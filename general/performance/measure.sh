@@ -11,7 +11,7 @@ MODEL='k'$K'_l'$L'_n'$N'_c'$C
 
 # Performance related properties
 WORKERS=${5-"$(nproc --all)"}
-HEAP_MEM=${6-"4G"}
+HEAP_MEM=${6-"128G"}
 DIRECT_MEM=${7-"4g"}
 FPSET_IMPL="tlc2.tool.fp.OffHeapDiskFPSet"
 
@@ -56,7 +56,6 @@ for i in {1..3}; do
            -javaagent:$TLATOOLS_HOME/jfr/jmx2jfr.jar=$TLATOOLS_HOME/jfr/jmxprobes.xml \
            -Xmx$HEAP_MEM -Xms$HEAP_MEM \
            -XX:MaxDirectMemorySize=$DIRECT_MEM \
-           -Dtlc2.tool.fp.FPSet.impl=$FPSET_IMPL \
            -cp $TLATOOLS_HOME/class:$TLATOOLS_HOME/lib/* \
            -DspecName=$SPEC \
            -DmodelName=$MODEL \
