@@ -180,7 +180,7 @@ public class DiskFPSet extends FPSet {
 		// to approximate 2^n ~= maxMemCnt
 		int logMaxMemCnt = 1;
 		maxMemCnt--;
-		while (maxMemCnt > 1) {
+		while (maxMemCnt > 1 && logMaxMemCnt < 32) { //only support arrays up to size of 32 bits.
 			maxMemCnt = maxMemCnt / 2;
 			logMaxMemCnt++;
 		}
@@ -902,6 +902,36 @@ public class DiskFPSet extends FPSet {
 		braf.close();
 		return (1.0 / dis);
 	}
+	
+
+	public boolean checkInvariant() throws IOException {
+		this.flushTable(); // No need for any lock here
+		final RandomAccessFile braf = new BufferedRandomAccessFile(
+				this.fpFilename, "r");
+		try {
+			final long fileLen = braf.length();
+			long predecessor = Long.MIN_VALUE;
+			if (fileLen > 0) {
+				while (braf.getFilePointer() < fileLen) {
+					long l = braf.readLong();
+					if (predecessor >= l) {
+						return false;
+					}
+					predecessor = l;
+				}
+			}
+		} finally {
+			braf.close();
+		}
+		return true;
+	}
+	
+	/* (non-Javadoc)
+	 * @see tlc2.tool.fp.FPSet#checkInvariant(long)
+	 */
+	public boolean checkInvariant(long expectedFPCnt) throws IOException {
+		return checkInvariant() && size() == expectedFPCnt;
+	}
 
 	/* (non-Javadoc)
 	 * @see tlc2.tool.fp.FPSet#beginChkpt(java.lang.String)
@@ -1174,6 +1204,31 @@ public class DiskFPSet extends FPSet {
 		return checkPointMark;
 	}
 	
+	/**
+	 * @return the maximal amount of fingerprints stored in memory. 
+	 */
+	public long getMaxTblCnt() {
+		return maxTblCnt;
+	}
+	
+	/**
+	 * @return The (static) number of locks used to guard the set. 
+	 */
+	public int getLockCnt() {
+		return 1;
+	}
+
+	/**
+	 * The load factor is a measure of how full the (primary) in-memory hash
+	 * table is.
+	 * 
+	 * @return The primary in-memory table's current load factor in the domain
+	 *         [0, 1]. If the {@link DiskFPSet} implementation doesn't support a
+	 *         load factor, <code>-1d</code> is returned.
+	 */
+	public double getLoadFactor() {
+		return this.tblCnt / (double) this.maxTblCnt;
+	}
 
 	// /**
 	// *

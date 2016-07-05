@@ -9,7 +9,7 @@ public abstract class FPSetTest extends AbstractFPSetTest {
 	 * Test filling a {@link FPSet} with max int + 1 random
 	 * @throws IOException
 	 */
-	public void testMaxFPSetSizeRnd() throws IOException {
+	public void testMaxFPSetSizeRnd() throws Exception {
 		Random rnd = new Random(System.currentTimeMillis());
 		
 		// amount to ~514 (mb) with 4gb system mem
@@ -38,7 +38,7 @@ public abstract class FPSetTest extends AbstractFPSetTest {
 	 * Test filling a {@link FPSet} with max int + 1 
 	 * @throws IOException
 	 */
-	public void testMaxFPSetSize() throws IOException {
+	public void testMaxFPSetSize() throws Exception {
 	
 		//
 		final FPSet fpSet = getFPSet(getFreeMemoryInBytes());

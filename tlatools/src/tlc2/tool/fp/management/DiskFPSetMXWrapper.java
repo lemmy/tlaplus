@@ -117,4 +117,11 @@ public class DiskFPSetMXWrapper extends TLCStandardMBean implements DiskFPSetMXB
 	public int getTblLoad() {
 		return fpset.getTblLoad();
 	}
+	
+	/* (non-Javadoc)
+	 * @see tlc2.tool.fp.management.DiskFPSetMXBean#getLoadFactor()
+	 */
+	public double getLoadFactor() {
+		return fpset.getLoadFactor();
+	}
 }

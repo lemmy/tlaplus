@@ -67,4 +67,9 @@ public interface DiskFPSetMXBean {
 	 * @see DiskFPSet#getCheckPointMark()
 	 */
 	int getCheckPointMark();
+	
+	/**
+	 * @see DiskFPSet#getLoadFactor()
+	 */
+	double getLoadFactor();
 }
