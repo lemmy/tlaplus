@@ -5,6 +5,12 @@ import tlc2.tool.fp.DiskFPSet;
 
 public interface DiskFPSetMXBean {
 
+
+	/**
+	 * @return The version of TLC.
+	 */
+	String getVersion();
+	
 	/**
 	 * @see DiskFPSet#getDiskHitCnt()
 	 */

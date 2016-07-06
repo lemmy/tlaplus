@@ -8,6 +8,11 @@ package tlc2.tool.distributed.management;
 public interface TLCStatisticsMXBean {
 
 	/**
+	 * @return The version of TLC.
+	 */
+	String getVersion();
+	
+	/**
 	 * @return The amount of states generated (non-distinct).
 	 *         {@link TLCStatisticsMXBean#getStatesGenerated()} >=
 	 *         {@link TLCStatisticsMXBean#getDistinctStatesGenerated()}

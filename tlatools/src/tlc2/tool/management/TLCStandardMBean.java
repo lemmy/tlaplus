@@ -12,6 +12,8 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
+import tlc2.TLCGlobals;
+
 /**
  * @author Markus Alexander Kuppe
  */
@@ -20,6 +22,10 @@ public abstract class TLCStandardMBean extends StandardMBean {
 	protected TLCStandardMBean(@SuppressWarnings("rawtypes") final Class mbeanInterface)
 			throws NotCompliantMBeanException {
 		super(mbeanInterface);
+	}
+
+	public String getVersion() {
+		return TLCGlobals.versionOfTLC;
 	}
 
 	/**
