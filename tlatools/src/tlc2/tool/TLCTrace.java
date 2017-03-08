@@ -10,9 +10,11 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
+import tlc2.TLCGlobals;
 import tlc2.output.EC;
 import tlc2.output.MP;
 import tlc2.output.StatePrinter;
@@ -22,17 +24,47 @@ import util.FileUtil;
 
 public class TLCTrace {
 
+	@SuppressWarnings("serial")
+	public static class UID implements Serializable {
+		public long sid;
+		public int wid = 0;
+		
+		public UID(long sid) {
+			assert sid >= 0;
+			this.sid = sid;
+		}
+		
+		//TODO Get rid of creating new instance by having a single instance per worker?
+		public UID(int wid, long sid) {
+			this(sid);
+			assert wid >= 0;
+			this.wid = wid;
+		}
+
+		public String toString() {
+			return "wid: " + wid + " sid: " + sid;
+		}
+	}
+
+	static final String EXT = ".st";
 	private static String filename;
-	private BufferedRandomAccessFile raf;
+	private final BufferedRandomAccessFile raf;
+	private final TraceApp tool;
+	private final Worker workers[];
 	private long lastPtr;
-	private TraceApp tool;
 
   public TLCTrace(String metadir, String specFile, TraceApp tool)
   throws IOException {
-		filename = metadir + FileUtil.separator + specFile + ".st";
+		filename = metadir + FileUtil.separator + specFile + EXT;
 		this.raf = new BufferedRandomAccessFile(filename, "rw");
 		this.lastPtr = 1L;
 		this.tool = tool;
+		this.workers = new Worker[TLCGlobals.getNumWorkers()];
+	}
+
+	public Worker addWorker(Worker worker) {
+		this.workers[worker.myGetId()] = worker;
+		return worker;
 	}
 
 	/**
@@ -40,7 +72,7 @@ public class TLCTrace {
 	 * @return The new location (pointer) for the given finger print (state)
 	 * @throws IOException
 	 */
-  public final synchronized long writeState(final long aFingerprint)
+  public final synchronized UID writeState(final long aFingerprint)
   throws IOException {
 		return writeState(1, aFingerprint);
 	}
@@ -51,9 +83,9 @@ public class TLCTrace {
 	 * @return The new location (pointer) for the given finger print (state)
 	 * @throws IOException
 	 */
-  public final synchronized long writeState(final TLCState predecessor, final long aFingerprint)
+  public final synchronized UID writeState(final TLCState predecessor, final long aFingerprint)
   throws IOException {
-		return writeState(predecessor.uid, aFingerprint);
+		return writeState(predecessor.uid.sid, aFingerprint);
 	}
 
 	/**
@@ -62,13 +94,13 @@ public class TLCTrace {
 	 * @return The new location (pointer) for the given finger print (state)
 	 * @throws IOException
 	 */
-  private final synchronized long writeState(long predecessorLoc, long fp)
+  private final synchronized UID writeState(long predecessorLoc, long fp)
   throws IOException {
 		// TODO Remove synchronization as all threads content for this lock
 		this.lastPtr = this.raf.getFilePointer();
 		this.raf.writeLongNat(predecessorLoc);
 		this.raf.writeLong(fp);
-		return this.lastPtr;
+		return new UID(this.lastPtr);
 	}
 
 	public final void close() throws IOException {
@@ -130,25 +162,21 @@ public class TLCTrace {
 		return getLevel(this.lastPtr);
 	}
 
+	public synchronized final int getLevel(TLCTrace.UID uid) throws IOException {
+		return getLevel(uid.sid);
+	}
+	
 	/**
    * @param startLoc The start location (pointer) from where the level (height) of the state tree should be calculated
 	 * @return The level (height) of the state tree.
 	 * @throws IOException
 	 */
 	public synchronized final int getLevel(long startLoc) throws IOException {
-		// keep current location
-		long currentFilePointer = this.raf.getFilePointer();
-
-		// calculate level/depth based on start location
-		int level = 0;
-	for (long predecessorLoc = startLoc; predecessorLoc != 1; predecessorLoc = this
-				.getPrev(predecessorLoc)) {
-			level++;
+		int maxLevel = 0;
+		for (Worker worker : workers) {
+			maxLevel = Math.max(maxLevel, worker.getMaxLevel());
 		}
-
-		// rewind to current location
-		this.raf.seek(currentFilePointer);
-		return level;
+		return maxLevel;
 	}
 
 	/**
@@ -203,9 +231,8 @@ public class TLCTrace {
 	 * @return An array of predecessor states
 	 * @throws IOException
 	 */
-  public final TLCStateInfo[] getTrace(long loc, boolean included)
-  throws IOException {
-    LongVec fps = new LongVec();
+	public final TLCStateInfo[] getTrace(long loc, boolean included) throws IOException {
+		LongVec fps = new LongVec();
 
 		// Starting at the given start fingerprint (which is the end of the
 		// trace from the point of the initial states), the chain of
@@ -220,6 +247,30 @@ public class TLCTrace {
 			this.raf.seek(curLoc);
 		}
 
+		return getTrace(fps);
+	}
+
+	public final TLCStateInfo[] getTrace(final UID uid, boolean included) throws IOException {
+		LongVec fps = new LongVec();
+
+		// Starting at the given start fingerprint (which is the end of the
+		// trace from the point of the initial states), the chain of
+		// predecessors fingerprints are reconstructed from the trace file up to
+		// the initial state.
+		synchronized (this) {
+			UID u = (included) ? uid : this.workers[uid.wid].getPrev(uid.sid);
+			while (u.sid != 1L) {
+				final Worker worker = this.workers[u.wid];
+				final long fp = worker.getFP(u.sid);
+				fps.addElement(fp);
+				u = this.workers[u.wid].getPrev(u.sid);
+			}
+		}
+		
+		return getTrace(fps);
+	}
+		
+	private final TLCStateInfo[] getTrace(LongVec fps) {	
 		// The vector of fingerprints is now being followed forward from the
 		// initial state (which is the last state in the long vector), to the
 		// end state.
@@ -273,14 +324,22 @@ public class TLCTrace {
 	 * @throws IOException
 	 * @throws WorkerException
 	 */
-	public synchronized final void printTrace(final TLCState s1, final TLCState s2)
+	public final void printTrace(final TLCState s1, final TLCState s2)
+			throws IOException, WorkerException {
+		printTrace(s1, s2, getTrace(s1.uid, false));
+	}
+
+	public final void printTraceLegacy(final TLCState s1, final TLCState s2)
+			throws IOException, WorkerException {
+		printTrace(s1, s2, getTrace(s1.uid.sid, false));
+	}
+
+	private synchronized final void printTrace(final TLCState s1, final TLCState s2, final TLCStateInfo[] prefix)
   throws IOException, WorkerException 
   {
 		MP.printError(EC.TLC_BEHAVIOR_UP_TO_THIS_POINT);
 		// Print the prefix leading to s1:
-		long loc1 = s1.uid;
 		TLCState lastState = null;
-		TLCStateInfo[] prefix = this.getTrace(loc1, false);
 		int idx = 0;
       while (idx < prefix.length) 
       {
@@ -405,7 +464,7 @@ public class TLCTrace {
 	private long[] addBlock(long fp[], long prev[]) throws IOException {
 		// Reuse prev.
 		for (int i = 0; i < fp.length; i++) {
-			prev[i] = this.writeState(prev[i], fp[i]);
+			prev[i] = this.writeState(prev[i], fp[i]).sid;
 		}
 		return prev;
 	}

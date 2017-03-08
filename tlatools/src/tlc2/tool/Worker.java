@@ -5,13 +5,18 @@
 
 package tlc2.tool;
 
+import java.io.IOException;
+
 import tlc2.output.EC;
 import tlc2.output.MP;
+import tlc2.tool.TLCTrace.UID;
 import tlc2.tool.queue.IStateQueue;
+import tlc2.util.BufferedRandomAccessFile;
 import tlc2.util.IdThread;
 import tlc2.util.ObjLongTable;
 import tlc2.util.statistics.FixedSizedBucketStatistics;
 import tlc2.util.statistics.IBucketStatistics;
+import util.FileUtil;
 
 public class Worker extends IdThread implements IWorker {
 	
@@ -26,8 +31,12 @@ public class Worker extends IdThread implements IWorker {
 	private final IBucketStatistics outDegree;
 	private long statesGenerated;
 
+	private final BufferedRandomAccessFile raf;
+	private long lastPtr;
+	private volatile int maxLevel = 0;
+
 	// SZ Feb 20, 2009: changed due to super type introduction
-	public Worker(int id, AbstractChecker tlc) {
+	public Worker(int id, AbstractChecker tlc, String metadir, String specFile) throws IOException {
 		super(id);
 		// SZ 12.04.2009: added thread name
 		this.setName("TLC Worker " + id);
@@ -36,6 +45,9 @@ public class Worker extends IdThread implements IWorker {
 		this.astCounts = new ObjLongTable(10);
 		this.outDegree = new FixedSizedBucketStatistics(this.getName(), 32); // maximum outdegree of 32 appears sufficient for now.
 		this.setName("TLCWorkerThread-" + String.format("%03d", id));
+
+		final String filename = metadir + FileUtil.separator + specFile + "-" + myGetId() + TLCTrace.EXT;
+		this.raf = new BufferedRandomAccessFile(filename, "rw");
 	}
 
   public final ObjLongTable getCounts() { return this.astCounts; }
@@ -90,5 +102,38 @@ public class Worker extends IdThread implements IWorker {
 
 	public IBucketStatistics getOutDegree() {
 		return this.outDegree;
+	}
+	
+	public UID writeState(long fp) throws IOException {
+		this.lastPtr = this.raf.getFilePointer();
+		this.raf.writeInt(myGetId());
+		this.raf.writeLongNat(1L);
+		this.raf.writeLong(fp);
+		return new TLCTrace.UID(myGetId(), this.lastPtr);
+	}
+
+	public UID writeState(final TLCState curState, final long sucStateFp) throws IOException {
+		maxLevel = Math.max(curState.level + 1, maxLevel);
+		this.lastPtr = this.raf.getFilePointer();
+		this.raf.writeInt(curState.uid.wid);
+		this.raf.writeLongNat(curState.uid.sid);
+		this.raf.writeLong(sucStateFp);
+		return new TLCTrace.UID(myGetId(), this.lastPtr);
+	}
+
+	public UID getPrev(long loc) throws IOException {
+		this.raf.seek(loc);
+		return new TLCTrace.UID(raf.readInt(), raf.readLongNat());
+	}
+
+	public long getFP(long loc) throws IOException {
+		this.raf.seek(loc);
+		this.raf.readInt(); /* drop */
+		this.raf.readLongNat(); /* drop */
+		return this.raf.readLong();
+	}
+	
+	public int getMaxLevel() {
+		return maxLevel;
 	}
 }

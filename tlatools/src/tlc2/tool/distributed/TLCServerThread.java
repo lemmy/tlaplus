@@ -257,7 +257,7 @@ public class TLCServerThread extends IdThread {
 			if (this.tlcServer.setErrState(state1, true)) {
 				if (state1 != null) {
 					try {
-						this.tlcServer.trace.printTrace(state1, state2);
+						this.tlcServer.trace.printTraceLegacy(state1, state2);
 					} catch (Exception e1) {
 						MP.printError(EC.GENERAL, e1);
 					}

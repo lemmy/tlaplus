@@ -17,7 +17,8 @@ import tlc2.value.ValueOutputStream;
 import util.UniqueString;
 
 public abstract class TLCState implements Cloneable, Serializable {
-  public long uid = -1;   // Must be set to a non-negative number
+  public TLCTrace.UID uid = null;
+  public int level = 1;
   
   // Set by subclasses. Cannot set until we know what the variables are.
   public static TLCState Empty = null;
@@ -40,11 +41,14 @@ public abstract class TLCState implements Cloneable, Serializable {
   }
 
   public void read(ValueInputStream vis) throws IOException {
-    this.uid = vis.readLongNat();
+	  this.uid = new TLCTrace.UID(vis.readInt(), vis.readLongNat());
+	  this.level = vis.readInt();
   }
   
   public void write(ValueOutputStream vos) throws IOException {
-    vos.writeLongNat(this.uid);
+	vos.writeInt(this.uid.wid);
+    vos.writeLongNat(this.uid.sid);
+    vos.writeInt(this.level);
   }
 
   public abstract TLCState bind(UniqueString name, Value value, SemanticNode expr);

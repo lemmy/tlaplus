@@ -4,6 +4,7 @@ import tla2sany.semantic.SemanticNode;
 import tla2sany.semantic.SymbolNode;
 import tlc2.tool.StateVec;
 import tlc2.tool.TLCState;
+import tlc2.tool.TLCTrace;
 import tlc2.value.Value;
 import util.UniqueString;
 
@@ -13,7 +14,7 @@ public class DummyTLCState extends TLCState {
 	private final long fp;
 
 	public DummyTLCState() {
-		uid = 0;
+		uid = new TLCTrace.UID(0L);
 		TLCState.Empty = this;
 		this.fp = 0L;
 	}

@@ -93,13 +93,13 @@ public abstract class AbstractHeapBasedDiskFPSetTest {
 		
 		// Fill the trace file with random fingerprints
 		final TLCState predecessor = new DummyTLCState();
-		predecessor.uid = 1L;
+		predecessor.uid = new TLCTrace.UID(1);
 		// an init state
-		trace.writeState(predecessor.uid);
+		trace.writeState(predecessor.uid.sid);
 		// successor states
-		for (long fp = predecessor.uid + 1; fp < limit; fp++) {
+		for (long fp = predecessor.uid.sid + 1; fp < limit; fp++) {
 			trace.writeState(predecessor, fp);
-			predecessor.uid = fp;
+			predecessor.uid.sid = fp;
 		}
 		
 		// Create a checkpoint file

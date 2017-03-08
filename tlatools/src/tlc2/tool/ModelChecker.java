@@ -95,7 +95,7 @@ public class ModelChecker extends AbstractChecker
         this.workers = new Worker[TLCGlobals.getNumWorkers()];
         for (int i = 0; i < this.workers.length; i++)
         {
-            this.workers[i] = new Worker(i, this);
+            this.workers[i] = this.trace.addWorker(new Worker(i, this, this.metadir, specFile));
         }
     }
 
@@ -245,7 +245,8 @@ public class ModelChecker extends AbstractChecker
                 this.tool.setCallStack();
                 try
                 {
-                    this.doNext(this.predErrState, new ObjLongTable(10), new Worker(4223, this));
+					this.doNext(this.predErrState, new ObjLongTable(10),
+							this.trace.addWorker(new Worker(4223, this, this.metadir, specObj.getFileName())));
                 } catch (FingerprintException e)
                 {
                     MP.printError(EC.TLC_FINGERPRINT_EXCEPTION, new String[]{e.getTrace(), e.getRootCause().getMessage()});
@@ -402,6 +403,7 @@ public class ModelChecker extends AbstractChecker
                 SUCCESSORS: for (int j = 0; j < sz; j++)
                 {
 					succState = nextStates.elementAt(j);
+					succState.level = curState.level + 1;
 					// Check if succState is a legal state.
                     if (!this.tool.isGoodState(succState))
                     {
@@ -439,8 +441,7 @@ public class ModelChecker extends AbstractChecker
                             // exploring this new state. Conversely, the state has to
                             // be in the trace in case either invariant or implied action
                             // checks want to print the trace. 
-							long loc = this.trace.writeState(curState, fp);
-							succState.uid = loc;
+                        	succState.uid = worker.writeState(curState, fp);
 							unseenSuccessorStates++;
 						}
 						// For liveness checking:
@@ -1018,7 +1019,7 @@ public class ModelChecker extends AbstractChecker
 					seen = theFPSet.put(fp);
 					if (!seen) {
 						allStateWriter.writeState(curState);
-						curState.uid = trace.writeState(fp);
+						curState.uid = ((Worker) workers[0]).writeState(fp);
 						theStateQueue.enqueue(curState);
 
 						// build behavior graph for liveness checking
