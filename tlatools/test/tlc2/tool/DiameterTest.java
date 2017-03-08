@@ -28,8 +28,6 @@ package tlc2.tool;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import java.util.List;
-
 import org.junit.Test;
 
 import tlc2.output.EC;
@@ -47,13 +45,13 @@ public class DiameterTest extends ModelCheckerTestCase {
 		// amount of states
 		assertFalse(recorder.recorded(EC.GENERAL));
 		assertTrue(recorder.recorded(EC.TLC_FINISHED));
-		//TODO A fixed number of 97 distinct states looks fishy too.
 		assertTrue(recorder.recordedWithStringValues(EC.TLC_STATS, "97", "16", "0"));
 
-		// The diameter is known to be 8 (as reported by TLC running with a
-		// single worker). With multiple workers, it's possible to get a higher
-		// number. However, TLC should never report a lower value.
-		assertTrue(recorder.getRecordAsInt(EC.TLC_SEARCH_DEPTH) >= 8);
+		// The diameter is known to be 8 as reported by TLC running with a
+		// single worker. With multiple workers, it's possible to get a higher
+		// or a lower number.
+		final int level = recorder.getRecordAsInt(EC.TLC_SEARCH_DEPTH);
+		assertTrue(String.format("Level below threshold: %s", level), level >= 8);
 	}
 
 	/* (non-Javadoc)

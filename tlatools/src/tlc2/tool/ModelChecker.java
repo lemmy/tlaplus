@@ -245,8 +245,10 @@ public class ModelChecker extends AbstractChecker
                 this.tool.setCallStack();
                 try
                 {
-					this.doNext(this.predErrState, new ObjLongTable(10),
-							this.trace.addWorker(new Worker(4223, this, this.metadir, specObj.getFileName())));
+					// Not adding newly created Worker to trace#addWorker because it is not supposed
+					// to rewrite the trace file but to reconstruct actual states referenced by
+					// their fingerprints in the trace.
+                    this.doNext(this.predErrState, new ObjLongTable(10), new Worker(4223, this, this.metadir, specObj.getFileName()));
                 } catch (FingerprintException e)
                 {
                     MP.printError(EC.TLC_FINGERPRINT_EXCEPTION, new String[]{e.getTrace(), e.getRootCause().getMessage()});

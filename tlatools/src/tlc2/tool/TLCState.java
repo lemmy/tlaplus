@@ -41,14 +41,14 @@ public abstract class TLCState implements Cloneable, Serializable {
   }
 
   public void read(ValueInputStream vis) throws IOException {
-	  this.uid = new TLCTrace.UID(vis.readInt(), vis.readLongNat());
-	  this.level = vis.readInt();
+	  this.uid = new TLCTrace.UID(vis.readShortNat(), vis.readLongNat());
+	  this.level = vis.readNat();
   }
   
   public void write(ValueOutputStream vos) throws IOException {
-	vos.writeInt(this.uid.wid);
+	vos.writeShortNat((short) this.uid.wid);
     vos.writeLongNat(this.uid.sid);
-    vos.writeInt(this.level);
+    vos.writeNat(this.level);
   }
 
   public abstract TLCState bind(UniqueString name, Value value, SemanticNode expr);

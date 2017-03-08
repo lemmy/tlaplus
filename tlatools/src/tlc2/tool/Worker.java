@@ -106,7 +106,7 @@ public class Worker extends IdThread implements IWorker {
 	
 	public UID writeState(long fp) throws IOException {
 		this.lastPtr = this.raf.getFilePointer();
-		this.raf.writeInt(myGetId());
+		this.raf.writeShortNat(myGetId());
 		this.raf.writeLongNat(1L);
 		this.raf.writeLong(fp);
 		return new TLCTrace.UID(myGetId(), this.lastPtr);
@@ -115,7 +115,7 @@ public class Worker extends IdThread implements IWorker {
 	public UID writeState(final TLCState curState, final long sucStateFp) throws IOException {
 		maxLevel = Math.max(curState.level + 1, maxLevel);
 		this.lastPtr = this.raf.getFilePointer();
-		this.raf.writeInt(curState.uid.wid);
+		this.raf.writeShortNat(curState.uid.wid);
 		this.raf.writeLongNat(curState.uid.sid);
 		this.raf.writeLong(sucStateFp);
 		return new TLCTrace.UID(myGetId(), this.lastPtr);
@@ -123,12 +123,12 @@ public class Worker extends IdThread implements IWorker {
 
 	public UID getPrev(long loc) throws IOException {
 		this.raf.seek(loc);
-		return new TLCTrace.UID(raf.readInt(), raf.readLongNat());
+		return new TLCTrace.UID(raf.readShortNat(), raf.readLongNat());
 	}
 
 	public long getFP(long loc) throws IOException {
 		this.raf.seek(loc);
-		this.raf.readInt(); /* drop */
+		this.raf.readShortNat(); /* drop */
 		this.raf.readLongNat(); /* drop */
 		return this.raf.readLong();
 	}
