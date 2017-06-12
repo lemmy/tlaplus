@@ -20,6 +20,8 @@ public abstract class TLCState implements Cloneable, Serializable {
   public TLCTrace.UID uid = null;
   public int level = 1;
   
+  public transient TLCState next;
+
   // Set by subclasses. Cannot set until we know what the variables are.
   public static TLCState Empty = null;
 

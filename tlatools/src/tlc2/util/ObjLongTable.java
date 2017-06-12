@@ -103,7 +103,15 @@ public final class ObjLongTable {
     return res;
   }
   
-
+  public final void clear() {
+    int size = size();
+    this.keys = new Object[size];
+    this.elems = new long[size];
+    this.count = 0;
+    this.length = size;
+    this.thresh = this.length / 2;
+  }
+  
   public final Enumerator keys() { return new Enumerator(); }
 
   public final class Enumerator {
