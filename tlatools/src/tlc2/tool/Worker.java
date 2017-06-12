@@ -25,7 +25,6 @@ public class Worker extends IdThread implements IWorker {
 	private final ObjLongTable astCounts;
 	private final IBucketStatistics outDegree;
 	private long statesGenerated;
-	private volatile long uid;
 
 	// SZ Feb 20, 2009: changed due to super type introduction
 	public Worker(int id, AbstractChecker tlc) {
@@ -91,13 +90,5 @@ public class Worker extends IdThread implements IWorker {
 
 	public IBucketStatistics getOutDegree() {
 		return this.outDegree;
-	}
-		
-	public void setState(TLCState succState) {
-		uid = succState.uid;
-	}
-	
-	public long getLastTracePtr() {
-		return uid;
 	}
 }
