@@ -153,4 +153,8 @@ public final class SetOfStates {
 	public void resetNext() {
 		iteratorIndex = 0;
 	}
+
+	public TLCState[] toArray() {
+		return states;
+	}
 }

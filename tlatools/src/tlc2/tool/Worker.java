@@ -10,6 +10,7 @@ import tlc2.output.MP;
 import tlc2.tool.queue.IStateQueue;
 import tlc2.util.IdThread;
 import tlc2.util.ObjLongTable;
+import tlc2.util.SetOfStates;
 import tlc2.util.statistics.FixedSizedBucketStatistics;
 import tlc2.util.statistics.IBucketStatistics;
 
@@ -47,11 +48,13 @@ public class Worker extends IdThread implements IWorker {
    * updates the state set and state queue.
 	 */
 	public final void run() {
+		final SetOfStates successors = new SetOfStates(1024);
+		TLCState[] curStates = null;
 		TLCState curState = null;
 		try {
 			while (true) {
-				curState = (TLCState) this.squeue.sDequeue();
-				if (curState == null) {
+				curStates = this.squeue.sDequeue(512);
+				if (curStates == null) {
 					synchronized (this.tlc) {
 						this.tlc.setDone();
 						this.tlc.notify();
@@ -59,8 +62,14 @@ public class Worker extends IdThread implements IWorker {
 					this.squeue.finishAll();
 					return;
 				}
-				if (this.tlc.doNext(curState, this.astCounts, this))
-					return;
+				for (TLCState state : curStates) {
+					curState = state;
+					if (this.tlc.doNext(curState, this.astCounts, this, successors)) {
+						return;
+					}
+				}
+				this.squeue.sEnqueue(successors.toArray());
+				successors.clear();
 			}
 		} catch (Throwable e) {
 			// Something bad happened. Quit ...

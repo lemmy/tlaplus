@@ -76,10 +76,14 @@ public abstract class StateQueue implements IStateQueue {
 	 * @see tlc2.tool.queue.IStateQueue#sEnqueue(tlc2.tool.TLCState[])
 	 */
 	public final synchronized void sEnqueue(final TLCState states[]) {
+		int cnt = 0;
 		for (int i = 0; i < states.length; i++) {
-			this.enqueueInner(states[i]);
+			if (states[i] != null) {
+				this.enqueueInner(states[i]);
+				cnt++;
+			}
 		}
-		this.len += states.length;
+		this.len += cnt;
 		if (this.numWaiting > 0 && !this.stop) {
 			this.notifyAll();
 		}

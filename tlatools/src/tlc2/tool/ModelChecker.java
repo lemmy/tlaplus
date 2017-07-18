@@ -245,7 +245,7 @@ public class ModelChecker extends AbstractChecker
                 this.tool.setCallStack();
                 try
                 {
-                    this.doNext(this.predErrState, new ObjLongTable(10), new Worker(4223, this));
+                    this.doNext(this.predErrState, new ObjLongTable(10), new Worker(4223, this), new SetOfStates(1024));
                 } catch (FingerprintException e)
                 {
                     MP.printError(EC.TLC_FINGERPRINT_EXCEPTION, new String[]{e.getTrace(), e.getRootCause().getMessage()});
@@ -354,7 +354,7 @@ public class ModelChecker extends AbstractChecker
      * 
      * This method is called from the workers on every step
      */
-    public final boolean doNext(TLCState curState, ObjLongTable counts, final Worker worker) throws Throwable
+    public final boolean doNext(TLCState curState, ObjLongTable counts, final Worker worker, final SetOfStates successors) throws Throwable
     {
         // SZ Feb 23, 2009: cancel the calculation
         if (this.cancellationFlag)
@@ -367,9 +367,8 @@ public class ModelChecker extends AbstractChecker
         SetOfStates liveNextStates = null;
         int unseenSuccessorStates = 0;
 
-        if (this.checkLiveness)
-        {
-            liveNextStates = new SetOfStates(INITIAL_CAPACITY * threadLocal.get());
+        if (this.checkLiveness) {
+        	liveNextStates = new SetOfStates(INITIAL_CAPACITY * threadLocal.get());
         }
 
         try
@@ -423,9 +422,9 @@ public class ModelChecker extends AbstractChecker
 
 					final boolean inModel = (this.tool.isInModel(succState) && this.tool.isInActions(curState, succState));
 					boolean seen = false;
+					final long fp = succState.fingerPrint();
                     if (inModel)
                     {
-						long fp = succState.fingerPrint();
 						seen = this.theFPSet.put(fp);
                         // Write out succState when needed:
                         this.allStateWriter.writeState(curState, succState, !seen);
@@ -496,7 +495,7 @@ public class ModelChecker extends AbstractChecker
 									// all, the user selected to continue model
 									// checking even if an invariant is
 									// violated.
-									this.theStateQueue.sEnqueue(succState);
+									successors.put(fp, succState);
 								}
 								// Continue with next successor iff an
 								// invariant is violated and
@@ -565,7 +564,7 @@ public class ModelChecker extends AbstractChecker
 								// all, the user selected to continue model
 								// checking even if an implied action is
 								// violated.
-								this.theStateQueue.sEnqueue(succState);
+								successors.put(fp, succState);
 							}
 							// Continue with next successor iff an
 							// implied action is violated and
@@ -591,7 +590,7 @@ public class ModelChecker extends AbstractChecker
 						// The state is inModel, unseen and neither invariants
 						// nor implied actions are violated. It is thus eligible
 						// for further processing by other workers.
-						this.theStateQueue.sEnqueue(succState);
+						successors.put(fp, succState);
                     }
 				}
 				// Must set state to null!!!
