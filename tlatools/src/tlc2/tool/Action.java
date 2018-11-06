@@ -18,6 +18,7 @@ public final class Action implements ToolGlobals, Serializable {
   public final SemanticNode pred;     // Expression of the action
   public final Context con;           // Context of the action
   private final UniqueString actionName;
+  public CostModel cm = CostModel.DO_NOT_RECORD;
 
   /* Constructors */
   public Action(SemanticNode pred, Context con) {

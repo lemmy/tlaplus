@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2017 Microsoft Research. All rights reserved. 
+ * Copyright (c) 2018 Microsoft Research. All rights reserved. 
  *
  * The MIT License (MIT)
  * 
@@ -21,51 +21,36 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  * Contributors:
- *   Markus Alexander Kuppe - initial API and implementation
+ *   loki der quaeler - initial API and implementation
+ *   Markus Alexander Kuppe
  ******************************************************************************/
-package util;
+package tlc2.tool.coverage;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
-import java.io.PipedOutputStream;
-import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.List;
+import org.junit.Test;
 
-public class TestPrintStream extends PrintStream {
+import tlc2.output.EC;
 
-	private final StringBuffer buf = new StringBuffer();
-	private final List<String> strings = new ArrayList<String>();
-	
-	public TestPrintStream() {
-        super(new PipedOutputStream());
-	}
+public class BCoverageTest extends AbstractCoverageTest {
 
-	/* (non-Javadoc)
-	 * @see java.io.PrintStream#println(java.lang.String)
-	 */
-	public void println(String x) {
-		strings.add(x);
-		buf.append(x + "\n");
-		System.out.println(x);
-		super.println(x);
-	}
-	
-	public void assertEmpty() {
-		assertTrue(this.strings.isEmpty());
-	}
-	
-	public void assertContains(final String seq) {
-		assertTrue(buf.toString().contains(seq));
-	}
-	
-	public void assertSubstring(String substring) {
-		for (String string : strings) {
-			if (string.contains(substring)) {
-				return;
-			}
-		}
-		fail("Substring not found");
-	}
+    public BCoverageTest () {
+        super("B");
+    }
+
+    @Test
+    public void testSpec () {
+		// ModelChecker has finished and generated the expected amount of states
+		assertTrue(recorder.recorded(EC.TLC_FINISHED));
+		assertTrue(recorder.recordedWithStringValue(EC.TLC_SEARCH_DEPTH, "2"));
+		assertTrue(recorder.recordedWithStringValues(EC.TLC_STATS, "5", "2", "0"));
+
+		// No 'general' errors recorded
+		assertFalse(recorder.recorded(EC.GENERAL));
+
+		assertCoverage("  line 4, col 9 to line 4, col 17 of module B: 1\n" + 
+				"  line 8, col 6 to line 8, col 19 of module B: 2\n" + 
+				"  line 10, col 6 to line 10, col 19 of module B: 2"); 
+    }
 }

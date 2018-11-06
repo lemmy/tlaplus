@@ -12,6 +12,7 @@ import java.io.Serializable;
 import tla2sany.semantic.SemanticNode;
 import tlc2.TLCGlobals;
 import tlc2.pprint.PrettyPrint;
+import tlc2.tool.CostModel;
 import tlc2.tool.FingerprintException;
 import tlc2.util.FP64;
 import util.Assert;
@@ -54,6 +55,16 @@ public abstract class Value implements ValueConstants, Serializable {
   public void write(ValueOutputStream vos) throws IOException {
 		throw new WrongInvocationException("ValueOutputStream: Can not pickle the value\n" +
 			    Value.ppr(toString()));
+  }
+
+  protected transient CostModel cm = CostModel.DO_NOT_RECORD;
+  
+  public void setCostModel(CostModel cm) {
+	  this.cm = cm;
+  }
+  
+  public CostModel getCostModel() {
+	  return this.cm;
   }
   
   /**
