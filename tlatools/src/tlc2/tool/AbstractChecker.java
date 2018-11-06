@@ -6,6 +6,11 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 import tla2sany.modanalyzer.SpecObj;
 import tla2sany.semantic.SemanticNode;
@@ -19,7 +24,7 @@ import tlc2.tool.liveness.Liveness;
 import tlc2.tool.liveness.NoOpLiveCheck;
 import tlc2.util.IStateWriter;
 import tlc2.util.IdThread;
-import tlc2.util.ObjLongTable;
+import tlc2.util.Vect;
 import tlc2.util.statistics.ConcurrentBucketStatistics;
 import tlc2.util.statistics.DummyBucketStatistics;
 import tlc2.util.statistics.IBucketStatistics;
@@ -144,6 +149,45 @@ public abstract class AbstractChecker implements Cancelable
         this.impliedActions = this.tool.getImpliedActions(); // implied-actions to be checked
         this.actions = this.tool.getActions(); // the sub-actions
 
+//		final Action next = tool.getNextStateSpec();
+//		visitor = new OpApplNodeCollector(this.tool, (OpApplNode) next.pred, specObj);
+//		next.pred.walkGraph(new OpApplNodeCollector.DummyHashTable(), visitor);
+//		next.cm = visitor.getRoot(next.pred);
+//		
+        if (TLCGlobals.isCoverageEnabled()) {
+        	final Vect init = this.tool.getInitStateSpec();
+        	for (int i = 0; i < init.size(); i++) {
+        		final Action initAction = (Action) init.elementAt(i);
+        		final OpApplNodeCollector visitor = new OpApplNodeCollector(this.tool, initAction.pred, specObj);
+        		initAction.cm = visitor.getRoot(initAction.pred);
+        		initAction.cm.printMe();
+        		System.out.println("\n###############\n");
+        	}
+        	
+        	final Map<SemanticNode, CostModel> cms = new HashMap<>(); 
+        	for (Action nextAction : actions) {
+        		System.out.println(nextAction.getLocation());
+        		if (cms.containsKey(nextAction.pred)) {
+        			CostModel costModel = cms.get(nextAction.pred);
+        			nextAction.cm = costModel;
+        		} else {
+        			final OpApplNodeCollector visitor = new OpApplNodeCollector(this.tool, nextAction.pred, specObj);
+        			nextAction.cm = visitor.getRoot(nextAction.pred);
+        			cms.put(nextAction.pred, nextAction.cm);
+        		}
+//    		nextAction.cm.printMe();
+        		System.out.println("\n###############\n");
+        	}
+        	
+        	for (Action invariant : invariants) {
+        		System.out.println(invariant.getLocation());
+        		final OpApplNodeCollector visitor = new OpApplNodeCollector(this.tool, invariant.pred, specObj);
+        		invariant.cm = visitor.getRoot(invariant.pred);
+//    		nextAction.cm.printMe();
+        		System.out.println("\n###############\n");
+        	}
+        }
+        
         if (this.checkLiveness) {
         	if (tool.hasSymmetry()) {
         		// raise warning...
@@ -199,26 +243,30 @@ public abstract class AbstractChecker implements Cancelable
 		if (TLCGlobals.isCoverageEnabled() && this.actions.length > 0)
 		{
             MP.printMessage(EC.TLC_COVERAGE_START);
-            // First collecting all counts from all workers:
-            final ObjLongTable<SemanticNode> counts = this.tool.getPrimedLocs();
             
-            for (IWorker worker : workers) {
-				counts.mergeInto(worker.getCounts());
-			}
-            // Reporting (sorted by location):
-            final SemanticNode[] array = counts.toArray(new SemanticNode[0]);
-			Arrays.sort(array, new Comparator<SemanticNode>() {
+        	final Vect init = this.tool.getInitStateSpec();
+        	for (int i = 0; i < init.size(); i++) {
+        		final Action initAction = (Action) init.elementAt(i);
+        		System.out.println(initAction.getLocation());
+        		initAction.cm.report();
+        	}
+
+            final Set<CostModel> reported = new HashSet<>();
+            final Set<Action> sortedActions = new TreeSet<>(new Comparator<Action>() {
 				@Override
-				public int compare(SemanticNode arg0, SemanticNode arg1) {
-					return arg0.getLocation().toString().compareTo(arg1.getLocation().toString());
+				public int compare(Action o1, Action o2) {
+					return o1.pred.getLocation().compareTo(o2.pred.getLocation());
 				}
 			});
-            for (int i = 0; i < array.length; i++)
-            {
-            	final SemanticNode semanticNode = array[i];
-                final long val = counts.get(semanticNode);
-                MP.printMessage(EC.TLC_COVERAGE_VALUE, new String[] { semanticNode.getLocation().toString(), String.valueOf(val) });
-            }
+            sortedActions.addAll(Arrays.asList(this.actions));
+            for (Action action : sortedActions) {
+            	if (!reported.contains(action.cm)) {
+            		System.out.println(action.getLocation());
+            		action.cm.report();
+            		reported.add(action.cm);
+            	}
+			}
+            
             MP.printMessage(EC.TLC_COVERAGE_END);
         }
     }

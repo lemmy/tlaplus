@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2017 Microsoft Research. All rights reserved. 
+ * Copyright (c) 2018 Microsoft Research. All rights reserved. 
  *
  * The MIT License (MIT)
  * 
@@ -23,49 +23,66 @@
  * Contributors:
  *   Markus Alexander Kuppe - initial API and implementation
  ******************************************************************************/
-package util;
+package tlc2.util.statistics;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.function.BooleanSupplier;
 
-import java.io.PipedOutputStream;
-import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.List;
-
-public class TestPrintStream extends PrintStream {
-
-	private final StringBuffer buf = new StringBuffer();
-	private final List<String> strings = new ArrayList<String>();
+public abstract class CounterStatistic {
 	
-	public TestPrintStream() {
-        super(new PipedOutputStream());
-	}
-
-	/* (non-Javadoc)
-	 * @see java.io.PrintStream#println(java.lang.String)
-	 */
-	public void println(String x) {
-		strings.add(x);
-		buf.append(x + "\n");
-		System.out.println(x);
-		super.println(x);
-	}
-	
-	public void assertEmpty() {
-		assertTrue(this.strings.isEmpty());
-	}
-	
-	public void assertContains(final String seq) {
-		assertTrue(buf.toString().contains(seq));
-	}
-	
-	public void assertSubstring(String substring) {
-		for (String string : strings) {
-			if (string.contains(substring)) {
-				return;
-			}
+	public static CounterStatistic getInstance(final BooleanSupplier s) {
+		if (s.getAsBoolean()) {
+			return new LongAdderCounterStatistic();
+		} else {
+			return new NoopCounterStatistic();
 		}
-		fail("Substring not found");
+	}
+	
+	public abstract void increment();
+	
+	public abstract void add(final long evalCount);
+
+	public abstract long getCount();
+
+	private CounterStatistic() {
+		// private ctor
+	}
+
+	private static class NoopCounterStatistic extends CounterStatistic {
+		
+		@Override
+		public final long getCount() {
+			return 0;
+		}
+		
+		@Override
+		public final void increment() {
+			// noop
+		}
+		
+		@Override
+		public void add(long evalCount) {
+			// noop
+		}
+	}
+	
+	private static class LongAdderCounterStatistic extends CounterStatistic {
+
+		private final LongAdder adder = new LongAdder();
+
+		@Override
+		public final long getCount() {
+			return this.adder.sum();
+		}
+
+		@Override
+		public final void increment() {
+			adder.increment();
+		}
+
+		@Override
+		public void add(long evalCount) {
+			adder.add(evalCount);
+		}
 	}
 }

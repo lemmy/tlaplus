@@ -183,4 +183,13 @@ public abstract class CommonTestCase {
 	protected void assertZeroUncovered() {
 		assertTrue(recorder.getZeroCoverage().isEmpty());
 	}
+	
+	protected void assertCoverage(final String actualCoverage) {
+		String actual = "";
+		final String[] actualCoverageLine = actualCoverage.split("\n");
+		for (String coverage : actualCoverageLine) {
+			actual += coverage.trim() + "\n";
+		}
+		assertEquals(recorder.getCoverageRecords(), actual);
+	}
 }

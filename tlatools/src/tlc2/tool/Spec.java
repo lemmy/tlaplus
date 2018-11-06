@@ -1745,25 +1745,33 @@ public class Spec implements ValueConstants, ToolGlobals, Serializable
         }
         return opNode;
     }
-
     public final Object getVal(ExprOrOpArgNode expr, Context c, final boolean cachable)
+    {
+    	return getVal(expr, c, cachable, CostModel.DO_NOT_RECORD);
+    }
+
+    public final Object getVal(ExprOrOpArgNode expr, Context c, final boolean cachable, final CostModel cm)
     {
         if (expr instanceof ExprNode)
         {
-            return new LazyValue(expr, c, cachable);
+            return new LazyValue(expr, c, cachable, cm);
         }
         SymbolNode opNode = ((OpArgNode) expr).getOp();
         return this.lookup(opNode, c, false);
     }
-
     public final Context getOpContext(OpDefNode opDef, ExprOrOpArgNode[] args, Context c, boolean cachable)
+    {
+    	return getOpContext(opDef, args, c, cachable, CostModel.DO_NOT_RECORD);
+    }
+
+    public final Context getOpContext(OpDefNode opDef, ExprOrOpArgNode[] args, Context c, boolean cachable, final CostModel cm)
     {
         FormalParamNode[] formals = opDef.getParams();
         int alen = args.length;
         Context c1 = c;
         for (int i = 0; i < alen; i++)
         {
-            Object aval = this.getVal(args[i], c, cachable);
+            Object aval = this.getVal(args[i], c, cachable, cm.get(args[i]));
             c1 = c1.cons(formals[i], aval);
         }
         return c1;

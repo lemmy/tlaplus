@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2017 Microsoft Research. All rights reserved. 
+ * Copyright (c) 2018 Microsoft Research. All rights reserved. 
  *
  * The MIT License (MIT)
  * 
@@ -21,51 +21,16 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  * Contributors:
- *   Markus Alexander Kuppe - initial API and implementation
+ *   loki der quaeler - initial API and implementation
+ *   Markus Alexander Kuppe
  ******************************************************************************/
-package util;
+package tlc2.tool.coverage;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import tlc2.tool.liveness.ModelCheckerTestCase;
 
-import java.io.PipedOutputStream;
-import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.List;
+public abstract class AbstractCoverageTest extends ModelCheckerTestCase {
 
-public class TestPrintStream extends PrintStream {
-
-	private final StringBuffer buf = new StringBuffer();
-	private final List<String> strings = new ArrayList<String>();
-	
-	public TestPrintStream() {
-        super(new PipedOutputStream());
-	}
-
-	/* (non-Javadoc)
-	 * @see java.io.PrintStream#println(java.lang.String)
-	 */
-	public void println(String x) {
-		strings.add(x);
-		buf.append(x + "\n");
-		System.out.println(x);
-		super.println(x);
-	}
-	
-	public void assertEmpty() {
-		assertTrue(this.strings.isEmpty());
-	}
-	
-	public void assertContains(final String seq) {
-		assertTrue(buf.toString().contains(seq));
-	}
-	
-	public void assertSubstring(String substring) {
-		for (String string : strings) {
-			if (string.contains(substring)) {
-				return;
-			}
-		}
-		fail("Substring not found");
+	public AbstractCoverageTest(String spec) {
+        super(spec, "coverage", new String[] {"-coverage", "9999"}); // To not interfere with testing, 9999 to make sure only final coverage is reported.
 	}
 }

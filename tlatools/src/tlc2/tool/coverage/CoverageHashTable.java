@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2017 Microsoft Research. All rights reserved. 
+ * Copyright (c) 2018 Microsoft Research. All rights reserved. 
  *
  * The MIT License (MIT)
  * 
@@ -23,49 +23,36 @@
  * Contributors:
  *   Markus Alexander Kuppe - initial API and implementation
  ******************************************************************************/
-package util;
+package tlc2.tool.coverage;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import java.util.Set;
 
-import java.io.PipedOutputStream;
-import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.List;
+import tla2sany.explorer.ExploreNode;
+import tla2sany.semantic.OpDefNode;
 
-public class TestPrintStream extends PrintStream {
+@SuppressWarnings("serial")
+class CoverageHashTable extends java.util.Hashtable<Integer, ExploreNode> {
+	private final Set<OpDefNode> nodes;
 
-	private final StringBuffer buf = new StringBuffer();
-	private final List<String> strings = new ArrayList<String>();
-	
-	public TestPrintStream() {
-        super(new PipedOutputStream());
+	public CoverageHashTable(final Set<OpDefNode> nodes) {
+		this.nodes = nodes;
 	}
 
-	/* (non-Javadoc)
-	 * @see java.io.PrintStream#println(java.lang.String)
-	 */
-	public void println(String x) {
-		strings.add(x);
-		buf.append(x + "\n");
-		System.out.println(x);
-		super.println(x);
-	}
-	
-	public void assertEmpty() {
-		assertTrue(this.strings.isEmpty());
-	}
-	
-	public void assertContains(final String seq) {
-		assertTrue(buf.toString().contains(seq));
-	}
-	
-	public void assertSubstring(String substring) {
-		for (String string : strings) {
-			if (string.contains(substring)) {
-				return;
+	@Override
+	public ExploreNode get(Object key) {
+		// Return null here to visit an OpDefNode D multiple times if D is "called" from
+		// multiple OpApplNodes. However, stop endless recursion if D is a RECURSIVE
+		// operator.
+		final ExploreNode v = super.get(key);
+		if (v instanceof OpDefNode) {
+			final OpDefNode odn = (OpDefNode) v;
+			if (odn.getInRecursive()) {
+				if (nodes.contains(odn)) {
+					// RECURSIVE operators
+					return v;
+				}
 			}
 		}
-		fail("Substring not found");
+		return null;
 	}
 }

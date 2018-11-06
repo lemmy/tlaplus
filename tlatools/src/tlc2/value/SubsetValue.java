@@ -511,6 +511,7 @@ public class SubsetValue extends EnumerableValue implements Enumerable {
 					reset(k + 1);
 					return new SetEnumValue();
 				}
+				cm.increment();
 
 				final ValueVec vals = new ValueVec(k);
 				int i = k - 1;
@@ -521,7 +522,7 @@ public class SubsetValue extends EnumerableValue implements Enumerable {
 					}
 				}
 				final SetEnumValue result = new SetEnumValue(vals, true);
-
+				
 				if (indices[0] == n - k) {
 					// Increment k to generate the set of k-subset for this k.
 					reset(k + 1);

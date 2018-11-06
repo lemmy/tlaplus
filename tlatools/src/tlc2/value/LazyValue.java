@@ -11,6 +11,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
 import tla2sany.semantic.SemanticNode;
+import tlc2.tool.CostModel;
 import tlc2.tool.FingerprintException;
 import tlc2.util.Context;
 import util.Assert;
@@ -46,13 +47,14 @@ public class LazyValue extends Value {
   public Context con;
   private Value val;
 
-  public LazyValue(SemanticNode expr, Context con) {
-	  this(expr, con, true);
+  public LazyValue(SemanticNode expr, Context con, CostModel costModel) {
+	  this(expr, con, true, costModel);
   }
 
-  public LazyValue(SemanticNode expr, Context con, final boolean cachable) {
+  public LazyValue(SemanticNode expr, Context con, final boolean cachable, final CostModel cm) {
     this.expr = expr;
     this.con = con;
+	this.cm = cm;
     this.val = null;
     // See comment on cachable's meager performance in Tool.java on line 1408.
     // See other note about a bug that surfaced with LazyValue in Tool.java on line ~1385.
