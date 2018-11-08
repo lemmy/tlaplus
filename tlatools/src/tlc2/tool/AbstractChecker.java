@@ -17,6 +17,7 @@ import tla2sany.semantic.SemanticNode;
 import tlc2.TLCGlobals;
 import tlc2.output.EC;
 import tlc2.output.MP;
+import tlc2.tool.coverage.OpApplNodeCollector;
 import tlc2.tool.liveness.AddAndCheckLiveCheck;
 import tlc2.tool.liveness.ILiveCheck;
 import tlc2.tool.liveness.LiveCheck;
@@ -155,36 +156,28 @@ public abstract class AbstractChecker implements Cancelable
 //		next.cm = visitor.getRoot(next.pred);
 //		
         if (TLCGlobals.isCoverageEnabled()) {
+			// TODO Start from the ModuleNode similar to how the Explorer works. It is
+			// unclear how to lookup the corresponding subtree in the global CM graph
+        	// in getNextState and getInitStates of the model checker.
         	final Vect init = this.tool.getInitStateSpec();
         	for (int i = 0; i < init.size(); i++) {
         		final Action initAction = (Action) init.elementAt(i);
-        		final OpApplNodeCollector visitor = new OpApplNodeCollector(this.tool, initAction.pred, specObj);
-        		initAction.cm = visitor.getRoot(initAction.pred);
-        		initAction.cm.printMe();
-        		System.out.println("\n###############\n");
+       			initAction.cm = new OpApplNodeCollector(this.tool, initAction.pred, specObj).getRoot();
         	}
         	
         	final Map<SemanticNode, CostModel> cms = new HashMap<>(); 
         	for (Action nextAction : actions) {
-        		System.out.println(nextAction.getLocation());
         		if (cms.containsKey(nextAction.pred)) {
         			CostModel costModel = cms.get(nextAction.pred);
         			nextAction.cm = costModel;
         		} else {
-        			final OpApplNodeCollector visitor = new OpApplNodeCollector(this.tool, nextAction.pred, specObj);
-        			nextAction.cm = visitor.getRoot(nextAction.pred);
-        			cms.put(nextAction.pred, nextAction.cm);
+           			nextAction.cm = new OpApplNodeCollector(this.tool, nextAction.pred, specObj).getRoot();
+           			cms.put(nextAction.pred, nextAction.cm);
         		}
-//    		nextAction.cm.printMe();
-        		System.out.println("\n###############\n");
         	}
         	
         	for (Action invariant : invariants) {
-        		System.out.println(invariant.getLocation());
-        		final OpApplNodeCollector visitor = new OpApplNodeCollector(this.tool, invariant.pred, specObj);
-        		invariant.cm = visitor.getRoot(invariant.pred);
-//    		nextAction.cm.printMe();
-        		System.out.println("\n###############\n");
+        		invariant.cm = new OpApplNodeCollector(this.tool, invariant.pred, specObj).getRoot();
         	}
         }
         
@@ -247,7 +240,6 @@ public abstract class AbstractChecker implements Cancelable
         	final Vect init = this.tool.getInitStateSpec();
         	for (int i = 0; i < init.size(); i++) {
         		final Action initAction = (Action) init.elementAt(i);
-        		System.out.println(initAction.getLocation());
         		initAction.cm.report();
         	}
 
@@ -261,10 +253,14 @@ public abstract class AbstractChecker implements Cancelable
             sortedActions.addAll(Arrays.asList(this.actions));
             for (Action action : sortedActions) {
             	if (!reported.contains(action.cm)) {
-            		System.out.println(action.getLocation());
             		action.cm.report();
             		reported.add(action.cm);
             	}
+			}
+            
+            for (Action invariant : invariants) {
+            	//TODO Might have to be ordered similar to next-state actions above.
+            	invariant.cm.report();
 			}
             
             MP.printMessage(EC.TLC_COVERAGE_END);
