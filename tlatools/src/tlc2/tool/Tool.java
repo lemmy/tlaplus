@@ -1101,7 +1101,7 @@ public class Tool
               Assert.fail("In computing next states, TLC encountered a CASE with no" +
                           " conditions true.\n" + pred);
             }
-            return this.getNextStates(other, acts, c, s0, s1, nss, cm);
+            return this.getNextStates(other, acts, c, s0, s1, nss, cm.get(args[alen - 1]));
           }
         case OPCODE_eq:
           {
