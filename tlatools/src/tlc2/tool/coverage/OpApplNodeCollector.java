@@ -117,8 +117,8 @@ public class OpApplNodeCollector extends ExplorerVisitor {
 
 	public CostModel getRoot() {
 		// TODO Find root for the given pred
-		final OpApplNodeWrapper root = this.stack.peek();
-		assert root.isRoot() /* && root.children.size() == 1 */;
-		return root.getChildren().get(0);
+		final OpApplNodeWrapper top = this.stack.peek();
+		assert top.isRoot();
+		return top.getRoot();
 	}
 }

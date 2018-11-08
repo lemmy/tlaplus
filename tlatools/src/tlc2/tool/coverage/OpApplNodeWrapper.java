@@ -25,9 +25,9 @@
  ******************************************************************************/
 package tlc2.tool.coverage;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 
 import tla2sany.semantic.OpApplNode;
@@ -42,27 +42,26 @@ import tlc2.util.statistics.CounterStatistic;
 public class OpApplNodeWrapper implements Comparable<OpApplNodeWrapper>, CostModel {
 
 	// children has to preserve order to later traverse tree in the module location
-	// order.
-//	private final Set<OpApplNodeWrapper> children = new TreeSet<>();
-	private final List<OpApplNodeWrapper> children = new ArrayList<>();
+	// order. Thus, use LinkedHashMap here.
+	private final Map<SemanticNode, OpApplNodeWrapper> children = new LinkedHashMap<>();
 	private final OpApplNode node;
 	private final CounterStatistic stats = CounterStatistic.getInstance(() -> TLCGlobals.isCoverageEnabled());
 	private boolean primed = false;
 	private int level;
 	private OpApplNodeWrapper recursive;
 
-	public OpApplNodeWrapper(OpApplNode node) {
+	OpApplNodeWrapper(OpApplNode node) {
 		this.node = node;
-	}
-
-	public OpApplNodeWrapper() {
-		this.node = null;
 		this.level = 0;
 	}
 
-	OpApplNodeWrapper(long samples) {
-		// For testing only.
-		this();
+	OpApplNodeWrapper() {
+		this(null);
+	}
+
+	// For unit testing only.
+	OpApplNodeWrapper(OpApplNode node, long samples) {
+		this(node);
 		this.add(samples);
 	}
 
@@ -120,6 +119,10 @@ public class OpApplNodeWrapper implements Comparable<OpApplNodeWrapper>, CostMod
 	public OpApplNode getNode() {
 		return this.node;
 	}
+	
+	public boolean isRoot() {
+		return this.node == null;
+	}
 
 	// ---------------- Parent <> Child ---------------- //
 
@@ -129,36 +132,29 @@ public class OpApplNodeWrapper implements Comparable<OpApplNodeWrapper>, CostMod
 		return this;
 	}
 
-	public boolean isRoot() {
-		return this.node == null;
-	}
-
 	public void addChild(final OpApplNodeWrapper child) {
-		this.children.add(child);
+		assert this.children.put(child.node, child) == null;
 	}
 	
-	public List<OpApplNodeWrapper> getChildren() {
-		return this.children;
+	public OpApplNodeWrapper getRoot() {
+		return this.children.values().iterator().next();
 	}
-
+	
 	@Override
 	public CostModel get(final SemanticNode eon) {
 		if (eon == this.node) {
 			return this;
 		}
 		if (eon instanceof OpApplNode) {
-			// TODO certainly too slow for actual impl!
-			for (OpApplNodeWrapper child : children) {
-				if (child.node == eon) {
-					return child;
-				}
+			OpApplNodeWrapper child = children.get(eon);
+			if (child != null) {
+				return child;
 			}
 			
 			if (recursive != null) {
-				for (OpApplNodeWrapper child : recursive.children) {
-					if (child.node == eon) {
-						return child;
-					}
+				child = recursive.children.get(eon);
+				if (child != null) {
+					return child;
 				}
 			}
 			// TODO Not all places in Tool lookup the correct CM yet. This should only be an
@@ -286,7 +282,7 @@ public class OpApplNodeWrapper implements Comparable<OpApplNodeWrapper>, CostMod
 	}
 	
 	private void printChildren(final int level) {
-		for (OpApplNodeWrapper opApplNodeWrapper : children) {
+		for (OpApplNodeWrapper opApplNodeWrapper : children.values()) {
 			opApplNodeWrapper.print(level, Calculate.CACHED);
 		}
 	}
@@ -315,7 +311,7 @@ public class OpApplNodeWrapper implements Comparable<OpApplNodeWrapper>, CostMod
 	private final Set<Long> childCounts = new HashSet<>();
 
 	private void collectChildren(final Set<Long> result, OpApplNodeWrapper.Calculate c) {
-		for (OpApplNodeWrapper opApplNodeWrapper : children) {
+		for (OpApplNodeWrapper opApplNodeWrapper : children.values()) {
 			opApplNodeWrapper.collectEvalCounts(result, c);
 		}
 	}
