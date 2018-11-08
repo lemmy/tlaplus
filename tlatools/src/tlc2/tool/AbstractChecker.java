@@ -151,7 +151,7 @@ public abstract class AbstractChecker implements Cancelable
         	final Vect init = this.tool.getInitStateSpec();
         	for (int i = 0; i < init.size(); i++) {
         		final Action initAction = (Action) init.elementAt(i);
-       			initAction.cm = new OpApplNodeCollector(this.tool, initAction.pred, specObj).getRoot();
+       			initAction.cm = new OpApplNodeCollector(this.tool, initAction.pred).getRoot();
         	}
         	
         	final Map<SemanticNode, CostModel> cms = new HashMap<>(); 
@@ -160,13 +160,13 @@ public abstract class AbstractChecker implements Cancelable
         			CostModel costModel = cms.get(nextAction.pred);
         			nextAction.cm = costModel;
         		} else {
-           			nextAction.cm = new OpApplNodeCollector(this.tool, nextAction.pred, specObj).getRoot();
+           			nextAction.cm = new OpApplNodeCollector(this.tool, nextAction.pred).getRoot();
            			cms.put(nextAction.pred, nextAction.cm);
         		}
         	}
         	
         	for (Action invariant : invariants) {
-        		invariant.cm = new OpApplNodeCollector(this.tool, invariant.pred, specObj).getRoot();
+        		invariant.cm = new OpApplNodeCollector(this.tool, invariant.pred).getRoot();
         	}
         }
         
