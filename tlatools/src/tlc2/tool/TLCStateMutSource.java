@@ -90,7 +90,7 @@ implements Cloneable, Serializable {
   }
 
   public final TLCState bind(UniqueString name, Value value, SemanticNode ast, CostModel cm) {
-	  cm.get(ast).increment();
+	  cm.get(ast).increment(ast);
     int loc = name.getVarLoc();
     this.values[loc] = value;
     if (this.asts != null) {

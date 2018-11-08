@@ -1,6 +1,5 @@
 package tlc2.tool;
 
-import tla2sany.semantic.OpApplNode;
 import tla2sany.semantic.SemanticNode;
 
 public interface CostModel {
@@ -8,7 +7,7 @@ public interface CostModel {
 	CostModel DO_NOT_RECORD = new CostModel() {
 
 		@Override
-		public void increment(OpApplNode oan) {
+		public void increment(SemanticNode oan) {
 			// no-op
 		}
 
@@ -39,7 +38,7 @@ public interface CostModel {
 	};
 	void increment();
 
-	void increment(OpApplNode oan);
+	void increment(SemanticNode ast);
 
 	void report();
 
