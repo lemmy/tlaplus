@@ -161,13 +161,10 @@ public class OpApplNodeWrapper implements Comparable<OpApplNodeWrapper>, CostMod
 					}
 				}
 			}
-//				throw new RuntimeException("Couldn't find child where one should be");
 			// TODO Not all places in Tool lookup the correct CM yet. This should only be an
 			// engineering effort but no fundamental problem expect that SubstInNode has not
 			// been looked into yet.
-			throw new RuntimeException("Couldn't find node");
-//				System.err.println(String.format("%s (%s) %s", Objects.hashCode(this.node), Objects.hashCode(this), Objects.hashCode(eon)));
-//				return this;
+			throw new RuntimeException("Couldn't find child where one should be!");
 		}
 		return this;
 	}
