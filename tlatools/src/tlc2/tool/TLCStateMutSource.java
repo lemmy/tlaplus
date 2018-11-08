@@ -89,7 +89,8 @@ implements Cloneable, Serializable {
     return false;
   }
 
-  public final TLCState bind(UniqueString name, Value value, SemanticNode ast) {
+  public final TLCState bind(UniqueString name, Value value, SemanticNode ast, CostModel cm) {
+	  cm.get(ast).increment();
     int loc = name.getVarLoc();
     this.values[loc] = value;
     if (this.asts != null) {
@@ -98,7 +99,7 @@ implements Cloneable, Serializable {
     return this;
   }
 
-  public final TLCState bind(SymbolNode id, Value value, SemanticNode expr) {
+  public final TLCState bind(SymbolNode id, Value value, SemanticNode expr, CostModel cm) {
     throw new WrongInvocationException("TLCStateMutSource.bind: This is a TLC bug.");
   }
   

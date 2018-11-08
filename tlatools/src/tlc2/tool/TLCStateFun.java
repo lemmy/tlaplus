@@ -40,11 +40,11 @@ public final class TLCStateFun extends TLCState {
 
   public final TLCState createEmpty() { return Empty; }
 
-  public final TLCState bind(UniqueString name, Value value, SemanticNode expr) {
+  public final TLCState bind(UniqueString name, Value value, SemanticNode expr, CostModel cm) {
       throw new WrongInvocationException("TLCStateFun.bind: This is a TLC bug.");
   }
 
-  public final TLCState bind(SymbolNode id, Value value, SemanticNode expr) {
+  public final TLCState bind(SymbolNode id, Value value, SemanticNode expr, CostModel cm) {
     return new TLCStateFun(id, value, this);
   }
   

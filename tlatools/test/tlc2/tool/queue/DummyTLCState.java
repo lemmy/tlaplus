@@ -6,6 +6,7 @@ import java.util.Set;
 import tla2sany.semantic.OpDeclNode;
 import tla2sany.semantic.SemanticNode;
 import tla2sany.semantic.SymbolNode;
+import tlc2.tool.CostModel;
 import tlc2.tool.StateVec;
 import tlc2.tool.TLCState;
 import tlc2.value.Value;
@@ -29,14 +30,14 @@ public class DummyTLCState extends TLCState {
 	/* (non-Javadoc)
 	 * @see tlc2.tool.TLCState#bind(util.UniqueString, tlc2.value.Value, tla2sany.semantic.SemanticNode)
 	 */
-	public TLCState bind(UniqueString name, Value value, SemanticNode expr) {
+	public TLCState bind(UniqueString name, Value value, SemanticNode expr, CostModel cm) {
 		return null;
 	}
 
 	/* (non-Javadoc)
 	 * @see tlc2.tool.TLCState#bind(tla2sany.semantic.SymbolNode, tlc2.value.Value, tla2sany.semantic.SemanticNode)
 	 */
-	public TLCState bind(SymbolNode id, Value value, SemanticNode expr) {
+	public TLCState bind(SymbolNode id, Value value, SemanticNode expr, CostModel cm) {
 		return null;
 	}
 
