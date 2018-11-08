@@ -28,7 +28,6 @@ package tlc2.tool.coverage;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 
 import tla2sany.semantic.OpApplNode;
@@ -222,18 +221,15 @@ public class OpApplNodeWrapper implements Comparable<OpApplNodeWrapper>, CostMod
 		this.stats.add(size);
 	}
 
-	public void increment(final OpApplNode oan) {
+	public void increment(final SemanticNode oan) {
 		if (oan != node) {
-			System.err.println(String.format("Reporting to %s (%s) with target %s", Objects.hashCode(node),
-					Objects.hashCode(this), Objects.hashCode(oan)));
+			throw new RuntimeException("Reporting cost metrics into wrong node.");
 		}
 		increment();
 	}
 
 	public void increment() {
 		this.stats.increment();
-//			System.out.println(String.format("%sIncremented counter to %s for node %s (%s)",
-//					indentBegin(getLevel(), ' ', ""), this.stats.getCount(), Objects.hashCode(node), Objects.hashCode(this)));
 	}
 
 	// ---------------- Print ---------------- //
