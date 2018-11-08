@@ -1649,7 +1649,7 @@ public class Spec implements ValueConstants, ToolGlobals, Serializable
         return this.assumptionIsAxiom;
     }
     /**
-     * This method gets the value of a symbol from the enviroment. We
+     * This method gets the value of a symbol from the environment. We
      * look up in the context c, its tool object, and the state s.
      * 
      * It and the lookup method that follows it were modified by LL
@@ -1750,8 +1750,9 @@ public class Spec implements ValueConstants, ToolGlobals, Serializable
     	return getVal(expr, c, cachable, CostModel.DO_NOT_RECORD);
     }
 
-    public final Object getVal(ExprOrOpArgNode expr, Context c, final boolean cachable, final CostModel cm)
+    public final Object getVal(ExprOrOpArgNode expr, Context c, final boolean cachable, CostModel cm)
     {
+    	cm = cm.get(expr);
         if (expr instanceof ExprNode)
         {
             return new LazyValue(expr, c, cachable, cm);
@@ -1771,7 +1772,7 @@ public class Spec implements ValueConstants, ToolGlobals, Serializable
         Context c1 = c;
         for (int i = 0; i < alen; i++)
         {
-            Object aval = this.getVal(args[i], c, cachable, cm.get(args[i]));
+            Object aval = this.getVal(args[i], c, cachable, cm);
             c1 = c1.cons(formals[i], aval);
         }
         return c1;
