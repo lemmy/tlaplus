@@ -44,6 +44,7 @@ public class ActionItemList {
     this.kind = kind;
     this.next = next;
     this.cm = cm;
+    assert this.cm == null || cm.matches(pred);
   }
 
   public final SemanticNode carPred() { return this.pred; }
@@ -63,7 +64,7 @@ public class ActionItemList {
 
   public final ActionItemList cons(SemanticNode pred,
 				   Context con, CostModel cm, int kind) {
-    return new ActionItemList(pred, con, kind, this, cm);
+    return new ActionItemList(pred, con, kind, this, cm.get(pred));
   }
 
   public final boolean isEmpty() { return this == Empty; }
