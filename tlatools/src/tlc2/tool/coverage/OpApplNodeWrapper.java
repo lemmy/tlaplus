@@ -131,9 +131,10 @@ public class OpApplNodeWrapper implements Comparable<OpApplNodeWrapper>, CostMod
 		this.recursive = recursive;
 		return this;
 	}
-
+	
 	public void addChild(final OpApplNodeWrapper child) {
-		assert this.children.put(child.node, child) == null;
+		final boolean newlyInserted = this.children.put(child.node, child) == null;
+		assert newlyInserted;
 	}
 	
 	public OpApplNodeWrapper getRoot() {
@@ -142,27 +143,26 @@ public class OpApplNodeWrapper implements Comparable<OpApplNodeWrapper>, CostMod
 	
 	@Override
 	public CostModel get(final SemanticNode eon) {
-		if (eon == this.node) {
+		if (eon == this.node || !(eon instanceof OpApplNode)) {
 			return this;
 		}
-		if (eon instanceof OpApplNode) {
-			OpApplNodeWrapper child = children.get(eon);
+		
+		OpApplNodeWrapper child = children.get(eon);
+		if (child != null) {
+			return child;
+		}
+		
+		if (recursive != null) {
+			child = recursive.children.get(eon);
 			if (child != null) {
 				return child;
 			}
-			
-			if (recursive != null) {
-				child = recursive.children.get(eon);
-				if (child != null) {
-					return child;
-				}
-			}
-			// TODO Not all places in Tool lookup the correct CM yet. This should only be an
-			// engineering effort but no fundamental problem expect that SubstInNode has not
-			// been looked into yet.
-			throw new RuntimeException("Couldn't find child where one should be!");
 		}
-		return this;
+		
+		// TODO Not all places in Tool lookup the correct CM yet. This should only be an
+		// engineering effort but no fundamental problem expect that SubstInNode has not
+		// been looked into yet.
+		throw new RuntimeException("Couldn't find child where one should be!");
 	}
 
 	@Override

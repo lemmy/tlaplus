@@ -1745,6 +1745,9 @@ public class Spec implements ValueConstants, ToolGlobals, Serializable
         }
         return opNode;
     }
+    public final Object lookup(final SymbolNode opNode) {
+    	return lookup(opNode, Context.Empty, false);
+    }
     public final Object getVal(ExprOrOpArgNode expr, Context c, final boolean cachable)
     {
     	return getVal(expr, c, cachable, CostModel.DO_NOT_RECORD);
