@@ -36,6 +36,7 @@ import tla2sany.modanalyzer.SpecObj;
 import tla2sany.semantic.OpApplNode;
 import tla2sany.semantic.OpDefNode;
 import tla2sany.semantic.SemanticNode;
+import tla2sany.semantic.SymbolNode;
 import tlc2.tool.CostModel;
 import tlc2.tool.Tool;
 import tlc2.util.ObjLongTable;
@@ -76,6 +77,19 @@ public class OpApplNodeCollector extends ExplorerVisitor {
 			if (nodes.contains(oan)) {
 				assert !oan.isPrimed();
 				oan.setPrimed();
+			}
+			
+			final SymbolNode operator = oan.getNode().getOperator();
+			if (operator instanceof OpDefNode) {
+				final OpDefNode odn = (OpDefNode) operator;
+				if (odn.getInRecursive()) {
+					final OpApplNodeWrapper recursive = stack.stream()
+							.filter(w -> w.getNode() != null && w.getNode().getOperator() == odn).findFirst()
+							.orElse(null);
+					if (recursive != null) {
+						oan.setRecursive(recursive);
+					}
+				}
 			}
 			
 			final OpApplNodeWrapper parent = stack.peek();

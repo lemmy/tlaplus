@@ -50,6 +50,7 @@ public class OpApplNodeWrapper implements Comparable<OpApplNodeWrapper>, CostMod
 	private final CounterStatistic stats = CounterStatistic.getInstance(() -> TLCGlobals.isCoverageEnabled());
 	private boolean primed = false;
 	private int level;
+	private OpApplNodeWrapper recursive;
 
 	public OpApplNodeWrapper(OpApplNode node) {
 		this.node = node;
@@ -123,6 +124,12 @@ public class OpApplNodeWrapper implements Comparable<OpApplNodeWrapper>, CostMod
 
 	// ---------------- Parent <> Child ---------------- //
 
+	public OpApplNodeWrapper setRecursive(OpApplNodeWrapper recursive) {
+		assert this.recursive == null;
+		this.recursive = recursive;
+		return this;
+	}
+
 	public boolean isRoot() {
 		return this.node == null;
 	}
@@ -145,6 +152,14 @@ public class OpApplNodeWrapper implements Comparable<OpApplNodeWrapper>, CostMod
 			for (OpApplNodeWrapper child : children) {
 				if (child.node == eon) {
 					return child;
+				}
+			}
+			
+			if (recursive != null) {
+				for (OpApplNodeWrapper child : recursive.children) {
+					if (child.node == eon) {
+						return child;
+					}
 				}
 			}
 //				throw new RuntimeException("Couldn't find child where one should be");
