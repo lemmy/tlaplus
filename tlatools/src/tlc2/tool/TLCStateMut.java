@@ -81,14 +81,14 @@ public final class TLCStateMut extends TLCState implements Cloneable, Serializab
     return false;
   }
   
-  public final TLCState bind(UniqueString name, Value value, SemanticNode expr) {
+  public final TLCState bind(UniqueString name, Value value, SemanticNode expr, CostModel cm) {
 	  // Note, tla2sany.semantic.OpApplNode.toString(Value) relies on this ordering.
     int loc = name.getVarLoc();
     this.values[loc] = value;
     return this;
   }
 
-  public final TLCState bind(SymbolNode id, Value value, SemanticNode expr) {
+  public final TLCState bind(SymbolNode id, Value value, SemanticNode expr, CostModel cm) {
     throw new WrongInvocationException("TLCStateMut.bind: This is a TLC bug.");
   }
   

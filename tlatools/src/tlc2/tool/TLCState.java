@@ -68,8 +68,8 @@ public abstract class TLCState implements Cloneable, Serializable {
 		vos.writeShortNat((short) this.level);
 	}
 
-  public abstract TLCState bind(UniqueString name, Value value, SemanticNode expr);
-  public abstract TLCState bind(SymbolNode id, Value value, SemanticNode expr);  
+  public abstract TLCState bind(UniqueString name, Value value, SemanticNode expr, CostModel cm);
+  public abstract TLCState bind(SymbolNode id, Value value, SemanticNode expr, CostModel cm);  
   public abstract TLCState unbind(UniqueString name);
   public abstract Value lookup(UniqueString var);
   public abstract boolean containsKey(UniqueString var);
