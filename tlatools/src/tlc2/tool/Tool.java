@@ -419,6 +419,7 @@ public class Tool
 
   private final void getInitStates(ActionItemList acts, TLCState ps, IStateFunctor states, CostModel cm) {
 		if (acts.isEmpty()) {
+			cm.increment();
 			states.addElement(ps.copy());
 			return;
 		} else if (ps.allAssigned()) {
@@ -441,6 +442,7 @@ public class Tool
 				// Move on to the next action in the ActionItemList.
 				acts = acts.cdr();
 			}
+			cm.increment();
 			states.addElement(ps.copy());
 			return;
 		}
@@ -831,8 +833,17 @@ public class Tool
     	if (this.callStack != null) { this.callStack.pop(); }
     }
   }
-
+  
   private final TLCState getNextStates(ActionItemList acts, final TLCState s0, final TLCState s1,
+          final StateVec nss, CostModel cm) {
+	  final TLCState copy = getNextStates0(acts, s0, s1, nss, cm);
+	  if (copy != s1) {
+		  cm.increment();
+	  }
+	  return copy;
+  }
+
+  private final TLCState getNextStates0(ActionItemList acts, final TLCState s0, final TLCState s1,
                                        final StateVec nss, CostModel cm) {
     int kind = acts.carKind();
     if (acts.isEmpty()) {
