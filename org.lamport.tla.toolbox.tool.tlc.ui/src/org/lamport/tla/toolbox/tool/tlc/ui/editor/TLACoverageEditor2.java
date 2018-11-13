@@ -26,6 +26,7 @@
 package org.lamport.tla.toolbox.tool.tlc.ui.editor;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.resource.JFaceResources;
@@ -98,20 +99,27 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 				TLAEditor tlaCoverageEditor) {
 			super(preferenceStore, tlaCoverageEditor);
 		}
-
+		
 		@Override
 		public ITextHover getTextHover(final ISourceViewer sourceViewer, String contentType) {
 			return new DefaultTextHover(sourceViewer) {
 				@Override
 				public String getHoverInfo(ITextViewer textViewer, IRegion hoverRegion) {
-					String hover = "";
-					final List<CoverageInformationItem> nodes = TLACoverageEditor2.this.coverage.getNodes(hoverRegion.getOffset());
-					for (CoverageInformationItem cii : nodes) {
-						if (cii.isActive()) {
-							hover = String.format("%,d\n%s", cii.getCount(), hover);
-						} else {
-							hover = String.format("%s%,d\n", hover, cii.getCount());
-						}
+					final List<CoverageInformationItem> sorted = coverage.getNodes(hoverRegion.getOffset()).stream()
+							.sorted((c1, c2) -> c1.isActive() ? -1
+									: c2.isActive() ? 1 : Long.compare(c1.getCount(), c2.getCount()))
+							.collect(Collectors.toList());
+					
+					String hover = "", plus = "";
+					Long sum = 0L;
+					for (CoverageInformationItem cii : sorted) {
+						sum += cii.getCount();
+						hover = String.format("%s%s%,d\n", hover, plus, cii.getCount());
+						plus = "+";
+					}
+					
+					if (sorted.size() > 1) {
+						hover += String.format("---------\n%,d", sum); 
 					}
 					return hover.replaceAll("\n$", "");
 				}
