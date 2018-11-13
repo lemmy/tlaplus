@@ -169,9 +169,13 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 		@Override
 		public void applyTextPresentation(final TextPresentation textPresentation) {
 			final StyledText textWidget = viewer.getTextWidget();
-			textWidget.addListener(SWT.MouseDown, new TextPresentationListener(coverage, viewer, textPresentation));
+			final TextPresentationListener listener = new TextPresentationListener(coverage, viewer, textPresentation);
+			textWidget.addListener(SWT.MouseDown, listener);
 			
 			((TextViewer) viewer).removeTextPresentationListener(this);
+			
+			// Color the editor initially.
+			listener.handleEvent(null);
 		}
 	}
 }
