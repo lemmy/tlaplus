@@ -3,8 +3,10 @@ package org.lamport.tla.toolbox.tool.tlc.output.data;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.TextPresentation;
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.graphics.Color;
 import org.lamport.tla.toolbox.tool.tlc.ui.util.IModuleLocatable;
@@ -120,6 +122,14 @@ public class CoverageInformationItem implements IModuleLocatable
         return modelName;
     }
 
+    private final List<CoverageInformationItem> siblings = new ArrayList<>();
+    
+	CoverageInformationItem addSiblings(List<CoverageInformationItem> siblings) {
+		this.siblings.addAll(siblings);
+		this.siblings.remove(this);
+		return this;
+	}
+
     private final List<CoverageInformationItem> childs = new ArrayList<>();
     
 	List<CoverageInformationItem> getChildren() {
@@ -127,10 +137,6 @@ public class CoverageInformationItem implements IModuleLocatable
 	}
 
 	CoverageInformationItem addChild(CoverageInformationItem child) {
-		if (child == this) {
-			System.out.println("CoverageInformationItem.addChild()");
-		}
-		assert this != child;
 		this.childs.add(child);
 		return this;
 	}
@@ -140,10 +146,11 @@ public class CoverageInformationItem implements IModuleLocatable
 		return this;
 	}
 	
-	private Color color;
+	private Color color, aggregateColor;
 
-	CoverageInformationItem setColor(Color c) {
+	CoverageInformationItem setColor(Color c, Color a) {
 		this.color = c;
+		this.aggregateColor = a == null ? c : a;
 		return this;
 	}
 
@@ -169,17 +176,43 @@ public class CoverageInformationItem implements IModuleLocatable
 	}
 	
 	public void style(final TextPresentation textPresentation) {
+		if (isRoot()) {
+			style(textPresentation, true);
+		} else {
+			style(textPresentation, false);
+		}
+	}
+	
+	private void style(final TextPresentation textPresentation, boolean merge) {
 		if (!isRoot()) {
 			final StyleRange rs = new StyleRange();
+			
+			// IRegion
 			rs.start = region.getOffset();
 			rs.length = region.getLength();
-			rs.background = color;
+			
+			// Background Color
+			if (merge) {
+				rs.background = aggregateColor;
+			} else {
+				rs.background = color;
+			}
+			
+			// Zero Coverage
+			if (getCount() == 0L) {
+				rs.background = null;
+				rs.borderStyle = SWT.BORDER_SOLID;
+				rs.borderColor = JFaceResources.getColorRegistry().get(CoverageInformation.RED);
+			}
+			
+			// Track active subtree
 			rs.data = this; //mergeStyleRange does not merge rs.data, thus track active instead.
 			active = true;
+			
 			textPresentation.mergeStyleRange(rs);
 		}
 		for (CoverageInformationItem child : childs) {
-			child.style(textPresentation);
+			child.style(textPresentation, merge);
 		}
 	}
 
@@ -189,6 +222,11 @@ public class CoverageInformationItem implements IModuleLocatable
 			rs.start = region.getOffset();
 			rs.length = region.getLength();
 			rs.background = c;
+			if (getCount() == 0L) {
+				rs.background = null;
+				rs.borderStyle = SWT.BORDER_SOLID;
+				rs.borderColor = JFaceResources.getColorRegistry().get(CoverageInformation.RED);
+			}
 			active = false;
 			textPresentation.replaceStyleRange(rs);
 		}

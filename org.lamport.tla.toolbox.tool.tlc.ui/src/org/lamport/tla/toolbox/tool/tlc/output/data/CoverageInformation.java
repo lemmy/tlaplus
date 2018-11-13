@@ -28,8 +28,10 @@ package org.lamport.tla.toolbox.tool.tlc.output.data;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.SortedSet;
 import java.util.TreeMap;
@@ -40,22 +42,30 @@ import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IRegion;
+import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.RGB;
 import org.lamport.tla.toolbox.util.AdapterFactory;
 
+import tla2sany.st.Location;
+
 public class CoverageInformation implements Iterable<CoverageInformationItem> {
 	
-	private final TreeSet<Long> counts = new TreeSet<>();
-	
 	private final List<CoverageInformationItem> items = new ArrayList<>();
+
+	private Map<Location, List<CoverageInformationItem>> loc2cci = new HashMap<>();
 	
 	private final TreeMap<Integer, List<CoverageInformationItem>> offset2cii = new TreeMap<>();
 
 	public void add(final CoverageInformationItem item) {
-		this.counts.add(item.getCount());
 		this.items.add(item);
+		
+		this.loc2cci.computeIfAbsent(item.getModuleLocation(), c -> new ArrayList<>()).add(item);
 	}
 
+	private int numSiblings(CoverageInformationItem item) {
+		return this.loc2cci.get(item.getModuleLocation()).size();
+	}
+	
 	@Override
 	public Iterator<CoverageInformationItem> iterator() {
 		return this.items.iterator();
@@ -71,10 +81,10 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 
 	private static final int BLUE = 240;
 
-	private int getHue(final CoverageInformationItem item) {
+	private int getHue(final long count, final TreeSet<Long> counts) {
 		final int size = counts.size();
 		final float r = 240f / size;
-		final SortedSet<Long> headSet = counts.headSet(item.getCount());
+		final SortedSet<Long> headSet = counts.headSet(count);
 		return BLUE - Math.round(r * headSet.size());
 	}
 	
@@ -94,6 +104,9 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 				}
 				stack.peek().addChild(item);
 				stack.push(item);
+				
+				// Set siblings if any:
+				item.addSiblings(loc2cci.get(item.getModuleLocation()));
 			}
 		}
 		
@@ -123,23 +136,45 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 	
 	public static final String GRAY = "GRAY";
 
+	public static final String RED = "RED";
+
 	public CoverageInformation prepare(final IDocument document) throws BadLocationException {
-		JFaceResources.getColorRegistry().put(GRAY, new RGB(211,211,211));
+		final TreeSet<Long> counts = new TreeSet<>();
+		
 		for (CoverageInformationItem item : items) {
-			// Calculate colors.
-			final int hue = getHue(item);
-			final String key = Integer.toString(hue);
-			if (!JFaceResources.getColorRegistry().hasValueFor(key)) {
-				JFaceResources.getColorRegistry().put(key, new RGB(hue, .25f, 1f));
-			}
-			item.setColor(JFaceResources.getColorRegistry().get(key));
-			
 			// Convert Location to IRegion
 			final IRegion region = AdapterFactory.locationToRegion(document, item.getModuleLocation());
 			item.setRegion(region);
 			
 			offset2cii.computeIfAbsent(region.getOffset(), c -> new ArrayList<>()).add(item);
+			
+			counts.add(item.getCount());
+			counts.add(item.getCount() * numSiblings(item));
 		}
+
+		JFaceResources.getColorRegistry().put(RED, new RGB(255,0,0));
+		JFaceResources.getColorRegistry().put(GRAY, new RGB(211,211,211));
+		
+		for (CoverageInformationItem item : items) {
+			// Calculate colors.
+			int hue = getHue(item.getCount(), counts);
+			String key = Integer.toString(hue);
+			if (!JFaceResources.getColorRegistry().hasValueFor(key)) {
+				JFaceResources.getColorRegistry().put(key, new RGB(hue, .25f, 1f));
+			}
+			Color color = JFaceResources.getColorRegistry().get(key);
+
+			// Aggregated color (might be identical to color).
+			hue = getHue(item.getCount() * numSiblings(item), counts);
+			key = Integer.toString(hue);
+			if (!JFaceResources.getColorRegistry().hasValueFor(key)) {
+				JFaceResources.getColorRegistry().put(key, new RGB(hue, .25f, 1f));
+			}
+			Color aggregate = JFaceResources.getColorRegistry().get(key);
+
+			item.setColor(color, aggregate);
+		}
+
 		return this;
 	}
 }
