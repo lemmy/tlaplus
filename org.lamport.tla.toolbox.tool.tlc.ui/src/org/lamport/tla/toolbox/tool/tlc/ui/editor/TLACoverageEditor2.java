@@ -59,7 +59,7 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 
 	/* TLACoverageEditor */
 
-	private final CoverageInformation coverage;
+	private CoverageInformation coverage;
 
 	public TLACoverageEditor2(final CoverageInformation coverage) {
 		this.coverage = coverage;
@@ -82,14 +82,18 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 	@Override
 	public void init(IEditorSite site, IEditorInput input) throws PartInitException {
 		super.init(site, input);
-		final IDocument document = getDocumentProvider().getDocument(input);
+		setInput(coverage);
+	}
+
+	public void setInput(final CoverageInformation ci) throws PartInitException {
+		this.coverage = ci;
+		final IDocument document = getDocumentProvider().getDocument(getEditorInput());
 		try {
-			coverage.prepare(document);
+			this.coverage.prepare(document);
 		} catch (BadLocationException e) {
 			throw new PartInitException(e.getMessage(), e);
 		}
 	}
-	
 
 	/* TLASourceViewerConfiguration */
 
