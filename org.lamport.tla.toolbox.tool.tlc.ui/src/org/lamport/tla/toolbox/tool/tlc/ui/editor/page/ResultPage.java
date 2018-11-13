@@ -65,6 +65,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.Text;
+import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.forms.IManagedForm;
 import org.eclipse.ui.forms.editor.FormEditor;
@@ -287,13 +288,18 @@ public class ResultPage extends BasicFormPage implements ITLCModelLaunchDataPres
 								return;
 							}
 							// Open the files as pages of the current model editor.
-							FileEditorInput input = new FileEditorInput(iFile);
-							if (modelEditor.findEditors(input).length == 0) {
-								try {
+							final FileEditorInput input = new FileEditorInput(iFile);
+							final IEditorPart[] findEditors = modelEditor.findEditors(input);
+							try {
+								if (findEditors.length == 0) {
 									modelEditor.addPage(new TLACoverageEditor2(ci), input);
-								} catch (PartInitException e) {
-									e.printStackTrace();
+								} else {
+									if (findEditors[0] instanceof TLACoverageEditor2) {
+										((TLACoverageEditor2) findEditors[0]).setInput(ci);
+									}
 								}
+							} catch (PartInitException e) {
+								TLCUIActivator.getDefault().logError(e.getMessage(), e);
 							}
 						}
 
