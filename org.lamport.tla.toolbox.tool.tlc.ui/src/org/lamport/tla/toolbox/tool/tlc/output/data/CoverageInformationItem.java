@@ -1,5 +1,12 @@
 package org.lamport.tla.toolbox.tool.tlc.output.data;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.eclipse.jface.text.IRegion;
+import org.eclipse.jface.text.TextPresentation;
+import org.eclipse.swt.custom.StyleRange;
+import org.eclipse.swt.graphics.Color;
 import org.lamport.tla.toolbox.tool.tlc.ui.util.IModuleLocatable;
 
 import tla2sany.st.Location;
@@ -39,7 +46,10 @@ public class CoverageInformationItem implements IModuleLocatable
         this.layer = layer;
     }
 
-    public final String getModule()
+    public CoverageInformationItem() {
+	}
+
+	public final String getModule()
     {
         return locationString.substring(locationString.indexOf(MOD) + MOD.length());
     }
@@ -110,4 +120,80 @@ public class CoverageInformationItem implements IModuleLocatable
         return modelName;
     }
 
+    private final List<CoverageInformationItem> childs = new ArrayList<>();
+    
+	List<CoverageInformationItem> getChildren() {
+		return childs;
+	}
+
+	CoverageInformationItem addChild(CoverageInformationItem child) {
+		if (child == this) {
+			System.out.println("CoverageInformationItem.addChild()");
+		}
+		assert this != child;
+		this.childs.add(child);
+		return this;
+	}
+
+	CoverageInformationItem setLayer(int i) {
+		this.layer = i;
+		return this;
+	}
+	
+	private Color color;
+
+	CoverageInformationItem setColor(Color c) {
+		this.color = c;
+		return this;
+	}
+
+	private IRegion region;
+
+	IRegion getRegion() {
+		return this.region;
+	}
+
+	CoverageInformationItem setRegion(IRegion locationToRegion) {
+		this.region = locationToRegion;
+		return this;
+	}
+
+	private boolean isRoot() {
+		return layer == -1;
+	}
+
+	private boolean active = false;
+	
+	public boolean isActive() {
+		return active;
+	}
+	
+	public void style(final TextPresentation textPresentation) {
+		if (!isRoot()) {
+			final StyleRange rs = new StyleRange();
+			rs.start = region.getOffset();
+			rs.length = region.getLength();
+			rs.background = color;
+			rs.data = this; //mergeStyleRange does not merge rs.data, thus track active instead.
+			active = true;
+			textPresentation.mergeStyleRange(rs);
+		}
+		for (CoverageInformationItem child : childs) {
+			child.style(textPresentation);
+		}
+	}
+
+	public void style(final TextPresentation textPresentation, final Color c) {
+		if (!isRoot()) {
+			final StyleRange rs = new StyleRange();
+			rs.start = region.getOffset();
+			rs.length = region.getLength();
+			rs.background = c;
+			active = false;
+			textPresentation.replaceStyleRange(rs);
+		}
+		for (CoverageInformationItem child : childs) {
+			child.style(textPresentation, c);
+		}
+	}
 }

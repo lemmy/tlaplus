@@ -455,15 +455,11 @@ public class TLCModelLaunchDataProvider implements ITLCOutputListener
                 case EC.TLC_COVERAGE_VALUE:
                     // Commented out by LL for testing on 25 sep 2010
                     CoverageInformationItem item = CoverageInformationItem.parse(outputMessage, getModelName());
-                    if (!item.getModule().equals(ModelHelper.MC_MODEL_NAME))
-                    {
-                        // only add coverage of the spec files
-                        this.coverageInfo.add(item);
-                        if (item.getCount() == 0) {
-                        	this.zeroCoverage = true;
-                        }
-                        informPresenter(ITLCModelLaunchDataPresenter.COVERAGE);
+                    this.coverageInfo.add(item);
+                    if (item.getCount() == 0) {
+                    	this.zeroCoverage = true;
                     }
+                    informPresenter(ITLCModelLaunchDataPresenter.COVERAGE);
                     break;
                 case EC.TLC_COVERAGE_END:
                     informPresenter(ITLCModelLaunchDataPresenter.COVERAGE_END);

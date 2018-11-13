@@ -25,17 +25,31 @@
  ******************************************************************************/
 package org.lamport.tla.toolbox.tool.tlc.output.data;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.SortedSet;
+import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
+
+import org.eclipse.jface.resource.JFaceResources;
+import org.eclipse.jface.text.BadLocationException;
+import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.text.IRegion;
+import org.eclipse.swt.graphics.RGB;
+import org.lamport.tla.toolbox.util.AdapterFactory;
 
 public class CoverageInformation implements Iterable<CoverageInformationItem> {
 	
 	private final TreeSet<Long> counts = new TreeSet<>();
 	
 	private final List<CoverageInformationItem> items = new ArrayList<>();
+	
+	private final TreeMap<Integer, List<CoverageInformationItem>> offset2cii = new TreeMap<>();
 
 	public void add(final CoverageInformationItem item) {
 		this.counts.add(item.getCount());
@@ -57,10 +71,75 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 
 	private static final int BLUE = 240;
 
-	public int getHue(final CoverageInformationItem item) {
+	private int getHue(final CoverageInformationItem item) {
 		final int size = counts.size();
 		final float r = 240f / size;
 		final SortedSet<Long> headSet = counts.headSet(item.getCount());
 		return BLUE - Math.round(r * headSet.size());
+	}
+	
+	private CoverageInformationItem root;
+
+	public CoverageInformationItem getRoot(final String filename) {
+		final CoverageInformationItem root = new CoverageInformationItem();
+		
+		final Deque<CoverageInformationItem> stack = new ArrayDeque<>();
+		stack.push(root.setLayer(-1));
+		
+		for (CoverageInformationItem item : items) {
+			if (filename.equals(item.getModuleLocation().source())) {
+				int layer = item.getLayer();
+				while (layer <= stack.peek().getLayer()) {
+					stack.pop();
+				}
+				stack.peek().addChild(item);
+				stack.push(item);
+			}
+		}
+		
+		return root;
+	}
+	
+	public CoverageInformationItem getRoot() {
+		if (root == null) {
+			root = getRoot(items.get(0).getModuleLocation().source());
+		}
+		return root;
+	}
+	
+	public CoverageInformationItem getNode(final int offset) {
+		return getNodes(offset).stream().findFirst().orElse(null);
+	}
+	
+	public List<CoverageInformationItem> getNodes(final int offset) {
+		final Entry<Integer, List<CoverageInformationItem>> entry = this.offset2cii.floorEntry(offset);
+		if (entry != null) {
+			return entry.getValue().stream()
+					.filter(cii -> offset <= cii.getRegion().getOffset() + cii.getRegion().getLength())
+					.collect(Collectors.toList());
+		}
+		return new ArrayList<>();
+	}
+	
+	public static final String GRAY = "GRAY";
+
+	public CoverageInformation prepare(final IDocument document) throws BadLocationException {
+		JFaceResources.getColorRegistry().put(GRAY, new RGB(211,211,211));
+		for (CoverageInformationItem item : items) {
+			// Calculate colors.
+			final int hue = getHue(item);
+			final String key = Integer.toString(hue);
+			if (!JFaceResources.getColorRegistry().hasValueFor(key)) {
+				JFaceResources.getColorRegistry().put(key, new RGB(hue, .25f, 1f));
+			}
+			item.setColor(JFaceResources.getColorRegistry().get(key));
+			
+			// Convert Location to IRegion
+			final IRegion region = AdapterFactory.locationToRegion(document, item.getModuleLocation());
+			item.setRegion(region);
+			
+			offset2cii.computeIfAbsent(region.getOffset(), c -> new ArrayList<>()).add(item);
+		}
+		return this;
 	}
 }
