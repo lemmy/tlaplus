@@ -85,7 +85,7 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 		final int size = counts.size();
 		final float r = 240f / size;
 		final SortedSet<Long> headSet = counts.headSet(count);
-		return BLUE - Math.round(r * headSet.size());
+		return BLUE - Math.round(r * (headSet.size() + 1));
 	}
 	
 	private CoverageInformationItem root;
