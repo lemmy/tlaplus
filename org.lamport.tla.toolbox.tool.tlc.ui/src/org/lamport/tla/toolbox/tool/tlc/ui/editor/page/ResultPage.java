@@ -283,6 +283,9 @@ public class ResultPage extends BasicFormPage implements ITLCModelLaunchDataPres
 						final List<IFile> savedTLAFiles = modelEditor.getModel().getSavedTLAFiles();
 						for (IFile iFile : savedTLAFiles) {
 							final CoverageInformation ci = dataProvider.getCoverageInfo(iFile);
+							if (ci.isEmpty()) {
+								return;
+							}
 							// Open the files as pages of the current model editor.
 							FileEditorInput input = new FileEditorInput(iFile);
 							if (modelEditor.findEditors(input).length == 0) {
