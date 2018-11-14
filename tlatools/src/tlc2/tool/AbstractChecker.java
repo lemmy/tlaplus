@@ -17,7 +17,7 @@ import tla2sany.semantic.SemanticNode;
 import tlc2.TLCGlobals;
 import tlc2.output.EC;
 import tlc2.output.MP;
-import tlc2.tool.coverage.OpApplNodeCollector;
+import tlc2.tool.coverage.CostModelCreator;
 import tlc2.tool.liveness.AddAndCheckLiveCheck;
 import tlc2.tool.liveness.ILiveCheck;
 import tlc2.tool.liveness.LiveCheck;
@@ -156,28 +156,29 @@ public abstract class AbstractChecker implements Cancelable
 //		next.cm = visitor.getRoot(next.pred);
 //		
         if (TLCGlobals.isCoverageEnabled()) {
+        	final CostModelCreator collector = new CostModelCreator(this.tool);
+        	
 			// TODO Start from the ModuleNode similar to how the Explorer works. It is
 			// unclear how to lookup the corresponding subtree in the global CM graph
         	// in getNextState and getInitStates of the model checker.
         	final Vect init = this.tool.getInitStateSpec();
         	for (int i = 0; i < init.size(); i++) {
         		final Action initAction = (Action) init.elementAt(i);
-       			initAction.cm = new OpApplNodeCollector(this.tool, initAction.pred).getRoot();
+       			initAction.cm = collector.getCM(initAction);
         	}
         	
         	final Map<SemanticNode, CostModel> cms = new HashMap<>(); 
         	for (Action nextAction : actions) {
         		if (cms.containsKey(nextAction.pred)) {
-        			CostModel costModel = cms.get(nextAction.pred);
-        			nextAction.cm = costModel;
+        			nextAction.cm = cms.get(nextAction.pred);
         		} else {
-           			nextAction.cm = new OpApplNodeCollector(this.tool, nextAction.pred).getRoot();
+           			nextAction.cm = collector.getCM(nextAction);
            			cms.put(nextAction.pred, nextAction.cm);
         		}
         	}
         	
         	for (Action invariant : invariants) {
-        		invariant.cm = new OpApplNodeCollector(this.tool, invariant.pred).getRoot();
+        		invariant.cm = collector.getCM(invariant);
         	}
         }
         

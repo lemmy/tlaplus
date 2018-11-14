@@ -38,11 +38,12 @@ import tla2sany.semantic.OpDefNode;
 import tla2sany.semantic.SemanticNode;
 import tla2sany.semantic.SymbolNode;
 import tlc2.TLCGlobals;
+import tlc2.tool.Action;
 import tlc2.tool.CostModel;
 import tlc2.tool.Tool;
 import tlc2.util.ObjLongTable;
 
-public class OpApplNodeCollector extends ExplorerVisitor {
+public class CostModelCreator extends ExplorerVisitor {
 
 	private final Deque<OpApplNodeWrapper> stack = new ArrayDeque<>();
 	private final Set<OpDefNode> opDefNodes = new HashSet<>();
@@ -51,13 +52,13 @@ public class OpApplNodeCollector extends ExplorerVisitor {
 	// Sequences.tla showed up in coverage output.
 	private final Set<OpApplNodeWrapper> nodes = new HashSet<>();
 	
-	private OpApplNodeCollector(final SemanticNode root) {
+	private CostModelCreator(final SemanticNode root) {
 		this.stack.push(new OpApplNodeWrapper());
 		root.walkGraph(new CoverageHashTable(opDefNodes), this);
 	}
 
 	// root cannot be type OpApplNode but has to be SemanticNode (see Test216).
-	public OpApplNodeCollector(final Tool tool, final SemanticNode root) {
+	public CostModelCreator(final Tool tool) {
 		// MAK 10/08/2018: Annotate OApplNodes in the semantic tree that correspond to
 		// primed vars. It is unclear why OpApplNodes do not get marked as primed when
 		// instantiated. The logic in Tool#getPrimedLocs is too obscure to tell.
@@ -66,9 +67,17 @@ public class OpApplNodeCollector extends ExplorerVisitor {
 		while ((sn = keys.nextElement()) != null) {
 			this.nodes.add(new OpApplNodeWrapper((OpApplNode) sn));
 		}
-
+	}
+	
+	public CostModel getCM(final Action act) {
+		this.opDefNodes.clear();
+		this.stack.clear();
+		
 		this.stack.push(new OpApplNodeWrapper());
-		root.walkGraph(new CoverageHashTable(opDefNodes), this);
+		act.pred.walkGraph(new CoverageHashTable(opDefNodes), this);
+		
+		assert this.stack.peek().isRoot();
+		return this.stack.peek().getRoot();
 	}
 
 	@Override
@@ -90,8 +99,8 @@ public class OpApplNodeCollector extends ExplorerVisitor {
 				final OpDefNode odn = (OpDefNode) val;
 				final ExprNode body = odn.getBody();
 				if (body instanceof OpApplNode) {
-					final OpApplNodeCollector substitution = new OpApplNodeCollector(body);
-					oan.addChild((OpApplNodeWrapper) substitution.getRoot());
+					final CostModelCreator substitution = new CostModelCreator(body);
+					oan.addChild((OpApplNodeWrapper) substitution.getModel());
 				}
 			}			
 			
@@ -132,7 +141,7 @@ public class OpApplNodeCollector extends ExplorerVisitor {
 		}
 	}
 
-	public CostModel getRoot() {
+	public CostModel getModel() {
 		// TODO Find root for the given pred
 		assert this.stack.peek().isRoot();
 		return this.stack.peek().getRoot();
