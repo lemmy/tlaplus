@@ -5,6 +5,7 @@ package tlc2.tool;
 
 import java.io.Serializable;
 
+import tla2sany.semantic.OpDefNode;
 import tla2sany.semantic.SemanticNode;
 import tlc2.util.Context;
 import util.UniqueString;
@@ -18,6 +19,7 @@ public final class Action implements ToolGlobals, Serializable {
   public final SemanticNode pred;     // Expression of the action
   public final Context con;           // Context of the action
   private final UniqueString actionName;
+  private OpDefNode opDef = null;
   public CostModel cm = CostModel.DO_NOT_RECORD;
 
   /* Constructors */
@@ -29,6 +31,11 @@ public final class Action implements ToolGlobals, Serializable {
 	  this.pred = pred;
 	  this.con = con;
 	  this.actionName = actionName;
+  }
+
+  public Action(SemanticNode pred, Context con, OpDefNode opDef) {
+	  this(pred, con, opDef.getName());
+	  this.opDef = opDef;
   }
 
 /* Returns a string representation of this action.  */
@@ -49,5 +56,9 @@ public final class Action implements ToolGlobals, Serializable {
    */
   public final UniqueString getName() {
 	  return actionName;
+  }
+  
+  public final OpDefNode getOpDef() {
+	  return this.opDef;
   }
 }

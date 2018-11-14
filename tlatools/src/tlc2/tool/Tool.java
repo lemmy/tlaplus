@@ -261,7 +261,7 @@ public class Tool
         }
       }
       if (opcode == 0) {
-        Action action = new Action(next, con, opNode.getName());
+        Action action = new Action(next, con, (OpDefNode) opNode);
         this.actionVec.addElement(action);
         return;
       }
