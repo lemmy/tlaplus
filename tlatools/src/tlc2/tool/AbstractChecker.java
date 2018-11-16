@@ -17,6 +17,7 @@ import tla2sany.semantic.SemanticNode;
 import tlc2.TLCGlobals;
 import tlc2.output.EC;
 import tlc2.output.MP;
+import tlc2.tool.coverage.CostModel;
 import tlc2.tool.coverage.CostModelCreator;
 import tlc2.tool.liveness.AddAndCheckLiveCheck;
 import tlc2.tool.liveness.ILiveCheck;
@@ -139,11 +140,6 @@ public abstract class AbstractChecker implements Cancelable
         this.impliedActions = this.tool.getImpliedActions(); // implied-actions to be checked
         this.actions = this.tool.getActions(); // the sub-actions
 
-//		final Action next = tool.getNextStateSpec();
-//		visitor = new OpApplNodeCollector(this.tool, (OpApplNode) next.pred, specObj);
-//		next.pred.walkGraph(new OpApplNodeCollector.DummyHashTable(), visitor);
-//		next.cm = visitor.getRoot(next.pred);
-//		
         if (TLCGlobals.isCoverageEnabled()) {
         	final CostModelCreator collector = new CostModelCreator(this.tool);
         	

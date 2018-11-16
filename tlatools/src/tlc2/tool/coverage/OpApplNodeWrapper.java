@@ -28,7 +28,6 @@ package tlc2.tool.coverage;
 import tla2sany.semantic.OpApplNode;
 import tla2sany.semantic.SemanticNode;
 import tla2sany.st.Location;
-import tlc2.tool.CostModel;
 
 public class OpApplNodeWrapper extends CostModelNode implements Comparable<OpApplNodeWrapper>, CostModel {
 
@@ -127,11 +126,6 @@ public class OpApplNodeWrapper extends CostModelNode implements Comparable<OpApp
 		assert this.recursive == null;
 		this.recursive = recursive;
 		return this;
-	}
-	
-	public void addChild(final OpApplNodeWrapper child) {
-		final boolean newlyInserted = this.children.put(child.node, child) == null;
-		assert newlyInserted;
 	}
 	
 	public CostModelNode getRoot() {

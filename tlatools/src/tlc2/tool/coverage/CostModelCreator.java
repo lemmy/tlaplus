@@ -39,13 +39,12 @@ import tla2sany.semantic.SemanticNode;
 import tla2sany.semantic.SymbolNode;
 import tlc2.TLCGlobals;
 import tlc2.tool.Action;
-import tlc2.tool.CostModel;
 import tlc2.tool.Tool;
 import tlc2.util.ObjLongTable;
 
 public class CostModelCreator extends ExplorerVisitor {
 
-	private final Deque<OpApplNodeWrapper> stack = new ArrayDeque<>();
+	private final Deque<CostModelNode> stack = new ArrayDeque<>();
 	private final Set<OpDefNode> opDefNodes = new HashSet<>();
 	// OpAppNode does not implement equals/hashCode which causes problem when added
 	// to sets or maps. E.g. for a test, an OpApplNode instance belonging to
@@ -109,8 +108,8 @@ public class CostModelCreator extends ExplorerVisitor {
 			if (operator instanceof OpDefNode) {
 				final OpDefNode odn = (OpDefNode) operator;
 				if (odn.getInRecursive()) {
-					final OpApplNodeWrapper recursive = stack.stream()
-							.filter(w -> w.getNode() != null && w.getNode().getOperator() == odn).findFirst()
+					final OpApplNodeWrapper recursive = (OpApplNodeWrapper) stack.stream()
+							.filter(w -> w.getNode() != null && ((OpApplNode) w.getNode()).getOperator() == odn).findFirst()
 							.orElse(null);
 					if (recursive != null) {
 						oan.setRecursive(recursive);
@@ -118,7 +117,7 @@ public class CostModelCreator extends ExplorerVisitor {
 				}
 			}
 			
-			final OpApplNodeWrapper parent = stack.peek();
+			final CostModelNode parent = stack.peek();
 			parent.addChild(oan.setLevel(parent.getLevel() + 1));
 			stack.push(oan);
 		} else if (exploreNode instanceof OpDefNode) {
@@ -133,7 +132,7 @@ public class CostModelCreator extends ExplorerVisitor {
 			if (((OpApplNode) exploreNode).isStandardModule()) {
 				return;
 			}
-			final OpApplNodeWrapper pop = stack.pop();
+			final CostModelNode pop = stack.pop();
 			assert pop.getNode() == exploreNode;
 		} else if (exploreNode instanceof OpDefNode) {
 			final boolean removed = opDefNodes.remove((OpDefNode) exploreNode);

@@ -12,6 +12,7 @@ import java.util.Set;
 import tla2sany.semantic.OpDeclNode;
 import tla2sany.semantic.SemanticNode;
 import tla2sany.semantic.SymbolNode;
+import tlc2.tool.coverage.CostModel;
 import tlc2.util.Context;
 import tlc2.value.Value;
 import tlc2.value.ValueInputStream;

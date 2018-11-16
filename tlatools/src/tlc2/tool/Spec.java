@@ -45,6 +45,7 @@ import tlc2.TLCGlobals;
 import tlc2.module.BuiltInModuleHelper;
 import tlc2.output.EC;
 import tlc2.output.MP;
+import tlc2.tool.coverage.CostModel;
 import tlc2.util.Context;
 import tlc2.util.List;
 import tlc2.util.ObjLongTable;

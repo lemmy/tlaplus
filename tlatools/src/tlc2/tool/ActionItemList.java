@@ -4,6 +4,7 @@
 package tlc2.tool;
 
 import tla2sany.semantic.SemanticNode;
+import tlc2.tool.coverage.CostModel;
 import tlc2.util.Context;
 
 public class ActionItemList {

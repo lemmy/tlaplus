@@ -11,8 +11,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
 import tla2sany.semantic.SemanticNode;
-import tlc2.tool.CostModel;
 import tlc2.tool.FingerprintException;
+import tlc2.tool.coverage.CostModel;
 import tlc2.util.Context;
 import util.Assert;
 import util.ToolIO;
