@@ -72,7 +72,7 @@ public class CostModelCreator extends ExplorerVisitor {
 		this.opDefNodes.clear();
 		this.stack.clear();
 		
-		this.stack.push(new OpApplNodeWrapper());
+		this.stack.push(new ActionWrapper(act));
 		act.pred.walkGraph(new CoverageHashTable(opDefNodes), this);
 		
 		assert this.stack.peek().isRoot();
@@ -141,7 +141,6 @@ public class CostModelCreator extends ExplorerVisitor {
 	}
 
 	public CostModel getModel() {
-		// TODO Find root for the given pred
 		assert this.stack.peek().isRoot();
 		return this.stack.peek().getRoot();
 	}
