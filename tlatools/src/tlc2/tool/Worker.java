@@ -10,13 +10,11 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 
-import tla2sany.semantic.SemanticNode;
 import tlc2.output.EC;
 import tlc2.output.MP;
 import tlc2.tool.queue.IStateQueue;
 import tlc2.util.BufferedRandomAccessFile;
 import tlc2.util.IdThread;
-import tlc2.util.ObjLongTable;
 import tlc2.util.statistics.FixedSizedBucketStatistics;
 import tlc2.util.statistics.IBucketStatistics;
 import util.FileUtil;
@@ -30,7 +28,6 @@ public class Worker extends IdThread implements IWorker {
 	 */
 	private final ModelChecker tlc;
 	private final IStateQueue squeue;
-	private final ObjLongTable<SemanticNode> astCounts;
 	private final IBucketStatistics outDegree;
 	private final String filename;
 	private final BufferedRandomAccessFile raf;
@@ -46,15 +43,12 @@ public class Worker extends IdThread implements IWorker {
 		this.setName("TLC Worker " + id);
 		this.tlc = (ModelChecker) tlc;
 		this.squeue = this.tlc.theStateQueue;
-		this.astCounts = new ObjLongTable<SemanticNode>(10);
 		this.outDegree = new FixedSizedBucketStatistics(this.getName(), 32); // maximum outdegree of 32 appears sufficient for now.
 		this.setName("TLCWorkerThread-" + String.format("%03d", id));
 
 		this.filename = metadir + FileUtil.separator + specFile + "-" + myGetId();
 		this.raf = new BufferedRandomAccessFile(filename + TLCTrace.EXT, "rw");
 	}
-
-  public final ObjLongTable<SemanticNode> getCounts() { return this.astCounts; }
 
 	/**
    * This method gets a state from the queue, generates all the
@@ -75,7 +69,7 @@ public class Worker extends IdThread implements IWorker {
 					return;
 				}
 				setCurrentState(curState);
-				if (this.tlc.doNext(curState, this.astCounts, this)) {
+				if (this.tlc.doNext(curState, this)) {
 					return;
 				}
 			}

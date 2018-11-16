@@ -111,12 +111,7 @@ public class Tool
       SpecObj processSpec = super.processSpec(spec);
 
       // Initialize state.
-      if (TLCGlobals.isCoverageEnabled()) {
-          TLCStateMutSource.init(this);
-      }
-      else {
-          TLCStateMut.init(this);
-      }
+      TLCStateMut.init(this);
 
       // Pre-evaluate all the definitions in the spec that are constants.
       if (preprocess) {
