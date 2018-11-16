@@ -4,20 +4,11 @@ import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.MathContext;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
 
 import tla2sany.modanalyzer.SpecObj;
-import tla2sany.semantic.SemanticNode;
 import tlc2.TLCGlobals;
 import tlc2.output.EC;
 import tlc2.output.MP;
-import tlc2.tool.coverage.CostModel;
 import tlc2.tool.coverage.CostModelCreator;
 import tlc2.tool.liveness.AddAndCheckLiveCheck;
 import tlc2.tool.liveness.ILiveCheck;
@@ -26,7 +17,6 @@ import tlc2.tool.liveness.Liveness;
 import tlc2.tool.liveness.NoOpLiveCheck;
 import tlc2.util.IStateWriter;
 import tlc2.util.IdThread;
-import tlc2.util.Vect;
 import tlc2.util.statistics.ConcurrentBucketStatistics;
 import tlc2.util.statistics.DummyBucketStatistics;
 import tlc2.util.statistics.IBucketStatistics;
@@ -141,30 +131,7 @@ public abstract class AbstractChecker implements Cancelable
         this.actions = this.tool.getActions(); // the sub-actions
 
         if (TLCGlobals.isCoverageEnabled()) {
-        	final CostModelCreator collector = new CostModelCreator(this.tool);
-        	
-			// TODO Start from the ModuleNode similar to how the Explorer works. It is
-			// unclear how to lookup the corresponding subtree in the global CM graph
-        	// in getNextState and getInitStates of the model checker.
-        	final Vect init = this.tool.getInitStateSpec();
-        	for (int i = 0; i < init.size(); i++) {
-        		final Action initAction = (Action) init.elementAt(i);
-       			initAction.cm = collector.getCM(initAction);
-        	}
-        	
-        	final Map<SemanticNode, CostModel> cms = new HashMap<>(); 
-        	for (Action nextAction : actions) {
-        		if (cms.containsKey(nextAction.pred)) {
-        			nextAction.cm = cms.get(nextAction.pred);
-        		} else {
-           			nextAction.cm = collector.getCM(nextAction);
-           			cms.put(nextAction.pred, nextAction.cm);
-        		}
-        	}
-        	
-        	for (Action invariant : invariants) {
-        		invariant.cm = collector.getCM(invariant);
-        	}
+        	CostModelCreator.create(this.tool);
         }
         
         if (this.checkLiveness) {
@@ -222,33 +189,7 @@ public abstract class AbstractChecker implements Cancelable
 		if (TLCGlobals.isCoverageEnabled() && this.actions.length > 0)
 		{
             MP.printMessage(EC.TLC_COVERAGE_START);
-            
-        	final Vect init = this.tool.getInitStateSpec();
-        	for (int i = 0; i < init.size(); i++) {
-        		final Action initAction = (Action) init.elementAt(i);
-        		initAction.cm.report();
-        	}
-
-            final Set<CostModel> reported = new HashSet<>();
-            final Set<Action> sortedActions = new TreeSet<>(new Comparator<Action>() {
-				@Override
-				public int compare(Action o1, Action o2) {
-					return o1.pred.getLocation().compareTo(o2.pred.getLocation());
-				}
-			});
-            sortedActions.addAll(Arrays.asList(this.actions));
-            for (Action action : sortedActions) {
-            	if (!reported.contains(action.cm)) {
-            		action.cm.report();
-            		reported.add(action.cm);
-            	}
-			}
-            
-            for (Action invariant : invariants) {
-            	//TODO Might have to be ordered similar to next-state actions above.
-            	invariant.cm.report();
-			}
-            
+            CostModelCreator.report(this.tool);
             MP.printMessage(EC.TLC_COVERAGE_END);
         }
     }
