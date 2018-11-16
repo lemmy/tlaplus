@@ -15,6 +15,7 @@ import tla2sany.semantic.OpDeclNode;
 import tla2sany.semantic.SemanticNode;
 import tla2sany.semantic.SymbolNode;
 import tlc2.output.EC;
+import tlc2.tool.coverage.CostModel;
 import tlc2.value.Value;
 import tlc2.value.ValueInputStream;
 import tlc2.value.ValueOutputStream;

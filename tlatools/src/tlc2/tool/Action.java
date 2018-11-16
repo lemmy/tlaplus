@@ -7,6 +7,7 @@ import java.io.Serializable;
 
 import tla2sany.semantic.OpDefNode;
 import tla2sany.semantic.SemanticNode;
+import tlc2.tool.coverage.CostModel;
 import tlc2.util.Context;
 import util.UniqueString;
 

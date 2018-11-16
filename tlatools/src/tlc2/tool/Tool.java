@@ -28,6 +28,7 @@ import tla2sany.semantic.ThmOrAssumpDefNode;
 import tlc2.TLCGlobals;
 import tlc2.output.EC;
 import tlc2.output.MP;
+import tlc2.tool.coverage.CostModel;
 import tlc2.util.Context;
 import tlc2.util.IdThread;
 import tlc2.util.Vect;
@@ -768,6 +769,7 @@ public class Tool
     TLCState s1 = TLCState.Empty.createEmpty();
     StateVec nss = new StateVec(0);
     this.getNextStates(action.pred, acts, action.con, state, s1, nss, action.cm);
+    action.cm.add(nss.size());
     return nss;
   }
 

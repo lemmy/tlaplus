@@ -35,7 +35,6 @@ import tla2sany.st.Location;
 import tlc2.TLCGlobals;
 import tlc2.output.EC;
 import tlc2.output.MP;
-import tlc2.tool.CostModel;
 import tlc2.util.statistics.CounterStatistic;
 
 public abstract class CostModelNode implements CostModel {
@@ -72,7 +71,7 @@ public abstract class CostModelNode implements CostModel {
 	
 	// -- -- //
 
-	public boolean isPrimed() {
+	protected boolean isPrimed() {
 		return false;
 	}
 
@@ -84,7 +83,7 @@ public abstract class CostModelNode implements CostModel {
 		print(0, Calculate.FRESH);
 	}
 
-	public void print(int level, final Calculate fresh) {
+	protected void print(int level, final Calculate fresh) {
 		final Set<Long> collectedEvalCounts = new HashSet<>();
 		this.collectChildren(collectedEvalCounts, fresh);
 		if (collectedEvalCounts.isEmpty()) {
@@ -134,22 +133,22 @@ public abstract class CostModelNode implements CostModel {
 		printChildren(level);
 	}
 	
-	private void printChildren(final int level) {
+	protected void printChildren(final int level) {
 		for (CostModelNode cmn : children.values()) {
 			cmn.print(level, Calculate.CACHED);
 		}
 	}
 
-	private void printSelf(final int level, final long count) {
+	protected void printSelf(final int level, final long count) {
 		MP.printMessage(EC.TLC_COVERAGE_VALUE, new String[] {
 				indentBegin(level, TLCGlobals.coverageIndent, getLocation().toString()), String.valueOf(count) });
 	}
 
-	private void printSelf(final int level) {
+	protected void printSelf(final int level) {
 		printSelf(level, getEvalCount());
 	}
 
-	private static String indentBegin(final int n, final char c, final String str) {
+	protected static String indentBegin(final int n, final char c, final String str) {
 		assert n >= 0;
 		final String whitespaces = new String(new char[n]).replace('\0', c);
 		return whitespaces + str;
@@ -161,15 +160,15 @@ public abstract class CostModelNode implements CostModel {
 		FRESH, CACHED;
 	}
 
-	private final Set<Long> childCounts = new HashSet<>();
+	protected final Set<Long> childCounts = new HashSet<>();
 
-	private void collectChildren(final Set<Long> result, Calculate c) {
+	protected void collectChildren(final Set<Long> result, Calculate c) {
 		for (CostModelNode cmn : children.values()) {
 			cmn.collectEvalCounts(result, c);
 		}
 	}
 
-	public void collectEvalCounts(final Set<Long> result, Calculate c) {
+	protected void collectEvalCounts(final Set<Long> result, Calculate c) {
 		if (c == Calculate.FRESH) {
 			childCounts.clear();
 			if (getEvalCount() > 0 || this.isPrimed()) {
@@ -178,5 +177,24 @@ public abstract class CostModelNode implements CostModel {
 			collectChildren(childCounts, c);
 		}
 		result.addAll(childCounts);
+	}
+	
+	// -- --//
+	
+	void addChild(final CostModelNode child) {
+		final boolean newlyInserted = this.children.put(child.getNode(), child) == null;
+		assert newlyInserted;
+	}
+
+	abstract SemanticNode getNode();
+	
+	abstract CostModelNode getRoot();
+	
+	boolean isRoot() {
+		return false;
+	}
+
+	int getLevel() {
+		return 0;
 	}
 }

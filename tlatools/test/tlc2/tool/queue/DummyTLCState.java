@@ -6,9 +6,9 @@ import java.util.Set;
 import tla2sany.semantic.OpDeclNode;
 import tla2sany.semantic.SemanticNode;
 import tla2sany.semantic.SymbolNode;
-import tlc2.tool.CostModel;
 import tlc2.tool.StateVec;
 import tlc2.tool.TLCState;
+import tlc2.tool.coverage.CostModel;
 import tlc2.value.Value;
 import util.UniqueString;
 

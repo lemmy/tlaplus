@@ -10,10 +10,10 @@ import tla2sany.semantic.ExprNode;
 import tla2sany.semantic.OpApplNode;
 import tla2sany.st.TreeNode;
 import tlc2.tool.ActionItemList;
-import tlc2.tool.CostModel;
 import tlc2.tool.TLCState;
 import tlc2.tool.TLCStateFun;
 import tlc2.tool.Tool;
+import tlc2.tool.coverage.CostModel;
 import tlc2.util.Context;
 
 /**
