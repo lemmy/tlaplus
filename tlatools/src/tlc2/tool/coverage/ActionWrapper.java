@@ -27,6 +27,8 @@ package tlc2.tool.coverage;
 
 import tla2sany.semantic.SemanticNode;
 import tla2sany.st.Location;
+import tlc2.output.EC;
+import tlc2.output.MP;
 import tlc2.tool.Action;
 
 public class ActionWrapper extends CostModelNode {
@@ -42,6 +44,7 @@ public class ActionWrapper extends CostModelNode {
 	 */
 	@Override
 	protected Location getLocation() {
+		//TODO return the location of the OpDefNode and not the OpApplNode.
 		return this.action.pred.getLocation();
 	}
 
@@ -57,9 +60,8 @@ public class ActionWrapper extends CostModelNode {
 	 * @see tlc2.tool.CostModel#get(tla2sany.semantic.SemanticNode)
 	 */
 	@Override
-	public CostModel get(final SemanticNode cmpts) {
-		assert action.pred == cmpts;
-		return this;
+	public CostModel get(final SemanticNode eon) {
+		return this.children.get(eon);
 	}
 
 	/* (non-Javadoc)
@@ -83,5 +85,16 @@ public class ActionWrapper extends CostModelNode {
 	@Override
 	boolean isRoot() {
 		return true;
+	}
+
+	public void report() {
+		// Report count for action itself.
+		MP.printMessage(EC.TLC_COVERAGE_ACTION_VALUE, new String[] { getLocation().toString(), String.valueOf(getEvalCount()) });
+		
+		// An action has single child which is the OpApplNodeWrapper with the OpApplNode
+		// for this OpDefNode.
+		assert this.children.size() == 1;
+		// Let children report.
+		this.children.values().forEach(c -> c.report());
 	}
 }
