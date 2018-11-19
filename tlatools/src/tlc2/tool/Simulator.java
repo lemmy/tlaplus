@@ -397,9 +397,7 @@ public class Simulator implements Cancelable {
 	 */
 	public final void reportCoverage() {
 		if (TLCGlobals.isCoverageEnabled()) {
-			MP.printMessage(EC.TLC_COVERAGE_START);
             CostModelCreator.report(this.tool);
-			MP.printMessage(EC.TLC_COVERAGE_END);
 		}
 	}
 

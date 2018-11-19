@@ -43,6 +43,8 @@ import tla2sany.semantic.OpDefNode;
 import tla2sany.semantic.SemanticNode;
 import tla2sany.semantic.SymbolNode;
 import tlc2.TLCGlobals;
+import tlc2.output.EC;
+import tlc2.output.MP;
 import tlc2.tool.Action;
 import tlc2.tool.Tool;
 import tlc2.util.ObjLongTable;
@@ -179,6 +181,7 @@ public class CostModelCreator extends ExplorerVisitor {
 	}
 	
 	public static void report(final Tool tool) {
+        MP.printMessage(EC.TLC_COVERAGE_START);
     	final Vect init = tool.getInitStateSpec();
     	for (int i = 0; i < init.size(); i++) {
     		final Action initAction = (Action) init.elementAt(i);
@@ -205,5 +208,6 @@ public class CostModelCreator extends ExplorerVisitor {
         	//TODO Might have to be ordered similar to next-state actions above.
         	invariant.cm.report();
 		}
+        MP.printMessage(EC.TLC_COVERAGE_END);
 	}
 }
