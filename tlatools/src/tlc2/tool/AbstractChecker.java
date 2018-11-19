@@ -188,9 +188,7 @@ public abstract class AbstractChecker implements Cancelable
 		// Without actions (empty spec) there won't be any statistics anyway.
 		if (TLCGlobals.isCoverageEnabled() && this.actions.length > 0)
 		{
-            MP.printMessage(EC.TLC_COVERAGE_START);
             CostModelCreator.report(this.tool);
-            MP.printMessage(EC.TLC_COVERAGE_END);
         }
     }
     
