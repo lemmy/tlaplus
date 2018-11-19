@@ -160,6 +160,7 @@ public abstract class CostModelNode implements CostModel {
 		FRESH, CACHED;
 	}
 
+	//TODO Push down into OpApplNodeWrapper bc useless for ActionWrapper
 	protected final Set<Long> childCounts = new HashSet<>();
 
 	protected void collectChildren(final Set<Long> result, Calculate c) {

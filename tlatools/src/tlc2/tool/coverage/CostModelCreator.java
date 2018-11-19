@@ -65,7 +65,7 @@ public class CostModelCreator extends ExplorerVisitor {
 	}
 
 	// root cannot be type OpApplNode but has to be SemanticNode (see Test216).
-	public CostModelCreator(final Tool tool) {
+	private CostModelCreator(final Tool tool) {
 		// MAK 10/08/2018: Annotate OApplNodes in the semantic tree that correspond to
 		// primed vars. It is unclear why OpApplNodes do not get marked as primed when
 		// instantiated. The logic in Tool#getPrimedLocs is too obscure to tell.
@@ -76,7 +76,7 @@ public class CostModelCreator extends ExplorerVisitor {
 		}
 	}
 	
-	public CostModel getCM(final Action act) {
+	private CostModel getCM(final Action act) {
 		this.opDefNodes.clear();
 		this.stack.clear();
 		
@@ -148,7 +148,7 @@ public class CostModelCreator extends ExplorerVisitor {
 		}
 	}
 
-	public CostModel getModel() {
+	private CostModel getModel() {
 		assert this.stack.peek().isRoot();
 		return this.stack.peek().getRoot();
 	}
