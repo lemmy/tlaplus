@@ -27,6 +27,7 @@ package tlc2.tool.coverage;
 
 import tla2sany.semantic.OpApplNode;
 import tla2sany.semantic.SemanticNode;
+import tla2sany.semantic.SubstInNode;
 import tla2sany.st.Location;
 
 public class OpApplNodeWrapper extends CostModelNode implements Comparable<OpApplNodeWrapper>, CostModel {
@@ -160,6 +161,9 @@ public class OpApplNodeWrapper extends CostModelNode implements Comparable<OpApp
 	public boolean matches(final SemanticNode expr) {
 		if (expr instanceof OpApplNode) {
 			return expr == node;
+		} else if (expr instanceof SubstInNode) {
+			final SubstInNode sin = (SubstInNode) expr;
+			return sin.getBody() == node;
 		}
 		return true;
 	}
