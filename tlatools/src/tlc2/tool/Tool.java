@@ -2637,7 +2637,7 @@ public class Tool
           if (val instanceof LazyValue)
           {
             LazyValue lv = (LazyValue) val;
-            return this.enabled(lv.expr, acts, lv.con, s0, s1, cm);
+            return this.enabled(lv.expr, acts, lv.con, s0, s1, lv.cm);
           }
 
           Object bval = val;

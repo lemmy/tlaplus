@@ -57,7 +57,7 @@ public abstract class Value implements ValueConstants, Serializable {
 			    Value.ppr(toString()));
   }
 
-  protected transient CostModel cm = CostModel.DO_NOT_RECORD;
+  public transient CostModel cm = CostModel.DO_NOT_RECORD;
   
   public void setCostModel(CostModel cm) {
 	  this.cm = cm;
