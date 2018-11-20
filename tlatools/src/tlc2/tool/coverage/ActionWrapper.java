@@ -46,6 +46,9 @@ public class ActionWrapper extends CostModelNode {
 	@Override
 	protected Location getLocation() {
 		//TODO return the location of the OpDefNode and not the OpApplNode.
+		if (this.action.getOpDef() != null) {
+			return this.action.getOpDef().getLocation();
+		}
 		return this.action.pred.getLocation();
 	}
 
