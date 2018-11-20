@@ -370,7 +370,7 @@ public class Tool
             Context c1 = c;
             for (int i = 0; i < subs.length; i++) {
               Subst sub = subs[i];
-              c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, false, cm));
+              c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, false, sub.getCM()));
             }
             this.getInitStates(init1.getBody(), acts, c1, ps, states, cm);
             return;
@@ -835,7 +835,7 @@ public class Tool
   	Context c1 = c;
   	for (int i = 0; i < slen; i++) {
   	  Subst sub = subs[i];
-  	  c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, false, cm));
+  	  c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, false, sub.getCM()));
   	}
   	return this.getNextStates(pred1.getBody(), acts, c1, s0, s1, nss, cm);
   }
@@ -1499,7 +1499,7 @@ public class Tool
   	Context c1 = c;
   	for (int i = 0; i < slen; i++) {
   	  Subst sub = subs[i];
-  	  c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, true, cm));
+  	  c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, true, sub.getCM()));
   	}
   	return this.eval(expr1.getBody(), c1, s0, s1, control, cm);
   }
@@ -2518,7 +2518,7 @@ public class Tool
             Context c1 = c;
             for (int i = 0; i < slen; i++) {
               Subst sub = subs[i];
-              c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, false, cm));
+              c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, false, sub.getCM()));
             }
             return this.enabled(pred1.getBody(), acts, c1, s0, s1, cm);
           }
