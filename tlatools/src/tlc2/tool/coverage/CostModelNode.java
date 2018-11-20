@@ -27,7 +27,6 @@ package tlc2.tool.coverage;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 
 import tla2sany.semantic.SemanticNode;
 import tla2sany.st.Location;
@@ -48,26 +47,6 @@ public abstract class CostModelNode implements CostModel {
 		return this.stats.getCount();
 	}
 
-	protected long getCount(Set<Long> collectWeights) {
-		assert collectWeights.size() == 1;
-		for (Long l : collectWeights) {
-			return l;
-		}
-		return -1l; // make compiler happy
-	}
-
-	@Override
-	public void add(long size) {
-		this.stats.add(size);
-	}
-
-	@Override
-	public void increment() {
-		this.stats.increment();
-	}
-	
-	// -- -- //
-
 	protected abstract Location getLocation();
 
 	// -- --//
@@ -79,7 +58,8 @@ public abstract class CostModelNode implements CostModel {
 
 	abstract SemanticNode getNode();
 	
-	abstract CostModelNode getRoot();
+	@Override
+	public abstract CostModelNode getRoot();
 	
 	boolean isRoot() {
 		return false;
@@ -87,5 +67,27 @@ public abstract class CostModelNode implements CostModel {
 
 	int getLevel() {
 		return 0;
+	}
+	
+	// -- -- //
+
+	@Override
+	public void incInvocations(long size) {
+		this.stats.add(size);
+	}
+
+	@Override
+	public void incInvocations() {
+		this.stats.increment();
+	}
+
+	@Override
+	public void incUnseen() {
+		throw new UnsupportedOperationException("Not applicable");
+	}
+
+	@Override
+	public void incUnseen(final long value) {
+		throw new UnsupportedOperationException("Not applicable");
 	}
 }

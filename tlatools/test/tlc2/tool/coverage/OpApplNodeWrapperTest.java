@@ -61,7 +61,7 @@ public class OpApplNodeWrapperTest {
 	@Test
 	public void testReportCoverage02() {
 		final OpApplNodeWrapper root = new OpApplNodeWrapper();
-		root.add(42);
+		root.incInvocations(42);
 		
 		root.addChild(getNode(23));
 		root.addChild(getNode(24));
@@ -77,7 +77,7 @@ public class OpApplNodeWrapperTest {
 	@Test
 	public void testReportCoverage03() {
 		final OpApplNodeWrapper root = new OpApplNodeWrapper();
-		root.add(42);
+		root.incInvocations(42);
 		
 		OpApplNodeWrapper childA = getNode(23);
 		childA.addChild(getNode(546));
@@ -112,7 +112,7 @@ public class OpApplNodeWrapperTest {
 	@Test
 	public void testReportCoverage04() {
 		final OpApplNodeWrapper root = new OpApplNodeWrapper();
-		root.add(1);
+		root.incInvocations(1);
 		
 		OpApplNodeWrapper childA = getNode(1);
 		root.addChild(childA);

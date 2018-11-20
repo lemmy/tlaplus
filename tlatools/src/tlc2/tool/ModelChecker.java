@@ -473,6 +473,7 @@ public class ModelChecker extends AbstractChecker
 		    // be in the trace in case either invariant or implied action
 		    // checks want to print the trace. 
 			worker.writeState(curState, fp, succState);
+			action.cm.incUnseen();
 		}
 		// For liveness checking:
 		if (this.checkLiveness)

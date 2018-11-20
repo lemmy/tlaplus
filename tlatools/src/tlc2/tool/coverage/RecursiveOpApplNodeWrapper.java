@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Microsoft Research. All rights reserved. 
+ * Copyright (c) Nov 20, 2018 Microsoft Research. All rights reserved. 
  *
  * The MIT License (MIT)
  * 
@@ -25,59 +25,21 @@
  ******************************************************************************/
 package tlc2.tool.coverage;
 
-import tla2sany.semantic.SemanticNode;
+public class RecursiveOpApplNodeWrapper extends OpApplNodeWrapper {
 
-public interface CostModel {
+	RecursiveOpApplNodeWrapper() {
+		super(null, null);
+	}
 
-	CostModel DO_NOT_RECORD = new CostModel() {
+	@Override
+	public boolean isRoot() {
+		assert this.getNode() == null;
+		return true;
+	}
 
-		@Override
-		public void report() {
-			// no-op
-		}
-
-		@Override
-		public CostModel get(final SemanticNode sn) {
-			return this;
-		}
-		
-		@Override
-		public CostModel getRoot() {
-			return this;
-		}
-
-		@Override
-		public void incInvocations() {
-			// no-op
-		}
-
-		@Override
-		public void incInvocations(final long value) {
-			// no-op
-		}
-
-		@Override
-		public void incUnseen() {
-			// no-op
-		}
-
-		@Override
-		public void incUnseen(final long value) {
-			// no-op
-		}
-	};
-
-	void incInvocations();
-
-	void incInvocations(final long value);
-
-	void incUnseen();
-	
-	void incUnseen(final long value);
-
-	void report();
-
-	CostModel get(final SemanticNode sn);
-	
-	CostModel getRoot();
+	@Override
+	public CostModelNode getRoot() {
+		assert this.children.size() == 1;
+		return this.children.values().iterator().next();
+	}
 }

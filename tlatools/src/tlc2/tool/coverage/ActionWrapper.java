@@ -28,16 +28,25 @@ package tlc2.tool.coverage;
 import tla2sany.semantic.SemanticNode;
 import tla2sany.semantic.SubstInNode;
 import tla2sany.st.Location;
+import tlc2.TLCGlobals;
 import tlc2.output.EC;
 import tlc2.output.MP;
 import tlc2.tool.Action;
+import tlc2.util.statistics.CounterStatistic;
 
 public class ActionWrapper extends CostModelNode {
 
-	private final Action action;
+	enum Relation {
+		INIT, NEXT, PROP;
+	}
 	
-	public ActionWrapper(final Action action) {
+	private final CounterStatistic unseen = CounterStatistic.getInstance(() -> TLCGlobals.isCoverageEnabled());
+	private final Action action;
+	private final Relation relation;
+	
+	public ActionWrapper(final Action action, Relation rel) {
 		this.action = action;
+		this.relation = rel;
 	}
 	
 	/* (non-Javadoc)
@@ -45,21 +54,36 @@ public class ActionWrapper extends CostModelNode {
 	 */
 	@Override
 	protected Location getLocation() {
-		//TODO return the location of the OpDefNode and not the OpApplNode.
 		if (this.action.getOpDef() != null) {
 			return this.action.getOpDef().getLocation();
 		}
 		return this.action.pred.getLocation();
 	}
-
+	
 	/* (non-Javadoc)
-	 * @see tlc2.tool.CostModel#increment(tla2sany.semantic.SemanticNode)
+	 * @see tlc2.tool.coverage.CostModelNode#incUnseen()
 	 */
 	@Override
-	public void increment(final SemanticNode ast) {
-		increment();
+	public void incUnseen() {
+		this.unseen.increment();
+	}
+	
+	/* (non-Javadoc)
+	 * @see tlc2.tool.coverage.CostModelNode#incUnseen(long)
+	 */
+	@Override
+	public void incUnseen(final long value) {
+		this.unseen.add(value);
 	}
 
+	/* (non-Javadoc)
+	 * @see tlc2.tool.coverage.CostModelNode#getRoot()
+	 */
+	@Override
+	public CostModelNode getRoot() {
+		return this;
+	}
+	
 	/* (non-Javadoc)
 	 * @see tlc2.tool.CostModel#get(tla2sany.semantic.SemanticNode)
 	 */
@@ -78,19 +102,24 @@ public class ActionWrapper extends CostModelNode {
 	}
 
 	@Override
-	CostModelNode getRoot() {
-		return this;
-	}
-
-	@Override
 	boolean isRoot() {
 		return true;
 	}
 
 	public void report() {
 		// Report count for action itself.
-		MP.printMessage(EC.TLC_COVERAGE_ACTION_VALUE, new String[] { getLocation().toString(), String.valueOf(getEvalCount()) });
-		
+		if (relation == Relation.PROP) {
+			assert getEvalCount() == 0L && this.unseen.getCount() == 0L;
+			MP.printMessage(EC.TLC_COVERAGE_PROPERTY, new String[] { getLocation().toString() });
+		} else if (relation == Relation.INIT) {
+			assert this.unseen.getCount() == 0L;
+			MP.printMessage(EC.TLC_COVERAGE_INIT,
+					new String[] { getLocation().toString(), String.valueOf(getEvalCount()) });
+		} else {
+			MP.printMessage(EC.TLC_COVERAGE_NEXT, new String[] { getLocation().toString(),
+					String.valueOf(this.unseen.getCount()), String.valueOf(getEvalCount()) });
+		}
+
 		// An action has single child which is the OpApplNodeWrapper with the OpApplNode
 		// for this OpDefNode unless the action's pred is a substitution.
 		assert !(this.action.pred instanceof SubstInNode) ? this.children.size() == 1 : !this.children.isEmpty();

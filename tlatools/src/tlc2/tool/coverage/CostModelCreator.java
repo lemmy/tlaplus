@@ -50,6 +50,7 @@ import tlc2.output.EC;
 import tlc2.output.MP;
 import tlc2.tool.Action;
 import tlc2.tool.Tool;
+import tlc2.tool.coverage.ActionWrapper.Relation;
 import tlc2.util.ObjLongTable;
 import tlc2.util.Vect;
 
@@ -63,8 +64,10 @@ public class CostModelCreator extends ExplorerVisitor {
 	// Sequences.tla showed up in coverage output.
 	private final Set<OpApplNodeWrapper> nodes = new HashSet<>();
 	
+	private ActionWrapper root;
+	
 	private CostModelCreator(final SemanticNode root) {
-		this.stack.push(new OpApplNodeWrapper());
+		this.stack.push(new RecursiveOpApplNodeWrapper());
 		root.walkGraph(new CoverageHashTable(opDefNodes), this);
 	}
 
@@ -76,16 +79,17 @@ public class CostModelCreator extends ExplorerVisitor {
 		final ObjLongTable<SemanticNode>.Enumerator<SemanticNode> keys = tool.getPrimedLocs().keys();
 		SemanticNode sn;
 		while ((sn = keys.nextElement()) != null) {
-			this.nodes.add(new OpApplNodeWrapper((OpApplNode) sn));
+			this.nodes.add(new OpApplNodeWrapper((OpApplNode) sn, null));
 		}
 	}
-	
-	private CostModel getCM(final Action act) {
+
+	private CostModel getCM(final Action act, final ActionWrapper.Relation relation) {
 		this.substs.clear();
 		this.opDefNodes.clear();
 		this.stack.clear();
 		
-		this.stack.push(new ActionWrapper(act));
+		this.root = new ActionWrapper(act, relation);
+		this.stack.push(root);
 		act.pred.walkGraph(new CoverageHashTable(opDefNodes), this);
 		
 		assert this.stack.peek().isRoot();
@@ -98,9 +102,8 @@ public class CostModelCreator extends ExplorerVisitor {
 			if (((OpApplNode) exploreNode).isStandardModule()) {
 				return;
 			}
-			final OpApplNodeWrapper oan = new OpApplNodeWrapper((OpApplNode) exploreNode);
+			final OpApplNodeWrapper oan = new OpApplNodeWrapper((OpApplNode) exploreNode, this.root);
 			if (nodes.contains(oan)) {
-				assert !oan.isPrimed();
 				oan.setPrimed();
 			}
 			
@@ -180,7 +183,7 @@ public class CostModelCreator extends ExplorerVisitor {
 		final Vect init = tool.getInitStateSpec();
 		for (int i = 0; i < init.size(); i++) {
 			final Action initAction = (Action) init.elementAt(i);
-			initAction.cm = collector.getCM(initAction);
+			initAction.cm = collector.getCM(initAction, Relation.INIT);
 		}
 
 		final Map<SemanticNode, CostModel> cms = new HashMap<>();
@@ -188,13 +191,13 @@ public class CostModelCreator extends ExplorerVisitor {
 			if (cms.containsKey(nextAction.pred)) {
 				nextAction.cm = cms.get(nextAction.pred);
 			} else {
-				nextAction.cm = collector.getCM(nextAction);
+				nextAction.cm = collector.getCM(nextAction, Relation.NEXT);
 				cms.put(nextAction.pred, nextAction.cm);
 			}
 		}
 
 		for (Action invariant : tool.getInvariants()) {
-			invariant.cm = collector.getCM(invariant);
+			invariant.cm = collector.getCM(invariant, Relation.PROP);
 		}
 	}
 	
