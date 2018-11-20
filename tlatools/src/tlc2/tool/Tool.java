@@ -1435,9 +1435,7 @@ public class Tool
     if (this.callStack != null) this.callStack.push(expr);
     cm = cm.get(expr);
     assert cm.matches(expr);
-    if (cm != null) {
-    	cm.increment(expr);
-    }
+    cm.increment(expr);
     try {
         ExprOrOpArgNode[] args = expr.getArgs();
         SymbolNode opNode = expr.getOperator();
