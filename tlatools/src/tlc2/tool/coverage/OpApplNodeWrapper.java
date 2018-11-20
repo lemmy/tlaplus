@@ -25,12 +25,19 @@
  ******************************************************************************/
 package tlc2.tool.coverage;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import tla2sany.semantic.OpApplNode;
 import tla2sany.semantic.SemanticNode;
 import tla2sany.st.Location;
+import tlc2.TLCGlobals;
+import tlc2.output.EC;
+import tlc2.output.MP;
 
 public class OpApplNodeWrapper extends CostModelNode implements Comparable<OpApplNodeWrapper>, CostModel {
 
+	private final Set<Long> childCounts = new HashSet<>();
 	private final OpApplNode node;
 	private boolean primed = false;
 	private int level;
@@ -176,5 +183,105 @@ public class OpApplNodeWrapper extends CostModelNode implements Comparable<OpApp
 
 	public boolean isPrimed() {
 		return this.primed;
+	}
+	
+	// ---------------- Print ---------------- //
+	
+	public void report() {
+		print(0, Calculate.FRESH);
+	}
+
+	protected void print(int level, final Calculate fresh) {
+		final Set<Long> collectedEvalCounts = new HashSet<>();
+		this.collectChildren(collectedEvalCounts, fresh);
+		if (collectedEvalCounts.isEmpty()) {
+			// Subtree has nothing to report.
+			if (getEvalCount() == 0l && !isPrimed()) {
+				// ..this node neither.
+				return;
+			} else {
+				printSelf(level++);
+				return; // Do not invoke printSelf(...) again below.
+			}
+		}
+
+		if (collectedEvalCounts.size() == 1) {
+			final long count = getCount(collectedEvalCounts);
+
+			if (count < getEvalCount()) {
+				// Cannot collapse subtree because inconsistent with this node.
+				printSelf(level++);
+				printChildren(level);
+				return;
+			}
+			if (!isPrimed() && getEvalCount() == 0l && count != 0l) {
+				// Collapse consistent subtree into this node unless this node is primed.
+				printSelf(level++, count);
+				return;
+			}
+			if (getEvalCount() == count && count == 0l) {
+				if (isPrimed()) {
+					printSelf(level++);
+				}
+				// Have a primed in subtree.
+				printChildren(level);
+				return;
+			}
+			if (getEvalCount() == count) {
+				// Have a primed in subtree.
+				printSelf(level++);
+				return;
+			}
+		}
+
+		// Subtree is inconsistent and needs to report itself.
+		if (getEvalCount() > 0 || isPrimed()) {
+			printSelf(level++);
+		}
+		printChildren(level);
+	}
+	
+	protected void printChildren(final int level) {
+		for (CostModelNode cmn : children.values()) {
+			((OpApplNodeWrapper) cmn).print(level, Calculate.CACHED);
+		}
+	}
+
+	protected void printSelf(final int level, final long count) {
+		MP.printMessage(EC.TLC_COVERAGE_VALUE, new String[] {
+				indentBegin(level, TLCGlobals.coverageIndent, getLocation().toString()), String.valueOf(count) });
+	}
+
+	protected void printSelf(final int level) {
+		printSelf(level, getEvalCount());
+	}
+
+	protected static String indentBegin(final int n, final char c, final String str) {
+		assert n >= 0;
+		final String whitespaces = new String(new char[n]).replace('\0', c);
+		return whitespaces + str;
+	}
+	
+	// ---------------- Child counts ---------------- //
+	
+	private enum Calculate {
+		FRESH, CACHED;
+	}
+
+	protected void collectChildren(final Set<Long> result, Calculate c) {
+		for (CostModelNode cmn : children.values()) {
+			((OpApplNodeWrapper) cmn).collectEvalCounts(result, c);
+		}
+	}
+
+	protected void collectEvalCounts(final Set<Long> result, Calculate c) {
+		if (c == Calculate.FRESH) {
+			childCounts.clear();
+			if (getEvalCount() > 0 || this.isPrimed()) {
+				childCounts.add(this.getEvalCount());
+			}
+			collectChildren(childCounts, c);
+		}
+		result.addAll(childCounts);
 	}
 }
