@@ -38,9 +38,12 @@ import java.util.TreeSet;
 import tla2sany.explorer.ExploreNode;
 import tla2sany.explorer.ExplorerVisitor;
 import tla2sany.semantic.ExprNode;
+import tla2sany.semantic.ExprOrOpArgNode;
 import tla2sany.semantic.OpApplNode;
 import tla2sany.semantic.OpDefNode;
 import tla2sany.semantic.SemanticNode;
+import tla2sany.semantic.Subst;
+import tla2sany.semantic.SubstInNode;
 import tla2sany.semantic.SymbolNode;
 import tlc2.TLCGlobals;
 import tlc2.output.EC;
@@ -53,6 +56,7 @@ import tlc2.util.Vect;
 public class CostModelCreator extends ExplorerVisitor {
 
 	private final Deque<CostModelNode> stack = new ArrayDeque<>();
+	private final Map<ExprOrOpArgNode, Subst> substs = new HashMap<>();
 	private final Set<OpDefNode> opDefNodes = new HashSet<>();
 	// OpAppNode does not implement equals/hashCode which causes problem when added
 	// to sets or maps. E.g. for a test, an OpApplNode instance belonging to
@@ -77,6 +81,7 @@ public class CostModelCreator extends ExplorerVisitor {
 	}
 	
 	private CostModel getCM(final Action act) {
+		this.substs.clear();
 		this.opDefNodes.clear();
 		this.stack.clear();
 		
@@ -125,9 +130,22 @@ public class CostModelCreator extends ExplorerVisitor {
 				}
 			}
 			
+			// Substitutions
+			if (this.substs.containsKey(exploreNode)) {
+				final Subst subst = this.substs.get(exploreNode);
+				assert subst.getExpr() == oan.getNode();
+				subst.setCM(oan);
+			}
+			
 			final CostModelNode parent = stack.peek();
 			parent.addChild(oan.setLevel(parent.getLevel() + 1));
 			stack.push(oan);
+		} else if (exploreNode instanceof SubstInNode) {
+			final SubstInNode sin = (SubstInNode) exploreNode;
+			final Subst[] substs = sin.getSubsts();
+			for (Subst subst : substs) {
+				this.substs.put(subst.getExpr(), subst);
+			}
 		} else if (exploreNode instanceof OpDefNode) {
 			//TODO Might suffice to just keep RECURSIVE ones.
 			opDefNodes.add((OpDefNode) exploreNode);
