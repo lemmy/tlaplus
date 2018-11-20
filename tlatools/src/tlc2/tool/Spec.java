@@ -931,7 +931,7 @@ public class Spec implements ValueConstants, ToolGlobals, Serializable
             {
                 Assert.fail(EC.TLC_CONFIG_ID_REQUIRES_NO_ARG, new String[] { "next state action", name });
             }
-            this.nextPred = new Action(def.getBody(), Context.Empty);
+            this.nextPred = new Action(def.getBody(), Context.Empty, def);
         }
     }
 

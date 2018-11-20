@@ -149,7 +149,7 @@ public class Tool
         this.actions = new Action[0];
       }
       else {
-        this.getActions(next.pred, next.con, next.cm == null ? CostModel.DO_NOT_RECORD : next.cm);
+        this.getActions(next);
         int sz = this.actionVec.size();
         this.actions = new Action[sz];
         for (int i = 0; i < sz; i++) {
@@ -160,22 +160,22 @@ public class Tool
     return this.actions;
   }
 
-  private final void getActions(SemanticNode next, Context con, CostModel cm) {
-	  this.getActions(next, con, Action.UNNAMED_ACTION, cm);
-  }
+	private final void getActions(final Action next) {
+		this.getActions(next.pred, next.con, next.getOpDef(), next.cm);
+	}
 
-  private final void getActions(SemanticNode next, Context con, final UniqueString actionName, CostModel cm) {
+  private final void getActions(SemanticNode next, Context con, final OpDefNode opDefNode, CostModel cm) {
     switch (next.getKind()) {
     case OpApplKind:
       {
         OpApplNode next1 = (OpApplNode)next;
-        this.getActionsAppl(next1, con, actionName, cm);
+        this.getActionsAppl(next1, con, opDefNode, cm);
         return;
       }
     case LetInKind:
       {
         LetInNode next1 = (LetInNode)next;
-        this.getActions(next1.getBody(), con, actionName, cm);
+        this.getActions(next1.getBody(), con, opDefNode, cm);
         return;
       }
     case SubstInKind:
@@ -183,10 +183,10 @@ public class Tool
         SubstInNode next1 = (SubstInNode)next;
         Subst[] substs = next1.getSubsts();
         if (substs.length == 0) {
-          this.getActions(next1.getBody(), con, actionName, cm);
+          this.getActions(next1.getBody(), con, opDefNode, cm);
         }
         else {
-          Action action = new Action(next1, con, actionName);
+          Action action = new Action(next1, con, opDefNode);
           this.actionVec.addElement(action);
         }
         return;
@@ -198,10 +198,10 @@ public class Tool
           APSubstInNode next1 = (APSubstInNode)next;
           Subst[] substs = next1.getSubsts();
           if (substs.length == 0) {
-            this.getActions(next1.getBody(), con, actionName, cm);
+            this.getActions(next1.getBody(), con, opDefNode, cm);
           }
           else {
-            Action action = new Action(next1, con, actionName);
+            Action action = new Action(next1, con, opDefNode);
             this.actionVec.addElement(action);
           }
           return;
@@ -213,7 +213,7 @@ public class Tool
     case LabelKind:
       {
         LabelNode next1 = (LabelNode)next;
-        this.getActions(next1.getBody(), con, actionName, cm);
+        this.getActions(next1.getBody(), con, opDefNode, cm);
         return;
       }
     default:
@@ -223,7 +223,7 @@ public class Tool
     }
   }
 
-  private final void getActionsAppl(OpApplNode next, Context con, final UniqueString actionName, CostModel cm) {
+  private final void getActionsAppl(OpApplNode next, Context con, final OpDefNode actionName, CostModel cm) {
     ExprOrOpArgNode[] args = next.getArgs();
     SymbolNode opNode = next.getOperator();
     int opcode = BuiltInOPs.getOpCode(opNode.getName());
@@ -249,7 +249,7 @@ public class Tool
                 Value aval = this.eval(args[i], con, TLCState.Empty, cm);
                 con1 = con1.cons(formals[i], aval);
               }
-              this.getActions(opDef.getBody(), con1, opDef.getName(), cm);
+              this.getActions(opDef.getBody(), con1, opDef, cm);
               return;
             }
           }

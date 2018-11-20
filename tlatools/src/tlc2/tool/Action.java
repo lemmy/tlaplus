@@ -28,7 +28,7 @@ public final class Action implements ToolGlobals, Serializable {
 	  this(pred, con, UNNAMED_ACTION);
   }
 
-  public Action(SemanticNode pred, Context con, UniqueString actionName) {
+  private Action(SemanticNode pred, Context con, UniqueString actionName) {
 	  this.pred = pred;
 	  this.con = con;
 	  this.actionName = actionName;
