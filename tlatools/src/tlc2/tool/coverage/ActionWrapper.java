@@ -26,6 +26,7 @@
 package tlc2.tool.coverage;
 
 import tla2sany.semantic.SemanticNode;
+import tla2sany.semantic.SubstInNode;
 import tla2sany.st.Location;
 import tlc2.output.EC;
 import tlc2.output.MP;
@@ -61,6 +62,10 @@ public class ActionWrapper extends CostModelNode {
 	 */
 	@Override
 	public CostModel get(final SemanticNode eon) {
+		if (eon instanceof SubstInNode) {
+			final SubstInNode sin = (SubstInNode) eon;
+			return this.children.get(sin.getBody());
+		}
 		return this.children.get(eon);
 	}
 
@@ -92,8 +97,8 @@ public class ActionWrapper extends CostModelNode {
 		MP.printMessage(EC.TLC_COVERAGE_ACTION_VALUE, new String[] { getLocation().toString(), String.valueOf(getEvalCount()) });
 		
 		// An action has single child which is the OpApplNodeWrapper with the OpApplNode
-		// for this OpDefNode.
-		assert this.children.size() == 1;
+		// for this OpDefNode unless the action's pred is a substitution.
+		assert !(this.action.pred instanceof SubstInNode) ? this.children.size() == 1 : !this.children.isEmpty();
 		// Let children report.
 		this.children.values().forEach(c -> c.report());
 	}
