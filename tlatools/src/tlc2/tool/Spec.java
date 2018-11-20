@@ -911,7 +911,7 @@ public class Spec implements ValueConstants, ToolGlobals, Serializable
             {
                 Assert.fail(EC.TLC_CONFIG_ID_REQUIRES_NO_ARG, new String[] { "initial predicate", name });
             }
-            this.initPredVec.addElement(new Action(def.getBody(), Context.Empty));
+            this.initPredVec.addElement(new Action(def.getBody(), Context.Empty, def));
         }
 
         name = this.config.getNext();
@@ -967,7 +967,7 @@ public class Spec implements ValueConstants, ToolGlobals, Serializable
                 	Assert.fail(EC.TLC_INVARIANT_VIOLATED_LEVEL, def.getName().toString());
                 }
                 this.invNameVec.addElement(name);
-                this.invVec.addElement(new Action(def.getBody(), Context.Empty));
+                this.invVec.addElement(new Action(def.getBody(), Context.Empty, def));
             } else if (inv == null)
             {
                 Assert.fail(EC.TLC_CONFIG_SPECIFIED_NOT_DEFINED, new String[] { "invariant", name });
@@ -1006,7 +1006,7 @@ public class Spec implements ValueConstants, ToolGlobals, Serializable
                     ExprNode body = ((OpDefNode) val).getBody();
                     if (this.getLevelBound(body, c) == 1)
                     {
-                        this.initPredVec.addElement(new Action(Spec.addSubsts(body, subs), c));
+                        this.initPredVec.addElement(new Action(Spec.addSubsts(body, subs), c, ((OpDefNode) val)));
                     } else
                     {
                         this.processConfigSpec(body, c, subs);
