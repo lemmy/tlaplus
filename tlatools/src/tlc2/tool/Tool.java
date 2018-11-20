@@ -415,7 +415,8 @@ public class Tool
 
   private final void getInitStates(ActionItemList acts, TLCState ps, IStateFunctor states, CostModel cm) {
 		if (acts.isEmpty()) {
-			cm.increment();
+			cm.incInvocations();
+			cm.getRoot().incInvocations();
 			states.addElement(ps.copy());
 			return;
 		} else if (ps.allAssigned()) {
@@ -438,7 +439,8 @@ public class Tool
 				// Move on to the next action in the ActionItemList.
 				acts = acts.cdr();
 			}
-			cm.increment();
+			cm.incInvocations();
+			cm.getRoot().incInvocations();
 			states.addElement(ps.copy());
 			return;
 		}
@@ -763,7 +765,7 @@ public class Tool
     TLCState s1 = TLCState.Empty.createEmpty();
     StateVec nss = new StateVec(0);
     this.getNextStates(action.pred, acts, action.con, state, s1, nss, action.cm);
-    action.cm.add(nss.size());
+    action.cm.incInvocations(nss.size());
     return nss;
   }
 
@@ -833,7 +835,7 @@ public class Tool
           final StateVec nss, CostModel cm) {
 	  final TLCState copy = getNextStates0(acts, s0, s1, nss, cm);
 	  if (copy != s1) {
-		  cm.increment();
+		  cm.incInvocations();
 	  }
 	  return copy;
   }
@@ -1429,7 +1431,7 @@ public class Tool
                               TLCState s1, final int control, CostModel cm) {
     if (this.callStack != null) this.callStack.push(expr);
     cm = cm.get(expr);
-    cm.increment(expr);
+    cm.incInvocations();
     try {
         ExprOrOpArgNode[] args = expr.getArgs();
         SymbolNode opNode = expr.getOperator();
