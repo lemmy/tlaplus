@@ -55,11 +55,6 @@ public interface CostModel {
 		public void increment() {
 			// no-op
 		}
-
-		@Override
-		public boolean matches(SemanticNode expr) {
-			return true;
-		}
 	};
 
 	void increment();
@@ -71,6 +66,4 @@ public interface CostModel {
 	void report();
 
 	CostModel get(final SemanticNode cmpts);
-
-	boolean matches(SemanticNode expr);
 }

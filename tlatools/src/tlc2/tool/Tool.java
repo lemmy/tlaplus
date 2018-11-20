@@ -451,7 +451,6 @@ public class Tool
                                        Context c, TLCState ps, IStateFunctor states, CostModel cm) {
     if (this.callStack != null) this.callStack.push(init);
     cm = cm.get(init);
-    assert cm.matches(init);
     try {
         ExprOrOpArgNode[] args = init.getArgs();
         int alen = args.length;
@@ -794,7 +793,6 @@ public class Tool
   private final TLCState getNextStatesImpl(SemanticNode pred, ActionItemList acts, Context c,
               TLCState s0, TLCState s1, StateVec nss, CostModel cm) {
     cm = cm.get(pred);
-    assert cm.matches(pred);
         switch (pred.getKind()) {
         case OpApplKind:
           {
@@ -900,7 +898,6 @@ public class Tool
 	  Context c = acts.carContext();
       CostModel cm2 = acts.cm;
 	  while (!acts.isEmpty()) {
-    	  assert cm2.matches(pred);
 		  if (kind > 0 || kind == -1) {
 			  final Value bval = this.eval(pred, c, s0, s1, EvalControl.Clear, cm2);
 			  if (!(bval instanceof BoolValue)) {
@@ -1305,7 +1302,6 @@ public class Tool
   private final TLCState processUnchangedImpl(SemanticNode expr, ActionItemList acts, Context c,
           TLCState s0, TLCState s1, StateVec nss, CostModel cm) {
     cm = cm.get(expr);
-    assert cm.matches(expr);
         SymbolNode var = this.getVar(expr, c, false);
         TLCState resState = s1;
         if (var != null) {
@@ -1428,7 +1424,6 @@ public class Tool
   private final Value evalImpl(final SemanticNode expr, final Context c, final TLCState s0,
           final TLCState s1, final int control, CostModel cm) {
     cm = cm.get(expr);
-    assert cm.matches(expr);
         switch (expr.getKind()) {
         /***********************************************************************
         * LabelKind class added by LL on 13 Jun 2007.                          *
@@ -1552,10 +1547,7 @@ public class Tool
   private final Value evalApplImpl(final OpApplNode expr, Context c, TLCState s0,
                               TLCState s1, final int control, CostModel cm) {
     cm = cm.get(expr);
-    assert cm.matches(expr);
-    if (cm != null) {
-    	cm.increment(expr);
-    }
+    cm.increment(expr);
         ExprOrOpArgNode[] args = expr.getArgs();
         SymbolNode opNode = expr.getOperator();
         int opcode = BuiltInOPs.getOpCode(opNode.getName());
@@ -2564,7 +2556,6 @@ public class Tool
     SemanticNode pred = acts.carPred();
     Context c = acts.carContext();
     cm = acts.cm;
-    assert cm.matches(pred);
     ActionItemList acts1 = acts.cdr();
     if (kind > ActionItemList.CONJUNCT) {
       TLCState res = this.enabled(pred, acts1, c, s0, s1, cm);
@@ -2594,7 +2585,6 @@ public class Tool
   {
     if (this.callStack != null) this.callStack.push(pred);
     cm = cm.get(pred);
-    assert cm.matches(pred);
     try {
         ExprOrOpArgNode[] args = pred.getArgs();
         int alen = args.length;
