@@ -69,14 +69,6 @@ public class ActionWrapper extends CostModelNode {
 		return this.children.get(eon);
 	}
 
-	/* (non-Javadoc)
-	 * @see tlc2.tool.CostModel#matches(tla2sany.semantic.SemanticNode)
-	 */
-	@Override
-	public boolean matches(final SemanticNode expr) {
-		return true;
-	}
-
 	@Override
 	SemanticNode getNode() {
 		return action.pred;

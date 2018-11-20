@@ -45,7 +45,6 @@ public class ActionItemList {
     this.kind = kind;
     this.next = next;
     this.cm = cm;
-    assert this.cm == null || cm.matches(pred);
   }
 
   public final SemanticNode carPred() { return this.pred; }
