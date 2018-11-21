@@ -31,6 +31,8 @@ import java.util.regex.Pattern;
 
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.TextPresentation;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.RGB;
 
@@ -110,6 +112,37 @@ public class ActionInformationItem extends CoverageInformationItem {
 		return unseen;
 	}
 	
+	@Override
+	protected StyleRange addStlye(final StyleRange sr) {
+		sr.borderStyle = SWT.BORDER_DOT;
+		return sr;
+	}
+	
+	/* (non-Javadoc)
+	 * @see org.lamport.tla.toolbox.tool.tlc.output.data.CoverageInformationItem#style(org.eclipse.jface.text.TextPresentation)
+	 */
+	@Override
+	public void style(TextPresentation textPresentation) {
+		if (relation == Relation.PROP) {
+			return;
+		}
+		super.style(textPresentation);
+	}
+	
+	/* (non-Javadoc)
+	 * @see org.lamport.tla.toolbox.tool.tlc.output.data.CoverageInformationItem#style(org.eclipse.jface.text.TextPresentation, boolean)
+	 */
+	@Override
+	protected void style(final TextPresentation textPresentation, boolean merge) {
+		if (relation == Relation.PROP) {
+			return;
+		}
+		super.style(textPresentation, merge);
+	}
+
+	/* (non-Javadoc)
+	 * @see org.lamport.tla.toolbox.tool.tlc.output.data.CoverageInformationItem#style(org.eclipse.jface.text.TextPresentation, org.eclipse.swt.graphics.Color)
+	 */
 	@Override
 	public void style(final TextPresentation textPresentation, final Color c) {
 		// Do not unstyle AII when specific CostModel tree gets selected.

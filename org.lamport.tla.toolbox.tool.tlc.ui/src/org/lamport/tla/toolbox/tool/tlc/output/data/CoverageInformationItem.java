@@ -175,7 +175,12 @@ public class CoverageInformationItem implements IModuleLocatable
 	public boolean isActive() {
 		return active;
 	}
-	
+
+	protected StyleRange addStlye(StyleRange sr) {
+		// no-op
+		return sr;
+	}
+
 	public void style(final TextPresentation textPresentation) {
 		if (isRoot()) {
 			style(textPresentation, true);
@@ -184,7 +189,7 @@ public class CoverageInformationItem implements IModuleLocatable
 		}
 	}
 	
-	private void style(final TextPresentation textPresentation, boolean merge) {
+	protected void style(final TextPresentation textPresentation, boolean merge) {
 		if (!isRoot()) {
 			final StyleRange rs = new StyleRange();
 			
@@ -210,7 +215,7 @@ public class CoverageInformationItem implements IModuleLocatable
 			rs.data = this; //mergeStyleRange does not merge rs.data, thus track active instead.
 			active = true;
 			
-			textPresentation.mergeStyleRange(rs);
+			textPresentation.mergeStyleRange(addStlye(rs));
 		}
 		for (CoverageInformationItem child : childs) {
 			child.style(textPresentation, merge);
@@ -229,7 +234,7 @@ public class CoverageInformationItem implements IModuleLocatable
 				rs.borderColor = JFaceResources.getColorRegistry().get(CoverageInformation.RED);
 			}
 			active = false;
-			textPresentation.replaceStyleRange(rs);
+			textPresentation.replaceStyleRange(addStlye(rs));
 		}
 		for (CoverageInformationItem child : childs) {
 			child.style(textPresentation, c);
