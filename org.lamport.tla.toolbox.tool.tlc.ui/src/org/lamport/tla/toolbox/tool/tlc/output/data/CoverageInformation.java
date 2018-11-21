@@ -42,7 +42,6 @@ import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IRegion;
-import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.RGB;
 import org.lamport.tla.toolbox.util.AdapterFactory;
 
@@ -81,7 +80,7 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 
 	private static final int BLUE = 240;
 
-	private int getHue(final long count, final TreeSet<Long> counts) {
+	static int getHue(final long count, final TreeSet<Long> counts) {
 		final int size = counts.size();
 		final float r = 240f / size;
 		final SortedSet<Long> headSet = counts.headSet(count);
@@ -139,42 +138,65 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 	public static final String RED = "RED";
 
 	public CoverageInformation prepare(final IDocument document) throws BadLocationException {
-		final TreeSet<Long> counts = new TreeSet<>();
+		final TreeSet<Long> ciiCounts = new TreeSet<>();
+		final TreeSet<Long> aiiCounts = new TreeSet<>();
 		
-		for (CoverageInformationItem item : items) {
+		for (final CoverageInformationItem item : items) {
 			// Convert Location to IRegion
 			final IRegion region = AdapterFactory.locationToRegion(document, item.getModuleLocation());
 			item.setRegion(region);
 			
 			offset2cii.computeIfAbsent(region.getOffset(), c -> new ArrayList<>()).add(item);
 			
-			counts.add(item.getCount());
-			counts.add(item.getCount() * numSiblings(item));
+			if (item instanceof ActionInformationItem) {
+				aiiCounts.add(((ActionInformationItem) item).getUnseen());
+			} else {
+				ciiCounts.add(item.getCount());
+				ciiCounts.add(item.getCount() * numSiblings(item));
+			}
 		}
 
 		JFaceResources.getColorRegistry().put(RED, new RGB(255,0,0));
 		JFaceResources.getColorRegistry().put(GRAY, new RGB(211,211,211));
-		
-		for (CoverageInformationItem item : items) {
-			// Calculate colors.
-			int hue = getHue(item.getCount(), counts);
-			String key = Integer.toString(hue);
-			if (!JFaceResources.getColorRegistry().hasValueFor(key)) {
-				JFaceResources.getColorRegistry().put(key, new RGB(hue, .25f, 1f));
-			}
-			Color color = JFaceResources.getColorRegistry().get(key);
 
-			// Aggregated color (might be identical to color).
-			hue = getHue(item.getCount() * numSiblings(item), counts);
-			key = Integer.toString(hue);
-			if (!JFaceResources.getColorRegistry().hasValueFor(key)) {
-				JFaceResources.getColorRegistry().put(key, new RGB(hue, .25f, 1f));
+		// Sum of all distinct states.
+		final long sum = items.stream().filter(cii -> cii instanceof ActionInformationItem).map(ActionInformationItem.class::cast)
+				.mapToLong(ActionInformationItem::getUnseen).sum();
+		for (final CoverageInformationItem item : items) {
+			if (item instanceof ActionInformationItem) {
+				item.colorItem(aiiCounts, 0);
+				((ActionInformationItem) item).setSum(sum);
+			} else {
+				// Calculate colors just for CII because the values of ACII are unrelated.
+				item.colorItem(ciiCounts, numSiblings(item));
 			}
-			Color aggregate = JFaceResources.getColorRegistry().get(key);
-
-			item.setColor(color, aggregate);
 		}
 
 		return this;
+	}
+
+	public String getHoverInfo(final int offset) {
+		final List<CoverageInformationItem> sorted = getNodes(offset).stream()
+				.sorted((c1, c2) -> c1.isActive() ? -1 : c2.isActive() ? 1 : Long.compare(c1.getCount(), c2.getCount()))
+				.collect(Collectors.toList());
+		
+		String hover = "", plus = "";
+		Long sum = 0L;
+		for (CoverageInformationItem cii : sorted) {
+			if (cii instanceof ActionInformationItem) {
+				assert sorted.size() == 1;
+				final ActionInformationItem aii = (ActionInformationItem) cii;
+				hover = aii.getHover();
+			} else {
+				sum += cii.getCount();
+				hover = String.format("%s%s%,d\n", hover, plus, cii.getCount());
+				plus = "+";
+			}
+		}
+
+		if (sorted.size() > 1) {
+			hover += String.format("---------\n%,d", sum);
+		}
+		return hover.replaceAll("\n$", "");
 	}
 }

@@ -25,9 +25,6 @@
  ******************************************************************************/
 package org.lamport.tla.toolbox.tool.tlc.ui.editor;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.BadLocationException;
@@ -109,23 +106,7 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 			return new DefaultTextHover(sourceViewer) {
 				@Override
 				public String getHoverInfo(ITextViewer textViewer, IRegion hoverRegion) {
-					final List<CoverageInformationItem> sorted = coverage.getNodes(hoverRegion.getOffset()).stream()
-							.sorted((c1, c2) -> c1.isActive() ? -1
-									: c2.isActive() ? 1 : Long.compare(c1.getCount(), c2.getCount()))
-							.collect(Collectors.toList());
-					
-					String hover = "", plus = "";
-					Long sum = 0L;
-					for (CoverageInformationItem cii : sorted) {
-						sum += cii.getCount();
-						hover = String.format("%s%s%,d\n", hover, plus, cii.getCount());
-						plus = "+";
-					}
-					
-					if (sorted.size() > 1) {
-						hover += String.format("---------\n%,d", sum); 
-					}
-					return hover.replaceAll("\n$", "");
+					return coverage.getHoverInfo(hoverRegion.getOffset());
 				}
 			};
 		}

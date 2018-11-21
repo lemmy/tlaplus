@@ -2,6 +2,7 @@ package org.lamport.tla.toolbox.tool.tlc.output.data;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TreeSet;
 
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.IRegion;
@@ -9,6 +10,7 @@ import org.eclipse.jface.text.TextPresentation;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.RGB;
 import org.lamport.tla.toolbox.tool.tlc.ui.util.IModuleLocatable;
 
 import tla2sany.st.Location;
@@ -17,7 +19,6 @@ import tlc2.TLCGlobals;
 /**
  * Coverage information item
  * @author Simon Zambrovski
- * @version $Id$
  */
 public class CoverageInformationItem implements IModuleLocatable
 {
@@ -26,10 +27,10 @@ public class CoverageInformationItem implements IModuleLocatable
     private final static String AT = "at ";
 
     private String locationString;
-    private Location location;
-    private String modelName;
-    private long count;
-	private int layer;
+    protected Location location;
+    protected String modelName;
+    protected long count;
+    protected int layer;
 
     /**
      * Creates an simple item storing information about a coverage at a certain location
@@ -39,7 +40,7 @@ public class CoverageInformationItem implements IModuleLocatable
      * @param module
      */
 
-    private CoverageInformationItem(Location location, long count, String modelName, int layer)
+    protected CoverageInformationItem(Location location, long count, String modelName, int layer)
     {
         this.location = location;
         this.locationString = this.location.toString();
@@ -148,7 +149,7 @@ public class CoverageInformationItem implements IModuleLocatable
 	
 	private Color color, aggregateColor;
 
-	CoverageInformationItem setColor(Color c, Color a) {
+	protected CoverageInformationItem setColor(Color c, Color a) {
 		this.color = c;
 		this.aggregateColor = a == null ? c : a;
 		return this;
@@ -233,5 +234,24 @@ public class CoverageInformationItem implements IModuleLocatable
 		for (CoverageInformationItem child : childs) {
 			child.style(textPresentation, c);
 		}
+	}
+
+	void colorItem(TreeSet<Long> counts, final int numSiblings) {
+		int hue = CoverageInformation.getHue(getCount(), counts);
+		String key = Integer.toString(hue);
+		if (!JFaceResources.getColorRegistry().hasValueFor(key)) {
+			JFaceResources.getColorRegistry().put(key, new RGB(hue, .25f, 1f));
+		}
+		Color color = JFaceResources.getColorRegistry().get(key);
+		
+		// Aggregated color (might be identical to color).
+		hue = CoverageInformation.getHue(getCount() * numSiblings, counts);
+		key = Integer.toString(hue);
+		if (!JFaceResources.getColorRegistry().hasValueFor(key)) {
+			JFaceResources.getColorRegistry().put(key, new RGB(hue, .25f, 1f));
+		}
+		Color aggregate = JFaceResources.getColorRegistry().get(key);
+		
+		setColor(color, aggregate);
 	}
 }
