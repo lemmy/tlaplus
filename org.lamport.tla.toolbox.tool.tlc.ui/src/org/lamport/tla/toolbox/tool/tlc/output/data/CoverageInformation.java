@@ -176,27 +176,37 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 	}
 
 	public String getHoverInfo(final int offset) {
-		final List<CoverageInformationItem> sorted = getNodes(offset).stream()
+		final List<CoverageInformationItem> nodes = getNodes(offset);
+		
+		final List<CoverageInformationItem> sorted = nodes.stream()
+				.filter(cii -> !(cii instanceof ActionInformationItem))
 				.sorted((c1, c2) -> c1.isActive() ? -1 : c2.isActive() ? 1 : Long.compare(c1.getCount(), c2.getCount()))
 				.collect(Collectors.toList());
 		
 		String hover = "", plus = "";
 		Long sum = 0L;
 		for (CoverageInformationItem cii : sorted) {
-			if (cii instanceof ActionInformationItem) {
-				assert sorted.size() == 1;
-				final ActionInformationItem aii = (ActionInformationItem) cii;
-				hover = aii.getHover();
-			} else {
-				sum += cii.getCount();
-				hover = String.format("%s%s%,d\n", hover, plus, cii.getCount());
-				plus = "+";
-			}
+			sum += cii.getCount();
+			hover = String.format("%s%s%,d invocation(s)\n", hover, plus, cii.getCount());
+			plus = "+";
 		}
 
-		if (sorted.size() > 1) {
-			hover += String.format("---------\n%,d", sum);
+		if (sorted.size() > 1 && sum > 0) {
+			hover += String.format("---------\n%,d invocation(s)", sum);
 		}
-		return hover.replaceAll("\n$", "");
+		
+		
+		final List<CoverageInformationItem> actionItems = nodes.stream().filter(cii -> cii instanceof ActionInformationItem)
+				.collect(Collectors.toList());
+		if (!actionItems.isEmpty()) {
+			hover += "\n";
+			for (CoverageInformationItem cii : actionItems) {
+				final ActionInformationItem aii = (ActionInformationItem) cii;
+				hover += aii.getHover();
+				hover += "\n";
+			}
+		}
+		
+		return hover.replaceAll("^\n", "").replaceAll("\n$", "");
 	}
 }
