@@ -25,12 +25,9 @@
  ******************************************************************************/
 package tlc2.tool.coverage;
 
-import tla2sany.semantic.OpDefNode;
 import tla2sany.semantic.SemanticNode;
 import tla2sany.semantic.SubstInNode;
 import tla2sany.st.Location;
-import tla2sany.st.SyntaxTreeConstants;
-import tla2sany.st.TreeNode;
 import tlc2.TLCGlobals;
 import tlc2.output.EC;
 import tlc2.output.MP;
@@ -57,17 +54,18 @@ public class ActionWrapper extends CostModelNode {
 	 */
 	@Override
 	protected Location getLocation() {
-		if (this.action.getOpDef() != null) {
-			final OpDefNode opDef = this.action.getOpDef();
-			final TreeNode tn = opDef.getTreeNode();
-			if (tn != null && tn.one() != null && tn.one().length >= 1) {
-				final TreeNode treeNode = tn.one()[0];
-				assert treeNode.isKind(SyntaxTreeConstants.N_IdentLHS);
-				return treeNode.getLocation();
-			}
-//			return opDef.getLocation();
+		if (this.action.isDeclared()) {
+			return this.action.getDeclaration();
 		}
 		return this.action.pred.getLocation();
+	}
+
+	private String printLocation() {
+		if (this.action.isDeclared()) {
+			return String.format("<%s %s>", this.action.getName(), this.action.getDeclaration());
+		} else {
+			return this.action.toString();
+		}
 	}
 	
 	/* (non-Javadoc)
@@ -106,27 +104,36 @@ public class ActionWrapper extends CostModelNode {
 		return this.children.get(eon);
 	}
 
+	/* (non-Javadoc)
+	 * @see tlc2.tool.coverage.CostModelNode#getNode()
+	 */
 	@Override
 	SemanticNode getNode() {
 		return action.pred;
 	}
 
+	/* (non-Javadoc)
+	 * @see tlc2.tool.coverage.CostModelNode#isRoot()
+	 */
 	@Override
 	boolean isRoot() {
 		return true;
 	}
 
+	/* (non-Javadoc)
+	 * @see tlc2.tool.coverage.CostModel#report()
+	 */
 	public void report() {
 		// Report count for action itself.
 		if (relation == Relation.PROP) {
 			assert getEvalCount() == 0L && this.unseen.getCount() == 0L;
-			MP.printMessage(EC.TLC_COVERAGE_PROPERTY, new String[] { getLocation().toString() });
+			MP.printMessage(EC.TLC_COVERAGE_PROPERTY, new String[] { printLocation() });
 		} else if (relation == Relation.INIT) {
 			assert this.unseen.getCount() == 0L;
 			MP.printMessage(EC.TLC_COVERAGE_INIT,
-					new String[] { getLocation().toString(), String.valueOf(getEvalCount()) });
+					new String[] { printLocation(), String.valueOf(getEvalCount()) });
 		} else {
-			MP.printMessage(EC.TLC_COVERAGE_NEXT, new String[] { getLocation().toString(),
+			MP.printMessage(EC.TLC_COVERAGE_NEXT, new String[] { printLocation(),
 					String.valueOf(this.unseen.getCount()), String.valueOf(getEvalCount()) });
 		}
 

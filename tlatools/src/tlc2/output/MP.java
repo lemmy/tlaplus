@@ -942,13 +942,13 @@ public class MP
             b.append("  %1%: %2%");
             break;
         case EC.TLC_COVERAGE_INIT:
-       		b.append("<%1%>: %2%");
+       		b.append("%1%: %2%");
             break;
         case EC.TLC_COVERAGE_NEXT:
-       		b.append("<%1%>: %2%:%3%");
+       		b.append("%1%: %2%:%3%");
             break;
         case EC.TLC_COVERAGE_PROPERTY:
-       		b.append("<%1%>");
+       		b.append("%1%");
             break;
         case EC.TLC_COVERAGE_END:
             b.append("End of statistics.");
