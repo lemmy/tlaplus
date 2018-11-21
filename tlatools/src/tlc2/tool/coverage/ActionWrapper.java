@@ -25,9 +25,12 @@
  ******************************************************************************/
 package tlc2.tool.coverage;
 
+import tla2sany.semantic.OpDefNode;
 import tla2sany.semantic.SemanticNode;
 import tla2sany.semantic.SubstInNode;
 import tla2sany.st.Location;
+import tla2sany.st.SyntaxTreeConstants;
+import tla2sany.st.TreeNode;
 import tlc2.TLCGlobals;
 import tlc2.output.EC;
 import tlc2.output.MP;
@@ -36,7 +39,7 @@ import tlc2.util.statistics.CounterStatistic;
 
 public class ActionWrapper extends CostModelNode {
 
-	enum Relation {
+	public enum Relation {
 		INIT, NEXT, PROP;
 	}
 	
@@ -55,7 +58,14 @@ public class ActionWrapper extends CostModelNode {
 	@Override
 	protected Location getLocation() {
 		if (this.action.getOpDef() != null) {
-			return this.action.getOpDef().getLocation();
+			final OpDefNode opDef = this.action.getOpDef();
+			final TreeNode tn = opDef.getTreeNode();
+			if (tn != null && tn.one() != null && tn.one().length >= 1) {
+				final TreeNode treeNode = tn.one()[0];
+				assert treeNode.isKind(SyntaxTreeConstants.N_IdentLHS);
+				return treeNode.getLocation();
+			}
+//			return opDef.getLocation();
 		}
 		return this.action.pred.getLocation();
 	}
