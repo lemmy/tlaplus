@@ -118,6 +118,9 @@ public class ActionInformationItem extends CoverageInformationItem {
 		}
 	}
 
+	/* (non-Javadoc)
+	 * @see org.lamport.tla.toolbox.tool.tlc.output.data.CoverageInformationItem#colorItem(java.util.TreeSet, int)
+	 */
 	@Override
 	void colorItem(TreeSet<Long> counts, final int ignored) {
 		final int hue = CoverageInformation.getHue(getUnseen(), counts);
@@ -134,10 +137,10 @@ public class ActionInformationItem extends CoverageInformationItem {
 			if (relation == Relation.NEXT) {
 				final double overhead = (unseen * 1d / getCount()) * 100d;
 				return String.format(
-						"%,d state(s) generated with %,d of them distinct (%.2f%%).\nContributed %.2f%% to total number of distinct states across all actions.",
-						getCount(), unseen, overhead, ratio);
+						"Action %s:\n%,d state(s) generated with %,d of them distinct (%.2f%%).\nContributes %.2f%% to total number of distinct states across all actions.",
+						name, getCount(), unseen, overhead, ratio);
 			} else {
-				return String.format("%,d", getCount());
+				return String.format("Action %s (Init):\n%,d state(s) generated.", name, getCount());
 			}
 		}
 		return "";
