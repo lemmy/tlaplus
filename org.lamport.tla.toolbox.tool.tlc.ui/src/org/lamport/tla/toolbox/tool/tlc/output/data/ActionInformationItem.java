@@ -40,60 +40,68 @@ import tlc2.tool.coverage.ActionWrapper.Relation;
 public class ActionInformationItem extends CoverageInformationItem {
 
 	public static ActionInformationItem parseInit(String outputMessage, String modelName) {
-		final Pattern pattern = Pattern.compile("^<(.*)>: ([0-9]+)$");
+		final Pattern pattern = Pattern.compile("^<(.*?) (.*)>: ([0-9]+)$");
 		final Matcher matcher = pattern.matcher(outputMessage);
 		matcher.find();
 
-		final Location location = Location.parseLocation(matcher.group(1));
-		final long generatedStates = Long.parseLong(matcher.group(2));
+		final Location location = Location.parseLocation(matcher.group(2));
+		final long generatedStates = Long.parseLong(matcher.group(3));
 		
-		return new ActionInformationItem(location, modelName, generatedStates, Relation.INIT);
+		return new ActionInformationItem(matcher.group(1), location, modelName, generatedStates);
 	}
 	
 	public static ActionInformationItem parseNext(String outputMessage, String modelName) {
-		final Pattern pattern = Pattern.compile("^<(.*)>: ([0-9]+):([0-9]+)$");
+		final Pattern pattern = Pattern.compile("^<(.*?) (line .*)>: ([0-9]+):([0-9]+)$");
 		final Matcher matcher = pattern.matcher(outputMessage);
 		matcher.find();
 
-		final Location location = Location.parseLocation(matcher.group(1));
-		final long distinctStates = Long.parseLong(matcher.group(2));
-		final long generatedStates = Long.parseLong(matcher.group(3));
+		final Location location = Location.parseLocation(matcher.group(2));
+		final long distinctStates = Long.parseLong(matcher.group(3));
+		final long generatedStates = Long.parseLong(matcher.group(4));
 		
-		return new ActionInformationItem(location, modelName, generatedStates, distinctStates, Relation.NEXT);
+		return new ActionInformationItem(matcher.group(1), location, modelName, generatedStates, distinctStates);
 	}
 	
 	public static ActionInformationItem parseProp(String outputMessage, String modelName) {
-		final Pattern pattern = Pattern.compile("^<(.*)>$");
+		final Pattern pattern = Pattern.compile("^<(.*?) (line .*)>$");
 		final Matcher matcher = pattern.matcher(outputMessage);
 		matcher.find();
 
-		final Location location = Location.parseLocation(matcher.group(1));
+		final Location location = Location.parseLocation(matcher.group(2));
 		
-		return new ActionInformationItem(location, modelName, Relation.INIT);
+		return new ActionInformationItem(matcher.group(1), location, modelName);
 	}
 	
 	// ---- ---- //
 	
 	private final Relation relation;
+	private final String name;
 	private long unseen = 0L;
 	private long sum;
 
-	public ActionInformationItem(Location loc, final String modelName, Relation relation) {
+	public ActionInformationItem(final String name, Location loc, final String modelName) {
 		super(loc, 0, modelName, 0);
-		this.relation = relation;
+		this.name = name;
+		this.relation = Relation.PROP;
 	}
 	
-	public ActionInformationItem(Location loc, final String modelName, long generated, Relation relation) {
+	public ActionInformationItem(final String name, Location loc, final String modelName, long generated) {
 		super(loc, generated, modelName, 0);
-		this.relation = relation;
+		this.name = name;
+		this.relation = Relation.INIT;
 	}
 
-	public ActionInformationItem(Location loc, final String modelName, long generated, long unseen, Relation relation) {
+	public ActionInformationItem(final String name, Location loc, final String modelName, long generated, long unseen) {
 		super(loc, generated, modelName, 0);
+		this.name = name;
 		this.unseen = unseen;
-		this.relation = relation;
+		this.relation = Relation.NEXT;
 	}
 
+	public String getName() {
+		return name;
+	}
+	
 	public Relation getRelation() {
 		return relation;
 	}
