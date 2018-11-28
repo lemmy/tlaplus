@@ -40,6 +40,9 @@ import org.eclipse.jface.text.TextViewer;
 import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Cursor;
+import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.ui.IEditorInput;
@@ -54,8 +57,14 @@ import org.lamport.tla.toolbox.tool.tlc.output.data.CoverageInformationItem;
 
 public class TLACoverageEditor2 extends TLAEditorReadOnly {
 
+	static {
+		JFaceResources.getColorRegistry().put("LIGHT_YELLOW", new RGB(245,245,245));
+	}
+	
 	/* TLACoverageEditor */
 
+	private static final Color lightYellow = JFaceResources.getColorRegistry().get("LIGHT_YELLOW");
+	
 	private CoverageInformation coverage;
 
 	public TLACoverageEditor2(final CoverageInformation coverage) {
@@ -154,12 +163,19 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 		@Override
 		public void applyTextPresentation(final TextPresentation textPresentation) {
 			final StyledText textWidget = viewer.getTextWidget();
+			
+			// Make TLACoverageEditor distinguishable from regular TLAEditor.
+			textWidget.setBackground(lightYellow);
+			textWidget.setCursor(new Cursor(textWidget.getDisplay(), SWT.CURSOR_HAND));
+			
+			// Attach a listener to react to mouse clicks to reveal coverage for selected expressions.
 			final TextPresentationListener listener = new TextPresentationListener(coverage, viewer, textPresentation);
 			textWidget.addListener(SWT.MouseDown, listener);
 			
+			// Unregister this to not rerun the initialization above.
 			((TextViewer) viewer).removeTextPresentationListener(this);
 			
-			// Color the editor initially.
+			// Color the editor with coverage information initially.
 			listener.handleEvent(null);
 		}
 	}
