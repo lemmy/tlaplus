@@ -65,6 +65,7 @@
 	      </plugin>
 	      
 			<!-- Compile aspects -->
+<!--
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>aspectj-maven-plugin</artifactId>
@@ -80,7 +81,7 @@
                     </execution>
                </executions>
            </plugin>
-
+-->
 			<!-- Run JUnit tests -->
       		<plugin>
 				<groupId>org.eclipse.tycho</groupId>

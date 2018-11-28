@@ -83,6 +83,7 @@
 							<version>0.0.0</version>
 						</dependency>
 						<!-- explicit dependency toward AspectJ -->
+<!--
 						<dependency>
 							<type>p2-installable-unit</type>
 							<artifactId>org.aspectj.runtime</artifactId>
@@ -108,9 +109,11 @@
 							<artifactId>org.eclipse.equinox.event</artifactId>
 							<version>0.0.0</version>
 						</dependency>
+-->
 					</dependencies>
 
 					<!-- Enable JDT weaving -->
+<!--
 					<frameworkExtensions>
 						<frameworkExtension>
 							<groupId>p2.osgi.bundle</groupId>
@@ -141,6 +144,7 @@
 							<autoStart>true</autoStart>
 						</bundle>
 					</bundleStartLevel>
+-->
 				</configuration>
 			</plugin>
 		</plugins>
