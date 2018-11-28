@@ -179,7 +179,7 @@ public class OpApplNodeWrapper extends CostModelNode implements Comparable<OpApp
 		return this;
 	}
 
-	private boolean isPrimed() {
+	protected boolean isPrimed() {
 		return this.primed;
 	}
 	
@@ -189,7 +189,7 @@ public class OpApplNodeWrapper extends CostModelNode implements Comparable<OpApp
 		print(0, Calculate.FRESH);
 	}
 
-	private void print(int level, final Calculate fresh) {
+	protected void print(int level, final Calculate fresh) {
 		final Set<Long> collectedEvalCounts = new HashSet<>();
 		this.collectChildren(collectedEvalCounts, fresh);
 		if (collectedEvalCounts.isEmpty()) {
@@ -247,22 +247,22 @@ public class OpApplNodeWrapper extends CostModelNode implements Comparable<OpApp
 		return -1l; // make compiler happy
 	}
 	
-	private void printChildren(final int level) {
+	protected void printChildren(final int level) {
 		for (CostModelNode cmn : children.values()) {
 			((OpApplNodeWrapper) cmn).print(level, Calculate.CACHED);
 		}
 	}
 
-	private void printSelf(final int level, final long count) {
+	protected void printSelf(final int level, final long count) {
 		MP.printMessage(EC.TLC_COVERAGE_VALUE, new String[] {
 				indentBegin(level, TLCGlobals.coverageIndent, getLocation().toString()), String.valueOf(count) });
 	}
 
-	private void printSelf(final int level) {
+	protected void printSelf(final int level) {
 		printSelf(level, getEvalCount());
 	}
 
-	private static String indentBegin(final int n, final char c, final String str) {
+	protected static String indentBegin(final int n, final char c, final String str) {
 		assert n >= 0;
 		final String whitespaces = new String(new char[n]).replace('\0', c);
 		return whitespaces + str;
@@ -270,17 +270,17 @@ public class OpApplNodeWrapper extends CostModelNode implements Comparable<OpApp
 	
 	// ---------------- Child counts ---------------- //
 	
-	private enum Calculate {
+	protected enum Calculate {
 		FRESH, CACHED;
 	}
 
-	private void collectChildren(final Set<Long> result, Calculate c) {
+	protected void collectChildren(final Set<Long> result, Calculate c) {
 		for (CostModelNode cmn : children.values()) {
 			((OpApplNodeWrapper) cmn).collectEvalCounts(result, c);
 		}
 	}
 
-	private void collectEvalCounts(final Set<Long> result, Calculate c) {
+	protected void collectEvalCounts(final Set<Long> result, Calculate c) {
 		if (c == Calculate.FRESH) {
 			childCounts.clear();
 			if (getEvalCount() > 0 || this.isPrimed()) {

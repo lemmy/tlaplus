@@ -23,33 +23,34 @@
  * Contributors:
  *   Markus Alexander Kuppe - initial API and implementation
  ******************************************************************************/
-package pcal;
+package tlc2.tool.coverage;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import java.util.HashSet;
+import java.util.Set;
 
-import org.junit.Test;
+import tla2sany.semantic.OpApplNode;
 
-import tlc2.output.EC;
+public class UnchangedOpApplNodeWrapper extends OpApplNodeWrapper {
 
-public class EvenOddBadTest extends PCalModelCheckerTestCase {
-
-	public EvenOddBadTest() {
-		super("EvenOddBad", "pcal", new String[] {"-wf", "-termination"});
+	public UnchangedOpApplNodeWrapper(OpApplNode opApplNode, ActionWrapper root) {
+		super(opApplNode, root);
 	}
 
-	@Test
-	public void testSpec() {
-		assertTrue(recorder.recordedWithStringValue(EC.TLC_INIT_GENERATED1, "2"));
-		assertTrue(recorder.recordedWithStringValues(EC.TLC_CHECKING_TEMPORAL_PROPS, "complete", "13"));
-		assertTrue(recorder.recorded(EC.TLC_CHECKING_TEMPORAL_PROPS_END));
-		assertTrue(recorder.recorded(EC.TLC_FINISHED));
-		assertFalse(recorder.recorded(EC.GENERAL));
-		assertTrue(recorder.recordedWithStringValues(EC.TLC_STATS, "15", "13", "0"));
-		assertTrue(recorder.recordedWithStringValue(EC.TLC_SEARCH_DEPTH, "9"));
+	@Override
+	protected boolean isPrimed() {
+		return true;
+	}
 
-		assertUncovered("line 66, col 23 to line 66, col 37 of module EvenOddBad: 0\n" + 
-				"line 67, col 23 to line 67, col 32 of module EvenOddBad: 0\n" + 
-				"line 68, col 23 to line 68, col 50 of module EvenOddBad: 0");
+	@Override
+	protected void print(int level, final Calculate fresh) {
+		final Set<Long> collectedEvalCounts = new HashSet<>();
+		this.collectChildren(collectedEvalCounts, fresh);
+		collectedEvalCounts.remove(0L); 
+		if (collectedEvalCounts.isEmpty()) {
+			printSelf(level++);
+			return;
+		} else {
+			printSelf(level, Math.max(getEvalCount(), collectedEvalCounts.iterator().next()));
+		}
 	}
 }

@@ -58,7 +58,7 @@ public class CCoverageTest extends AbstractCoverageTest {
 				"  line 12, col 19 to line 12, col 26 of module C: 640\n" + 
 				"  |line 12, col 26 to line 12, col 26 of module C: 20\n" + 
 				"  line 23, col 12 to line 23, col 15 of module C: 20\n" + 
-				"  line 24, col 19 to line 24, col 25 of module C: 0\n" + 
+				"  line 24, col 19 to line 24, col 25 of module C: 20\n" + 
 				"  |line 24, col 21 to line 24, col 21 of module C: 20\n" + 
 				"  |line 24, col 23 to line 24, col 23 of module C: 20\n" + 
 				"  line 26, col 9 to line 26, col 14 of module C: 20\n" + 
@@ -68,12 +68,12 @@ public class CCoverageTest extends AbstractCoverageTest {
 				"  |line 30, col 13 to line 30, col 16 of module C: 20\n" + 
 				"  line 30, col 21 to line 30, col 31 of module C: 210\n" + 
 				"  line 32, col 7 to line 32, col 11 of module C: 20\n" + 
-				"  line 32, col 26 to line 32, col 29 of module C: 0\n" + 
+				"  line 32, col 16 to line 32, col 29 of module C: 0\n" + 
 				"  line 34, col 7 to line 34, col 11 of module C: 20\n" + 
-				"  line 34, col 26 to line 34, col 32 of module C: 0\n" + 
+				"  line 34, col 16 to line 34, col 32 of module C: 0\n" + 
 				"  line 36, col 7 to line 36, col 11 of module C: 20\n" + 
-				"  line 36, col 26 to line 36, col 26 of module C: 0\n" + 
-				"  line 36, col 41 to line 36, col 41 of module C: 0\n" + 
+				"  line 36, col 16 to line 36, col 26 of module C: 0\n" + 
+				"  line 36, col 31 to line 36, col 41 of module C: 0\n" + 
 				"  line 48, col 8 to line 54, col 26 of module C: 21\n" + 
 				"  |line 48, col 11 to line 48, col 19 of module C: 21\n" + 
 				"  |line 49, col 11 to line 49, col 19 of module C: 21\n" + 

@@ -25,6 +25,8 @@
  ******************************************************************************/
 package tlc2.tool.coverage;
 
+import static tlc2.tool.ToolGlobals.OPCODE_unchanged;
+
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -54,6 +56,21 @@ import tlc2.tool.coverage.ActionWrapper.Relation;
 import tlc2.util.ObjLongTable;
 import tlc2.util.Vect;
 
+/**
+ * Why a CostModelCreate to traverses the semantic graph to create a forest of
+ * OpAppNode trees (rooted at an action)?<br>
+ * The semantic graph is not a fit to store cost metrics. This is due to the
+ * fact that the semantic graph has only a single node for each OpDefNode and
+ * thus OpApplNode even when an OpApplNode is invoked from different actions. If
+ * we were to store costs inside the semantic graph, it would thus not be
+ * possible to show costs per action. Therefore, CostModelCreate creates a tree
+ * for each action whose subtree is the set of OpApplNodes reachable from this
+ * particular action.
+ * <p>
+ * A CostModel tree of an action gets traversed by Tool in lockstep (except that
+ * the tree only contains OpApplNodes) when Tool traverses the semantic graph to
+ * evaluate an action.
+ */
 public class CostModelCreator extends ExplorerVisitor {
 
 	private final Deque<CostModelNode> stack = new ArrayDeque<>();
@@ -99,17 +116,25 @@ public class CostModelCreator extends ExplorerVisitor {
 	@Override
 	public void preVisit(final ExploreNode exploreNode) {
 		if (exploreNode instanceof OpApplNode) {
-			if (((OpApplNode) exploreNode).isStandardModule()) {
+			final OpApplNode opApplNode = (OpApplNode) exploreNode;
+			if (opApplNode.isStandardModule()) {
 				return;
 			}
-			final OpApplNodeWrapper oan = new OpApplNodeWrapper((OpApplNode) exploreNode, this.root);
+			
+	        final OpApplNodeWrapper oan;
+			if (opApplNode.hasOpcode(OPCODE_unchanged)) {
+				oan = new UnchangedOpApplNodeWrapper(opApplNode, this.root);
+			} else {
+				oan = new OpApplNodeWrapper(opApplNode, this.root);
+			}
+			
 			if (nodes.contains(oan)) {
 				oan.setPrimed();
 			}
 			
 			// CONSTANT operators (this is similar to the lookups in Tool#evalAppl on e.g.
 			// line 1442), except that we lookup ToolObject only.
-			final Object val = ((OpApplNode) exploreNode).getOperator().getToolObject(TLCGlobals.ToolId);// tool.lookup(((OpApplNode)
+			final Object val = opApplNode.getOperator().getToolObject(TLCGlobals.ToolId);// tool.lookup(((OpApplNode)
 			if (val instanceof OpDefNode) {
 				final OpDefNode odn = (OpDefNode) val;
 				final ExprNode body = odn.getBody();
