@@ -192,7 +192,8 @@ public abstract class CommonTestCase {
 		
 		// Validation of coverage results is split into two steps. Step A checks if all
 		// uncovered (zero) lines are found, step B checks if non-zero lines exist.		
-		final Set<Coverage> expectedZero = expected.stream().filter(Coverage::isZero).collect(Collectors.toSet());
+		final Set<Coverage> expectedZero = expected.stream().filter(Coverage::isZero)
+				.filter(Coverage::isCoverage).collect(Collectors.toSet());
 		final Set<Coverage> actualZeroCoverage = recorder.getZeroCoverage().stream().collect(Collectors.toSet());
 		assertEquals(expectedZero, actualZeroCoverage);
 		
