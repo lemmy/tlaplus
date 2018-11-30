@@ -90,13 +90,23 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 	private CoverageInformationItem root;
 
 	public CoverageInformationItem getRoot(final String filename) {
+		// Root is the technical root acting as entry point for the editor. It doesn't
+		// have a location or counts.
 		final CoverageInformationItem root = new CoverageInformationItem();
 		
 		final Deque<CoverageInformationItem> stack = new ArrayDeque<>();
 		stack.push(root.setLayer(-1));
 		
+		// AII is the (logical) root of the current CostModel. It has a location and
+		// counts.
+		ActionInformationItem aiiRoot = null;
 		for (CoverageInformationItem item : items) {
 			if (filename.equals(item.getModuleLocation().source())) {
+				if (item instanceof ActionInformationItem) {
+					aiiRoot = (ActionInformationItem) item;
+				} else {
+					item.setRoot(aiiRoot);
+				}
 				int layer = item.getLayer();
 				while (layer <= stack.peek().getLayer()) {
 					stack.pop();
@@ -186,13 +196,15 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 		String hover = "", plus = "";
 		Long sum = 0L;
 		for (CoverageInformationItem cii : sorted) {
-			sum += cii.getCount();
-			hover = String.format("%s%s%,d invocation(s)\n", hover, plus, cii.getCount());
+			final long count = cii.getCount();
+			sum += count;
+			hover = String.format("%s%s%,d invocation%s (%s)\n", hover, plus, count, count == 1 ? "" : "s",
+					cii.getRoot().getLocation());
 			plus = "+";
 		}
 
 		if (sorted.size() > 1 && sum > 0) {
-			hover += String.format("---------\n%,d invocation(s)", sum);
+			hover += String.format("---------\n%,d invocations", sum);
 		}
 		
 		

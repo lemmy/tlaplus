@@ -143,4 +143,8 @@ public class ActionWrapper extends CostModelNode {
 		// Let children report.
 		this.children.values().forEach(c -> c.report());
 	}
+
+	public boolean is(Relation r) {
+		return r == this.relation;
+	}
 }

@@ -31,6 +31,15 @@ public class CoverageInformationItem implements IModuleLocatable
     protected String modelName;
     protected long count;
     protected int layer;
+    
+    private final List<CoverageInformationItem> siblings = new ArrayList<>();
+    private final List<CoverageInformationItem> childs = new ArrayList<>();
+    private CoverageInformationItem parent;
+    private ActionInformationItem root;
+	
+	private Color color, aggregateColor;
+	private boolean active = false;
+
 
     /**
      * Creates an simple item storing information about a coverage at a certain location
@@ -122,16 +131,17 @@ public class CoverageInformationItem implements IModuleLocatable
     {
         return modelName;
     }
-
-    private final List<CoverageInformationItem> siblings = new ArrayList<>();
+ 
+    CoverageInformationItem setRoot(ActionInformationItem root) {
+    	this.root = root;
+    	return this;
+    }
     
 	CoverageInformationItem addSiblings(List<CoverageInformationItem> siblings) {
 		this.siblings.addAll(siblings);
 		this.siblings.remove(this);
 		return this;
 	}
-
-    private final List<CoverageInformationItem> childs = new ArrayList<>();
     
 	List<CoverageInformationItem> getChildren() {
 		return childs;
@@ -139,6 +149,7 @@ public class CoverageInformationItem implements IModuleLocatable
 
 	CoverageInformationItem addChild(CoverageInformationItem child) {
 		this.childs.add(child);
+		child.parent = this;
 		return this;
 	}
 
@@ -146,8 +157,6 @@ public class CoverageInformationItem implements IModuleLocatable
 		this.layer = i;
 		return this;
 	}
-	
-	private Color color, aggregateColor;
 
 	protected CoverageInformationItem setColor(Color c, Color a) {
 		this.color = c;
@@ -169,8 +178,6 @@ public class CoverageInformationItem implements IModuleLocatable
 	private boolean isRoot() {
 		return layer == -1;
 	}
-
-	private boolean active = false;
 	
 	public boolean isActive() {
 		return active;
@@ -258,5 +265,17 @@ public class CoverageInformationItem implements IModuleLocatable
 		Color aggregate = JFaceResources.getColorRegistry().get(key);
 		
 		setColor(color, aggregate);
+	}
+
+	public CoverageInformationItem getParent() {
+		return parent;
+	}
+	
+	public ActionInformationItem getRoot() {
+		return root;
+	}
+
+	public boolean hasLocation() {
+		return this.location != null;
 	}
 }
