@@ -165,16 +165,24 @@ public class ActionInformationItem extends CoverageInformationItem {
 	}
 
 	public String getHover() {
-		if (relation != Relation.PROP){
-			final double ratio = (unseen * 1d / sum) * 100d;
-			if (relation == Relation.NEXT) {
+		if (relation == Relation.PROP){
+			return "";
+		} else if (relation == Relation.NEXT) {
+			if (getCount() == 0) {
+				return String.format("Action %s:\n- No states generated\n", name);
+			} else if (unseen == 0) {
+				return String.format("Action %s:\n- %,d state%s generated but none distinct\n", name, getCount(),
+						getCount() == 1 ? "" : "s");
+			} else {
+				final double ratio = (unseen * 1d / sum) * 100d;
 				final double overhead = (unseen * 1d / getCount()) * 100d;
 				return String.format(
-						"Action %s:\n%,d state(s) generated with %,d of them distinct (%.2f%%).\nContributes %.2f%% to total number of distinct states across all actions.",
-						name, getCount(), unseen, overhead, ratio);
-			} else {
-				return String.format("Action %s (Init):\n%,d state(s) generated.", name, getCount());
+						"Action %s:\n- %,d state%s generated with %,d distinct (%.2f%%)\n- Contributes %.2f%% to total number of distinct states across all actions\n",
+						name, getCount(), getCount() == 1 ? "" : "s", unseen, overhead, ratio);
 			}
+		} else if (relation == Relation.INIT) {
+			return String.format("Action %s (Init):\n- %,d state%s generated", name, getCount(),
+					getCount() == 1 ? "" : "s");
 		}
 		return "";
 	}
