@@ -185,8 +185,9 @@ public class OpApplNodeWrapper extends CostModelNode implements Comparable<OpApp
 	
 	// ---------------- Print ---------------- //
 	
-	public void report() {
+	public CostModel report() {
 		print(0, Calculate.FRESH);
+		return this;
 	}
 
 	protected void print(int level, final Calculate fresh) {

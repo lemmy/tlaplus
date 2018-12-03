@@ -104,7 +104,7 @@ public class ActionWrapper extends CostModelNode {
 	/* (non-Javadoc)
 	 * @see tlc2.tool.coverage.CostModel#report()
 	 */
-	public void report() {
+	public CostModel report() {
 		// Report count for action itself.
 		if (relation == Relation.PROP) {
 			assert getEvalCount() == 0L && this.secondary.getCount() == 0L;
@@ -123,6 +123,7 @@ public class ActionWrapper extends CostModelNode {
 		assert !(this.action.pred instanceof SubstInNode) ? this.children.size() == 1 : !this.children.isEmpty();
 		// Let children report.
 		this.children.values().forEach(c -> c.report());
+		return this;
 	}
 
 	public boolean is(Relation r) {
