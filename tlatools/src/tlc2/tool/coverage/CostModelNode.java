@@ -77,13 +77,15 @@ public abstract class CostModelNode implements CostModel {
 	// -- -- //
 
 	@Override
-	public void incInvocations(long size) {
+	public CostModel incInvocations(long size) {
 		this.stats.add(size);
+		return this;
 	}
 
 	@Override
-	public void incInvocations() {
+	public CostModel incInvocations() {
 		this.stats.increment();
+		return this;
 	}
 
 	public CostModel incSecondary() {
