@@ -16,6 +16,7 @@ import tlc2.tool.EvalException;
 import tlc2.tool.FingerprintException;
 import tlc2.tool.TLCState;
 import tlc2.tool.Tool;
+import tlc2.tool.coverage.CostModel;
 import tlc2.util.Context;
 import util.Assert;
 
@@ -54,6 +55,12 @@ public class SetPredValue extends EnumerableValue implements Enumerable {
        * after the call, so copies must be made.
        */
     this.control = control;
+  }
+
+  public SetPredValue(Object vars, Value inVal, SemanticNode pred, Tool tool,
+          Context con, TLCState s0, TLCState s1, int control, CostModel cm) {
+	  this(vars, inVal, pred, tool, con, s0, s1, control);
+	  this.cm = cm;
   }
 
   public final byte getKind() { return SETPREDVALUE; }
@@ -277,7 +284,7 @@ public class SetPredValue extends EnumerableValue implements Enumerable {
       while ((elem = Enum.nextElement()) != null) {
         vals.addElement(elem);
       }
-      return new SetEnumValue(vals, ((SetPredValue)this).isNormalized());
+      return new SetEnumValue(vals, this.isNormalized(), cm);
   }
 
   @Override

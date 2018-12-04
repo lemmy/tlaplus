@@ -237,7 +237,7 @@ public class SetDiffValue extends EnumerableValue implements Enumerable {
       while ((elem = Enum.nextElement()) != null) {
         vals.addElement(elem);
       }
-      return new SetEnumValue(vals, this.set1.isNormalized());
+      return new SetEnumValue(vals, this.set1.isNormalized(), cm);
   }
 
   /* The string representation  */

@@ -9,6 +9,7 @@ package tlc2.value;
 import java.io.IOException;
 
 import tlc2.tool.FingerprintException;
+import tlc2.tool.coverage.CostModel;
 import tlc2.util.FP64;
 import util.Assert;
 
@@ -22,13 +23,28 @@ implements Enumerable, Reducible {
 	  this(new ValueVec(elems), isNorm);
   }
 
+  public SetEnumValue(Value[] vals, boolean isNorm, CostModel cm) {
+	  this(vals, isNorm);
+	  this.cm = cm;
+  }
+
   public SetEnumValue(ValueVec elems, boolean isNorm) {
     this.elems = elems;
     this.isNorm = isNorm;
   }
-  
+
+  public SetEnumValue(ValueVec elems, boolean isNorm, final CostModel cm) {
+	  this(elems, isNorm);
+	  this.cm = cm;
+  }
+
   public SetEnumValue() {
 	  this(new ValueVec(0), true);
+  }
+  
+  public SetEnumValue(CostModel cm) {
+	  this();
+	  this.cm = cm;
   }
 
   public final byte getKind() { return SETENUMVALUE; }

@@ -12,6 +12,7 @@ import java.math.BigInteger;
 import tlc2.TLCGlobals;
 import tlc2.output.EC;
 import tlc2.tool.FingerprintException;
+import tlc2.tool.coverage.CostModel;
 import util.Assert;
 import util.UniqueString;
 
@@ -29,6 +30,11 @@ public class SetOfRcdsValue extends SetOfFcnsOrRcdsValue implements Enumerable {
     if (!isNorm) {
       this.sortByNames();
     }
+  }
+
+  public SetOfRcdsValue(UniqueString[] names, Value[] values, boolean isNorm, CostModel cm) {
+	  this(names, values, isNorm);
+	  this.cm = cm;
   }
 
   public final byte getKind() { return SETOFRCDSVALUE; }
@@ -339,7 +345,7 @@ public class SetOfRcdsValue extends SetOfFcnsOrRcdsValue implements Enumerable {
       while ((elem = Enum.nextElement()) != null) {
         vals.addElement(elem);
       }
-      return new SetEnumValue(vals, this.isNormalized());
+      return new SetEnumValue(vals, this.isNormalized(), cm);
   }
 
   @Override
@@ -458,7 +464,7 @@ public class SetOfRcdsValue extends SetOfFcnsOrRcdsValue implements Enumerable {
         this.enums[i].reset();
         this.currentElems[i] = this.enums[i].nextElement();
       }
-      return new RecordValue(names, elems, true);
+      return new RecordValue(names, elems, true, cm);
     }
 
   }
@@ -500,7 +506,7 @@ public class SetOfRcdsValue extends SetOfFcnsOrRcdsValue implements Enumerable {
 				
 				val[i] = sev.elems.elementAt(elementAt);
 			}
-			return new RecordValue(names, val, false);
+			return new RecordValue(names, val, false, cm);
 		}
 	}
 	
@@ -544,7 +550,7 @@ public class SetOfRcdsValue extends SetOfFcnsOrRcdsValue implements Enumerable {
 
 				val[i] = sev.elems.elementAt(elementAt);
 			}
-			return new RecordValue(names, val, false);
+			return new RecordValue(names, val, false, cm);
 		}
 	}
 }

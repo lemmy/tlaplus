@@ -10,6 +10,7 @@ import java.io.IOException;
 
 import tlc2.TLCGlobals;
 import tlc2.tool.FingerprintException;
+import tlc2.tool.coverage.CostModel;
 import util.Assert;
 
 public class SetOfTuplesValue extends EnumerableValue implements Enumerable {
@@ -20,6 +21,10 @@ public class SetOfTuplesValue extends EnumerableValue implements Enumerable {
   public SetOfTuplesValue(Value[] sets) {
     this.sets = sets;
     this.tupleSet = null;
+  }
+  public SetOfTuplesValue(Value[] set, CostModel cm) {
+	  this(set);
+	  this.cm = cm;
   }
 
   public SetOfTuplesValue(Value val) {
@@ -303,7 +308,7 @@ public class SetOfTuplesValue extends EnumerableValue implements Enumerable {
       while ((elem = Enum.nextElement()) != null) {
         vals.addElement(elem);
       }
-      return new SetEnumValue(vals, this.isNormalized());
+      return new SetEnumValue(vals, this.isNormalized(), cm);
   }
 
   @Override
@@ -420,7 +425,7 @@ public class SetOfTuplesValue extends EnumerableValue implements Enumerable {
         this.enums[i].reset();
         this.currentElems[i] = this.enums[i].nextElement();
       }
-      return new TupleValue(elems);
+      return new TupleValue(elems, cm);
     }
   }
 

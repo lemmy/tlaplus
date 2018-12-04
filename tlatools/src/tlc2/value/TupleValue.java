@@ -12,6 +12,7 @@ import tlc2.output.EC;
 import tlc2.output.MP;
 import tlc2.tool.EvalControl;
 import tlc2.tool.FingerprintException;
+import tlc2.tool.coverage.CostModel;
 import tlc2.util.FP64;
 import util.Assert;
 
@@ -30,6 +31,11 @@ public class TupleValue extends Value implements Applicable {
 	  this(new Value[2]);
     this.elems[0] = v1;
     this.elems[1] = v2;
+  }
+
+  public TupleValue(Value[] elems, CostModel cm) {
+	  this(elems);
+	  this.cm = cm;
   }
 
   public final byte getKind() { return TUPLEVALUE; }

@@ -13,6 +13,7 @@ import java.util.Arrays;
 import tlc2.output.EC;
 import tlc2.output.MP;
 import tlc2.tool.FingerprintException;
+import tlc2.tool.coverage.CostModel;
 import tlc2.util.FP64;
 import util.Assert;
 import util.UniqueString;
@@ -27,6 +28,11 @@ public class RecordValue extends Value implements Applicable {
     this.names = names;
     this.values = values;
     this.isNorm = isNorm;
+  }
+
+  public RecordValue(UniqueString[] names, Value[] values, boolean isNorm, CostModel cm) {
+	  this(names, values, isNorm);
+	  this.cm = cm;
   }
 
   public final byte getKind() { return RECORDVALUE; }

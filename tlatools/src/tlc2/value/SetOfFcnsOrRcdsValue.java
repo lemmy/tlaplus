@@ -45,7 +45,7 @@ public abstract class SetOfFcnsOrRcdsValue extends EnumerableValue {
 		assert (needBigInteger() ? vec.sort(true).size() == kOutOfN
 				: vec.sort(true).size() == Math.min(kOutOfN, size()));
 
-    	return new SetEnumValue(vec, false);
+    	return new SetEnumValue(vec, false, cm);
 	}
 
 	@Override

@@ -11,6 +11,7 @@ import java.util.Arrays;
 
 import tlc2.tool.EvalControl;
 import tlc2.tool.FingerprintException;
+import tlc2.tool.coverage.CostModel;
 import tlc2.util.FP64;
 import util.Assert;
 import util.UniqueString;
@@ -49,6 +50,16 @@ public class FcnRcdValue extends Value implements Applicable {
 
   public FcnRcdValue(ValueVec elems, Value[] values, boolean isNorm) {
 	  this(elems.toArray(), values, isNorm);
+  }
+
+  public FcnRcdValue(ValueVec elems, Value[] values, boolean isNorm, CostModel cm) {
+	  this(elems, values, isNorm);
+	  this.cm = cm;
+  }
+
+  public FcnRcdValue(Value[] domain, Value[] values, boolean isNorm, CostModel cm) {
+	  this(domain, values, isNorm);
+	  this.cm = cm;
   }
 
   public final byte getKind() { return FCNRCDVALUE; }

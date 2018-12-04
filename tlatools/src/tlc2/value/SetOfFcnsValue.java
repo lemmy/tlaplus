@@ -11,6 +11,7 @@ import java.math.BigInteger;
 
 import tlc2.TLCGlobals;
 import tlc2.tool.FingerprintException;
+import tlc2.tool.coverage.CostModel;
 import util.Assert;
 
 public class SetOfFcnsValue extends SetOfFcnsOrRcdsValue implements Enumerable {
@@ -23,6 +24,11 @@ public class SetOfFcnsValue extends SetOfFcnsOrRcdsValue implements Enumerable {
     this.domain = domain;
     this.range = range;
     this.fcnSet = null;
+  }
+
+  public SetOfFcnsValue(Value domain, Value range, CostModel cm) {
+	  this(domain, range);
+	  this.cm = cm;
   }
 
   public final byte getKind() { return SETOFFCNSVALUE; }
@@ -285,7 +291,7 @@ public class SetOfFcnsValue extends SetOfFcnsOrRcdsValue implements Enumerable {
       while ((elem = Enum.nextElement()) != null) {
         vals.addElement(elem);
       }
-      return new SetEnumValue(vals, this.isNormalized());
+      return new SetEnumValue(vals, this.isNormalized(), cm);
   }
 
   @Override
