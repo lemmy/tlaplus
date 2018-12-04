@@ -528,7 +528,6 @@ public class SubsetValue extends EnumerableValue implements Enumerable {
 					reset(k + 1);
 					return new SetEnumValue();
 				}
-				cm.incInvocations();
 
 				final ValueVec vals = new ValueVec(k);
 				int i = k - 1;
