@@ -53,6 +53,7 @@ import tlc2.output.MP;
 import tlc2.tool.Action;
 import tlc2.tool.Tool;
 import tlc2.tool.coverage.ActionWrapper.Relation;
+import tlc2.util.Context;
 import tlc2.util.ObjLongTable;
 import tlc2.util.Vect;
 
@@ -75,6 +76,7 @@ public class CostModelCreator extends ExplorerVisitor {
 
 	private final Deque<CostModelNode> stack = new ArrayDeque<>();
 	private final Map<ExprOrOpArgNode, Subst> substs = new HashMap<>();
+	private final Map<OpApplNode, OpApplNodeWrapper> node2Wrapper = new HashMap<>();
 	private final Set<OpDefNode> opDefNodes = new HashSet<>();
 	// OpAppNode does not implement equals/hashCode which causes problem when added
 	// to sets or maps. E.g. for a test, an OpApplNode instance belonging to
@@ -82,6 +84,8 @@ public class CostModelCreator extends ExplorerVisitor {
 	private final Set<OpApplNodeWrapper> nodes = new HashSet<>();
 	
 	private ActionWrapper root;
+	private Tool tool;
+	private Context ctx = Context.Empty;
 	
 	private CostModelCreator(final SemanticNode root) {
 		this.stack.push(new RecursiveOpApplNodeWrapper());
@@ -90,6 +94,7 @@ public class CostModelCreator extends ExplorerVisitor {
 
 	// root cannot be type OpApplNode but has to be SemanticNode (see Test216).
 	private CostModelCreator(final Tool tool) {
+		this.tool = tool;
 		// MAK 10/08/2018: Annotate OApplNodes in the semantic tree that correspond to
 		// primed vars. It is unclear why OpApplNodes do not get marked as primed when
 		// instantiated. The logic in Tool#getPrimedLocs is too obscure to tell.
@@ -102,8 +107,10 @@ public class CostModelCreator extends ExplorerVisitor {
 
 	private CostModel getCM(final Action act, final ActionWrapper.Relation relation) {
 		this.substs.clear();
+		this.node2Wrapper.clear();
 		this.opDefNodes.clear();
 		this.stack.clear();
+		this.ctx = Context.Empty;
 		
 		this.root = new ActionWrapper(act, relation);
 		this.stack.push(root);
@@ -134,7 +141,7 @@ public class CostModelCreator extends ExplorerVisitor {
 			
 			// CONSTANT operators (this is similar to the lookups in Tool#evalAppl on e.g.
 			// line 1442), except that we lookup ToolObject only.
-			final Object val = opApplNode.getOperator().getToolObject(TLCGlobals.ToolId);// tool.lookup(((OpApplNode)
+			final Object val = opApplNode.getOperator().getToolObject(TLCGlobals.ToolId);
 			if (val instanceof OpDefNode) {
 				final OpDefNode odn = (OpDefNode) val;
 				final ExprNode body = odn.getBody();
@@ -145,7 +152,7 @@ public class CostModelCreator extends ExplorerVisitor {
 			}			
 			
 			// RECURSIVE
-			final SymbolNode operator = oan.getNode().getOperator();
+			final SymbolNode operator = opApplNode.getOperator();
 			if (operator instanceof OpDefNode) {
 				final OpDefNode odn = (OpDefNode) operator;
 				if (odn.getInRecursive()) {
@@ -156,6 +163,26 @@ public class CostModelCreator extends ExplorerVisitor {
 						oan.setRecursive(recursive);
 					}
 				}
+			}
+			
+			// Higher-order operators/Operators as arguments (LAMBDA, ...)
+			if (tool != null && operator instanceof OpDefNode && opApplNode.hasOpcode(0)) {
+				// 1) Maintain Context as done by Tool...
+				final OpDefNode odn = (OpDefNode) operator;
+				this.ctx = tool.getOpContext(odn, opApplNode.getArgs(), ctx, false);
+			}
+			final Object lookup = this.ctx.lookup(opApplNode.getOperator());
+			if (lookup instanceof OpDefNode) {
+				// 2) Context has an entry for the given body. Remember for later.
+				final ExprNode body = ((OpDefNode) lookup).getBody();
+				if (body instanceof OpApplNode) {
+					this.node2Wrapper.put((OpApplNode) body, oan);
+				}
+			}
+			if (this.node2Wrapper.containsKey(opApplNode)) {
+				// 3) Now its later. Connect w and oan. 
+				final OpApplNodeWrapper w = this.node2Wrapper.get(opApplNode);
+				w.addChild(oan);
 			}
 			
 			// Substitutions
