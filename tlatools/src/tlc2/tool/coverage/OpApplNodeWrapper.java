@@ -257,9 +257,19 @@ public class OpApplNodeWrapper extends CostModelNode implements Comparable<OpApp
 		MP.printMessage(EC.TLC_COVERAGE_VALUE, new String[] {
 				indentBegin(level, TLCGlobals.coverageIndent, getLocation().toString()), String.valueOf(count) });
 	}
+	
+	protected void printSelf(final int level, final long count, final long cost) {
+		MP.printMessage(EC.TLC_COVERAGE_VALUE_COST,
+				new String[] { indentBegin(level, TLCGlobals.coverageIndent, getLocation().toString()),
+						String.valueOf(count), String.valueOf(cost) });
+	}
 
 	protected void printSelf(final int level) {
-		printSelf(level, getEvalCount());
+		if (getSecondary() > 0) {
+			printSelf(level, getEvalCount(), getSecondary());
+		} else {
+			printSelf(level, getEvalCount());
+		}
 	}
 
 	protected static String indentBegin(final int n, final char c, final String str) {

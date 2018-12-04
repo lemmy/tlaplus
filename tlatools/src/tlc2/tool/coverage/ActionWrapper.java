@@ -28,11 +28,9 @@ package tlc2.tool.coverage;
 import tla2sany.semantic.SemanticNode;
 import tla2sany.semantic.SubstInNode;
 import tla2sany.st.Location;
-import tlc2.TLCGlobals;
 import tlc2.output.EC;
 import tlc2.output.MP;
 import tlc2.tool.Action;
-import tlc2.util.statistics.CounterStatistic;
 
 public class ActionWrapper extends CostModelNode {
 
@@ -40,7 +38,6 @@ public class ActionWrapper extends CostModelNode {
 		INIT, NEXT, PROP;
 	}
 	
-	private final CounterStatistic unseen = CounterStatistic.getInstance(() -> TLCGlobals.isCoverageEnabled());
 	private final Action action;
 	private final Relation relation;
 	
@@ -66,22 +63,6 @@ public class ActionWrapper extends CostModelNode {
 		} else {
 			return this.action.toString();
 		}
-	}
-	
-	/* (non-Javadoc)
-	 * @see tlc2.tool.coverage.CostModelNode#incUnseen()
-	 */
-	@Override
-	public void incUnseen() {
-		this.unseen.increment();
-	}
-	
-	/* (non-Javadoc)
-	 * @see tlc2.tool.coverage.CostModelNode#incUnseen(long)
-	 */
-	@Override
-	public void incUnseen(final long value) {
-		this.unseen.add(value);
 	}
 
 	/* (non-Javadoc)
@@ -126,15 +107,15 @@ public class ActionWrapper extends CostModelNode {
 	public void report() {
 		// Report count for action itself.
 		if (relation == Relation.PROP) {
-			assert getEvalCount() == 0L && this.unseen.getCount() == 0L;
+			assert getEvalCount() == 0L && this.secondary.getCount() == 0L;
 			MP.printMessage(EC.TLC_COVERAGE_PROPERTY, new String[] { printLocation() });
 		} else if (relation == Relation.INIT) {
-			assert this.unseen.getCount() == 0L;
+			assert this.secondary.getCount() == 0L;
 			MP.printMessage(EC.TLC_COVERAGE_INIT,
 					new String[] { printLocation(), String.valueOf(getEvalCount()) });
 		} else {
 			MP.printMessage(EC.TLC_COVERAGE_NEXT, new String[] { printLocation(),
-					String.valueOf(this.unseen.getCount()), String.valueOf(getEvalCount()) });
+					String.valueOf(this.secondary.getCount()), String.valueOf(getEvalCount()) });
 		}
 
 		// An action has single child which is the OpApplNodeWrapper with the OpApplNode

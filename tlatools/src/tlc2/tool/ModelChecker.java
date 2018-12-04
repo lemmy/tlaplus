@@ -484,7 +484,7 @@ public class ModelChecker extends AbstractChecker
                             // checks want to print the trace. 
                         	worker.writeState(curState, fp, succState);
 							unseenSuccessorStates++;
-							this.actions[i].cm.incUnseen();
+							this.actions[i].cm.incSecondary();
 						}
 						// For liveness checking:
                         if (this.checkLiveness)

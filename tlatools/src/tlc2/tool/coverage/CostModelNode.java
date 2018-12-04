@@ -40,11 +40,16 @@ public abstract class CostModelNode implements CostModel {
 	protected final Map<SemanticNode, CostModelNode> children = new LinkedHashMap<>();
 
 	protected final CounterStatistic stats = CounterStatistic.getInstance(() -> TLCGlobals.isCoverageEnabled());
+	protected final CounterStatistic secondary = CounterStatistic.getInstance(() -> TLCGlobals.isCoverageEnabled());
 	
 	// ---------------- Statistics ---------------- //
 
 	protected long getEvalCount() {
 		return this.stats.getCount();
+	}
+
+	protected long getSecondary() {
+		return this.secondary.getCount();
 	}
 
 	protected abstract Location getLocation();
@@ -81,13 +86,14 @@ public abstract class CostModelNode implements CostModel {
 		this.stats.increment();
 	}
 
-	@Override
-	public void incUnseen() {
-		throw new UnsupportedOperationException("Not applicable");
+	public CostModel incSecondary() {
+		this.secondary.increment();
+		return this;
 	}
 
 	@Override
-	public void incUnseen(final long value) {
-		throw new UnsupportedOperationException("Not applicable");
+	public CostModel incSecondary(final long value) {
+		this.secondary.add(value);
+		return this;
 	}
 }

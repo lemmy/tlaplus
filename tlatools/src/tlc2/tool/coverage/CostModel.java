@@ -57,13 +57,15 @@ public interface CostModel {
 		}
 
 		@Override
-		public void incUnseen() {
+		public CostModel incSecondary() {
 			// no-op
+			return this;
 		}
 
 		@Override
-		public void incUnseen(final long value) {
+		public CostModel incSecondary(final long value) {
 			// no-op
+			return this;
 		}
 	};
 
@@ -71,9 +73,9 @@ public interface CostModel {
 
 	void incInvocations(final long value);
 
-	void incUnseen();
+	CostModel incSecondary();
 	
-	void incUnseen(final long value);
+	CostModel incSecondary(final long value);
 
 	void report();
 
