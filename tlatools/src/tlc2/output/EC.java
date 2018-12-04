@@ -228,6 +228,7 @@ public interface EC
     public static final int TLC_STATE_PRINT3 = 2218;  // This seems to be a "Stuttering" message from a liveness-error trace 
     public static final int TLC_SANY_END = 2219;
     public static final int TLC_SANY_START = 2220;
+    public static final int TLC_COVERAGE_MISMATCH = 2776;
     public static final int TLC_COVERAGE_VALUE = 2221;
     public static final int TLC_COVERAGE_NEXT = 2772;
     public static final int TLC_COVERAGE_INIT = 2773;

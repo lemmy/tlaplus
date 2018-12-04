@@ -155,9 +155,9 @@ public class OpApplNodeWrapper extends CostModelNode implements Comparable<OpApp
 		}
 		
 		// TODO Not all places in Tool lookup the correct CM yet. This should only be an
-		// engineering effort but no fundamental problem expect that SubstInNode has not
-		// been looked into yet.
-		throw new RuntimeException("Couldn't find child where one should be!");
+		// engineering effort though.
+		MP.printMessage(EC.TLC_COVERAGE_MISMATCH, new String[] { eon.toString(), this.toString() });
+		return this;
 	}
 
 	// ---------------- Level ---------------- //
