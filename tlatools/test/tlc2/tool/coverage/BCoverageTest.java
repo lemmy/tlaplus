@@ -49,6 +49,7 @@ public class BCoverageTest extends AbstractCoverageTest {
 		// No 'general' errors recorded
 		assertFalse(recorder.recorded(EC.GENERAL));
 
+		assertFalse(recorder.recorded(EC.TLC_COVERAGE_MISMATCH));
 		assertCoverage("  line 4, col 9 to line 4, col 17 of module B: 1\n" + 
 				"  line 8, col 6 to line 8, col 19 of module B: 2\n" + 
 				"  line 10, col 6 to line 10, col 19 of module B: 2"); 
