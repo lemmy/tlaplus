@@ -172,9 +172,9 @@ public class RecordValue extends Value implements Applicable {
         this.normalize();
         Value[] dom = new Value[this.names.length];
         for (int i = 0; i < this.names.length; i++) {
-          dom[i] = new StringValue(this.names[i]);
+          dom[i] = new StringValue(this.names[i], cm);
         }
-        return new FcnRcdValue(dom, this.values, this.isNormalized());
+        return new FcnRcdValue(dom, this.values, this.isNormalized(), cm);
 	}
 
   public final int size() {

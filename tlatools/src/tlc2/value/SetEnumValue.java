@@ -124,7 +124,7 @@ implements Enumerable, Reducible {
           diffElems.addElement(elem);
         }
       }
-      return new SetEnumValue(diffElems, this.isNormalized());
+      return new SetEnumValue(diffElems, this.isNormalized(), cm);
     }
     catch (RuntimeException | OutOfMemoryError e) {
       if (hasSource()) { throw FingerprintException.getNewHead(this, e); }
@@ -142,7 +142,7 @@ implements Enumerable, Reducible {
           capElems.addElement(elem);
         }
       }
-      return new SetEnumValue(capElems, this.isNormalized());
+      return new SetEnumValue(capElems, this.isNormalized(), cm);
     }
     catch (RuntimeException | OutOfMemoryError e) {
       if (hasSource()) { throw FingerprintException.getNewHead(this, e); }
@@ -168,7 +168,7 @@ implements Enumerable, Reducible {
         }
         return new SetEnumValue(cupElems, false);
       }
-      return new SetCupValue(this, set);
+      return new SetCupValue(this, set, cm);
     }
     catch (RuntimeException | OutOfMemoryError e) {
       if (hasSource()) { throw FingerprintException.getNewHead(this, e); }
@@ -413,7 +413,7 @@ implements Enumerable, Reducible {
     	while ((v = ve.nextElement()) != null) {
     		vec.addElement(v);
     	}
-    	return new SetEnumValue(vec, false);
+    	return new SetEnumValue(vec, false, cm);
 	}
 
 	@Override

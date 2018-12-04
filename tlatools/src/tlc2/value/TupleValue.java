@@ -225,8 +225,8 @@ public class TupleValue extends Value implements Applicable {
 
 	@Override
 	public final FcnRcdValue toFcnRcd() {
-        IntervalValue intv = new IntervalValue(1, this.elems.length);
-        return new FcnRcdValue(intv, this.elems);
+        final IntervalValue intv = new IntervalValue(1, this.elems.length);
+        return new FcnRcdValue(intv, this.elems, cm);
 	}
 
   /* The normalization of the value. */

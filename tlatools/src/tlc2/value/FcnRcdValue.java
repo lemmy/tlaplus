@@ -40,6 +40,11 @@ public class FcnRcdValue extends Value implements Applicable {
     this.indexTbl = null;
   }
 
+  public FcnRcdValue(IntervalValue intv, Value[] values, CostModel cm) {
+	  this(intv, values);
+	  this.cm = cm;
+  }
+
   private FcnRcdValue(FcnRcdValue fcn, Value[] values) {
     this.domain = fcn.domain;
     this.intv = fcn.intv;
@@ -518,7 +523,7 @@ public class FcnRcdValue extends Value implements Applicable {
           return null;
         }
       }
-      return new TupleValue(elems);
+      return new TupleValue(elems, cm);
   }
 
   @Override
@@ -532,7 +537,7 @@ public class FcnRcdValue extends Value implements Applicable {
         }
         vars[i] = ((StringValue)this.domain[i]).getVal();
       }
-      return new RecordValue(vars, this.values, this.isNormalized());
+      return new RecordValue(vars, this.values, this.isNormalized(), cm);
   }
 
   	@Override

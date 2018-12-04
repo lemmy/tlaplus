@@ -59,8 +59,9 @@ public abstract class Value implements ValueConstants, Serializable {
 
   public transient CostModel cm = CostModel.DO_NOT_RECORD;
   
-  public void setCostModel(CostModel cm) {
+  public Value setCostModel(CostModel cm) {
 	  this.cm = cm;
+	  return this;
   }
   
   public CostModel getCostModel() {
