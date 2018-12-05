@@ -161,8 +161,8 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 			if (item instanceof ActionInformationItem) {
 				aiiCounts.add(((ActionInformationItem) item).getUnseen());
 			} else {
-				ciiCounts.add(item.getCount());
-				ciiCounts.add(item.getCount() * numSiblings(item));
+				ciiCounts.add(item.getWeight());
+				ciiCounts.add(item.getWeight() * numSiblings(item));
 			}
 		}
 
@@ -198,7 +198,11 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 		for (CoverageInformationItem cii : sorted) {
 			final long count = cii.getCount();
 			sum += count;
-			hover = String.format("%s%s%,d invocation%s (%s)\n", hover, plus, count, count == 1 ? "" : "s",
+			String cost = "";
+			if (cii.getCost() > 0) {
+				cost = String.format(", cost %s", cii.getCost());
+			}
+			hover = String.format("%s%s%,d invocation%s%s (%s)\n", hover, plus, count, count == 1 ? "" : "s", cost,
 					cii.getRoot().getLocation());
 			plus = "+";
 		}
