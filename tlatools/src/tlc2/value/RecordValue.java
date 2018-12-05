@@ -174,6 +174,7 @@ public class RecordValue extends Value implements Applicable {
         for (int i = 0; i < this.names.length; i++) {
           dom[i] = new StringValue(this.names[i], cm);
         }
+        cm.incSecondary(dom.length);
         return new FcnRcdValue(dom, this.values, this.isNormalized(), cm);
 	}
 

@@ -273,6 +273,7 @@ public class UnionValue extends EnumerableValue implements Enumerable {
       while ((elem = Enum.nextElement()) != null) {
         vals.addElement(elem);
       }
+      cm.incSecondary(vals.size());
       return new SetEnumValue(vals, false, cm);
   }
 

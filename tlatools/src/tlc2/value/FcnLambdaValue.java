@@ -591,6 +591,7 @@ public class FcnLambdaValue extends Value implements Applicable {
           Context c1 = this.con.cons(var, IntValue.gen(i));
           elems[i-1] = this.tool.eval(this.body, c1, this.state, this.pstate, this.control);
         }
+        cm.incSecondary(elems.length);
         return new TupleValue(elems, cm);
       }
       else {
@@ -608,6 +609,7 @@ public class FcnLambdaValue extends Value implements Applicable {
           Context c1 = this.con.cons(var, argVal);
           elems[i] = this.tool.eval(this.body, c1, this.state, this.pstate, this.control);
         }
+        cm.incSecondary(elems.length);
         return new TupleValue(elems, cm);
       }
   }
@@ -624,6 +626,7 @@ public class FcnLambdaValue extends Value implements Applicable {
         }
         vars[i] = ((StringValue)fcn.domain[i]).getVal();
       }
+      cm.incSecondary(vars.length);
       return new RecordValue(vars, fcn.values, fcn.isNormalized(), cm);
   }
 
@@ -681,6 +684,7 @@ public class FcnLambdaValue extends Value implements Applicable {
             values[idx++] = this.tool.eval(this.body, c1, this.state, this.pstate, this.control);
           }
         }
+        cm.incSecondary(sz);
         this.fcnRcd = new FcnRcdValue(domain, values, false, cm);
         if (this.excepts != null) {
           this.fcnRcd = (FcnRcdValue)fcnRcd.takeExcept(this.excepts);

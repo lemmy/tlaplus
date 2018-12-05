@@ -234,6 +234,7 @@ public class SetCapValue extends EnumerableValue implements Enumerable {
       while ((elem = Enum.nextElement()) != null) {
         vals.addElement(elem);
       }
+      cm.incSecondary(vals.size());
       return new SetEnumValue(vals, this.isNormalized(), cm);
   }
 
