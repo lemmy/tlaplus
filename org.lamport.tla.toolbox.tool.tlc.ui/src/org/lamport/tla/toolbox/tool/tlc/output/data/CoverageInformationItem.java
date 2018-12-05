@@ -3,6 +3,8 @@ package org.lamport.tla.toolbox.tool.tlc.output.data;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.IRegion;
@@ -30,6 +32,7 @@ public class CoverageInformationItem implements IModuleLocatable
     protected Location location;
     protected String modelName;
     protected long count;
+    protected long cost;
     protected int layer;
     
     private final List<CoverageInformationItem> siblings = new ArrayList<>();
@@ -57,6 +60,11 @@ public class CoverageInformationItem implements IModuleLocatable
         this.modelName = modelName;
         this.layer = layer;
     }
+    
+    public CoverageInformationItem(Location location, long count, long cost, String modelName, int layer) {
+    	this(location, count, modelName, layer);
+    	this.cost = cost;
+    }
 
     public CoverageInformationItem() {
 	}
@@ -76,6 +84,14 @@ public class CoverageInformationItem implements IModuleLocatable
         return count;
     }
 
+    public final long getCost() {
+    	return cost;
+    }
+    
+    public final long getWeight() {
+    	return getCount() + getCost();
+    }
+    
 	/**
 	 * If two CCI are co-located (overlapping, nested, ...), the layer indicates
 	 * which one is considered more important.
@@ -101,6 +117,24 @@ public class CoverageInformationItem implements IModuleLocatable
         int index = outputMessage.indexOf(COLON);
         return new CoverageInformationItem(Location.parseLocation(outputMessage.substring(layer, index)), Long
                 .parseLong(outputMessage.substring(index + COLON.length())), modelName, layer);
+    }
+    
+    public static CoverageInformationItem parseCost(String outputMessage, String modelName)
+    {
+
+        // "  line 84, col 32 to line 85, col 73 of module AtomicBakery: 1012492"
+        outputMessage = outputMessage.trim();
+        
+		final Pattern pattern = Pattern.compile("^(\\|*?)(line .*): ([0-9]+):([0-9]+)$");
+		final Matcher matcher = pattern.matcher(outputMessage);
+		matcher.find();
+
+		final int layer = matcher.group(1).length();
+		final Location location = Location.parseLocation(matcher.group(2));
+		final long count = Long.parseLong(matcher.group(3));
+		final long cost= Long.parseLong(matcher.group(4));
+       
+		return new CoverageInformationItem(location, count, cost, modelName, layer);
     }
 
     /**
@@ -249,7 +283,7 @@ public class CoverageInformationItem implements IModuleLocatable
 	}
 
 	void colorItem(TreeSet<Long> counts, final int numSiblings) {
-		int hue = CoverageInformation.getHue(getCount(), counts);
+		int hue = CoverageInformation.getHue(getWeight(), counts);
 		String key = Integer.toString(hue);
 		if (!JFaceResources.getColorRegistry().hasValueFor(key)) {
 			JFaceResources.getColorRegistry().put(key, new RGB(hue, .25f, 1f));
@@ -257,7 +291,7 @@ public class CoverageInformationItem implements IModuleLocatable
 		Color color = JFaceResources.getColorRegistry().get(key);
 		
 		// Aggregated color (might be identical to color).
-		hue = CoverageInformation.getHue(getCount() * numSiblings, counts);
+		hue = CoverageInformation.getHue(getWeight() * numSiblings, counts);
 		key = Integer.toString(hue);
 		if (!JFaceResources.getColorRegistry().hasValueFor(key)) {
 			JFaceResources.getColorRegistry().put(key, new RGB(hue, .25f, 1f));
