@@ -2,9 +2,12 @@
 <aspectj>
 
 	<aspects>
+	<!-- 
 		<aspect name="tlc2.tool.WorkerMonitorAspect"/>
 		<aspect name="tlc2.tool.distributed.RMIMethodMonitorAspect"/>
 		<aspect name="tlc2.tool.distributed.TLCServerMonitorAspect"/>
+	-->
+		<aspect name="tlc2.value.CostModelAspect"/>
 	</aspects>
 
 </aspectj>
