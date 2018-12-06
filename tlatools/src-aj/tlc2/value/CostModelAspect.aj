@@ -40,16 +40,16 @@ public class CostModelAspect {
 	// -------------------------------- //
 	
 	@Pointcut("call(tlc2.value.Value+.new(..)) && !within(tlc2.value.CostModelAspect)")
-	void newValueExec() {}
+	void newValueCtor() {}
 	
-	@AfterReturning(pointcut="newValueExec()", returning="newValue")
+	@AfterReturning(pointcut="newValueCtor()", returning="newValue")
 	public void afterNewValue(final Value newValue, final JoinPoint jp) {
 		afterNewValueImpl(newValue, jp);
 	}
 
 	private void afterNewValueImpl(final Value newValue, final JoinPoint jp) {
 		if (jp.getThis() instanceof Value) {
-			// A) Get CostModel instance from existing Value.
+			// Get CostModel instance from existing Value and attach to new one.
 			final Value existingValue = (Value) jp.getThis();
 			newValue.setCostModel(existingValue.getCostModel());
 		}
