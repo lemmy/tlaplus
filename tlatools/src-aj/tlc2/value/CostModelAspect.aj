@@ -32,6 +32,7 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 
+import tlc2.TLCGlobals;
 import tlc2.tool.coverage.CostModel;
 
 @Aspect
@@ -39,8 +40,10 @@ public class CostModelAspect {
 	
 	// -------------------------------- //
 	
-	@Pointcut("call(tlc2.value.Value+.new(..)) && !within(tlc2.value.CostModelAspect)")
-	void newValueCtor() {}
+	@Pointcut("call(tlc2.value.Value+.new(..)) && !within(tlc2.value.CostModelAspect) && if()")
+	public static boolean newValueCtor() {
+		return TLCGlobals.isCoverageEnabled();
+	}
 	
 	@AfterReturning(pointcut="newValueCtor()", returning="newValue")
 	public void afterNewValue(final Value newValue, final JoinPoint jp) {
@@ -57,8 +60,10 @@ public class CostModelAspect {
 
 	// -------------------------------- //
 
-	@Pointcut("execution(public tlc2.value.ValueEnumeration tlc2.value.Enumerable+.elements(..)) && !within(tlc2.value.CostModelAspect)")
-	void elementsExec() {}
+	@Pointcut("execution(public tlc2.value.ValueEnumeration tlc2.value.Enumerable+.elements(..)) && !within(tlc2.value.CostModelAspect) && if()")
+	public static boolean elementsExec() {
+		return TLCGlobals.isCoverageEnabled();
+	}
 	
 	@Around("elementsExec()")
 	public Object procedeElements(final ProceedingJoinPoint call) throws Throwable {
