@@ -73,6 +73,8 @@
         name="org.eclipse.e4.tools.spies.feature.feature.group"/>
     <requirement
         name="com.abstratt.eclipsegraphviz.feature.feature.group"/>
+    <requirement
+        name="org.eclipse.rcptt.platform.feature.group"/>
     <repository
         url="http://download.eclipse.org/technology/swtbot/releases/latest/"/>
     <repository
@@ -83,12 +85,14 @@
         url="http://download.eclipse.org/e4/snapshots/org.eclipse.e4.tools/latest/"/>
     <repository
         url="jar:http://repository-textuml.forge.cloudbees.com/snapshot/com/abstratt/mdd/com.abstratt.mdd.oss.repository/2.1/com.abstratt.mdd.oss.repository-2.1.zip!/"/>
+    <repository
+        url="http://download.eclipse.org/rcptt/release/2.3.0/repository/"/>
     <description>Install the tools needed in the IDE to work with the source code for ${scope.project.label}</description>
   </setupTask>
   <setupTask
       xsi:type="git:GitCloneTask"
       id="git.clone"
-      remoteURI="tlaplus/tlaplus">
+      remoteURI="lemmy/tlaplus">
     <annotation
         source="http://www.eclipse.org/oomph/setup/InducedChoices">
       <detail
@@ -171,8 +175,8 @@
     </workingSet>
     <description>The dynamic working sets for ${scope.project.label}</description>
   </setupTask>
-  <stream name="master"
-      label="Master"/>
+  <stream name="mku-rcptt"
+      label="mku-rcptt"/>
   <logicalProjectContainer
       xsi:type="setup:ProjectCatalog"
       href="index:/org.eclipse.setup#//@projectCatalogs[name='com.github']"/>
