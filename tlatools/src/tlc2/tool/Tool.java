@@ -415,8 +415,6 @@ public class Tool
 
   private final void getInitStates(ActionItemList acts, TLCState ps, IStateFunctor states, CostModel cm) {
 		if (acts.isEmpty()) {
-			cm.incInvocations();
-			cm.getRoot().incInvocations();
 			states.addElement(ps.copy());
 			return;
 		} else if (ps.allAssigned()) {
@@ -439,8 +437,6 @@ public class Tool
 				// Move on to the next action in the ActionItemList.
 				acts = acts.cdr();
 			}
-			cm.incInvocations();
-			cm.getRoot().incInvocations();
 			states.addElement(ps.copy());
 			return;
 		}
@@ -452,7 +448,6 @@ public class Tool
   private final void getInitStatesAppl(OpApplNode init, ActionItemList acts,
                                        Context c, TLCState ps, IStateFunctor states, CostModel cm) {
     if (this.callStack != null) this.callStack.push(init);
-    cm = cm.get(init);
     try {
         ExprOrOpArgNode[] args = init.getArgs();
         int alen = args.length;
@@ -760,19 +755,17 @@ public class Tool
    * This method returns the set of next states when taking the action
    * in the given state.
    */
-  public /*final*/ StateVec getNextStates(Action action, TLCState state) {
+  public final StateVec getNextStates(Action action, TLCState state) {
     ActionItemList acts = ActionItemList.Empty;
     TLCState s1 = TLCState.Empty.createEmpty();
     StateVec nss = new StateVec(0);
     this.getNextStates(action.pred, acts, action.con, state, s1, nss, action.cm);
-    action.cm.incInvocations(nss.size());
     return nss;
   }
 
   private final TLCState getNextStates(SemanticNode pred, ActionItemList acts, Context c,
                                        TLCState s0, TLCState s1, StateVec nss, CostModel cm) {
     if (this.callStack != null) this.callStack.push(pred);
-    cm = cm.get(pred);
     try {
         switch (pred.getKind()) {
         case OpApplKind:
@@ -832,15 +825,6 @@ public class Tool
   }
   
   private final TLCState getNextStates(ActionItemList acts, final TLCState s0, final TLCState s1,
-          final StateVec nss, CostModel cm) {
-	  final TLCState copy = getNextStates0(acts, s0, s1, nss, cm);
-	  if (copy != s1) {
-		  cm.incInvocations();
-	  }
-	  return copy;
-  }
-
-  private final TLCState getNextStates0(ActionItemList acts, final TLCState s0, final TLCState s1,
                                        final StateVec nss, CostModel cm) {
     int kind = acts.carKind();
     if (acts.isEmpty()) {
@@ -1239,7 +1223,6 @@ public class Tool
   private final TLCState processUnchanged(SemanticNode expr, ActionItemList acts, Context c,
                                           TLCState s0, TLCState s1, StateVec nss, CostModel cm) {
     if (this.callStack != null) this.callStack.push(expr);
-    cm = cm.get(expr);
     try {
         SymbolNode var = this.getVar(expr, c, false);
         TLCState resState = s1;
@@ -1335,7 +1318,6 @@ public class Tool
   public final Value eval(SemanticNode expr, Context c, TLCState s0,
                           TLCState s1, final int control, CostModel cm) {
     if (this.callStack != null) this.callStack.push(expr);
-    cm = cm.get(expr);
     try {
         switch (expr.getKind()) {
         /***********************************************************************
@@ -1430,8 +1412,6 @@ public class Tool
   private final Value evalAppl(final OpApplNode expr, Context c, TLCState s0,
                               TLCState s1, final int control, CostModel cm) {
     if (this.callStack != null) this.callStack.push(expr);
-    cm = cm.get(expr);
-    cm.incInvocations();
     try {
         ExprOrOpArgNode[] args = expr.getArgs();
         SymbolNode opNode = expr.getOperator();
@@ -2324,7 +2304,6 @@ public class Tool
     if (this.callStack != null) {
       value.setSource(expr);
     }
-    value.setCostModel(cm.get(expr));
     return value;
   }
 
@@ -2475,7 +2454,6 @@ public class Tool
   private final TLCState enabledAppl(OpApplNode pred, ActionItemList acts, Context c, TLCState s0, TLCState s1, CostModel cm)
   {
     if (this.callStack != null) this.callStack.push(pred);
-    cm = cm.get(pred);
     try {
         ExprOrOpArgNode[] args = pred.getArgs();
         int alen = args.length;
