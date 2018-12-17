@@ -34,9 +34,11 @@ import org.aspectj.lang.annotation.Pointcut;
 
 import tlc2.tool.Action;
 import tlc2.tool.ActionItemList;
+import tlc2.tool.IStateFunctor;
 import tlc2.tool.StateVec;
 import tlc2.tool.TLCState;
 import tlc2.tool.coverage.CostModel;
+import tlc2.util.Context;
 import tla2sany.semantic.OpApplNode;
 import tla2sany.semantic.SemanticNode;
 
@@ -50,18 +52,13 @@ public class CostModelAspect {
  */
 
 	@Pointcut("execution(private void tlc2.tool.Tool.getInitStates(tlc2.tool.ActionItemList, tlc2.tool.TLCState, ..))"
+			 + "&& args(acts, ps, .., cm)"
 			 + "&& !within(tlc2.value.CostModelAspect)")
-	public static void getInitStates() {
+	public static void getInitStates(ActionItemList acts, TLCState ps, CostModel cm) {
 	}
 	
-	@Around("getInitStates()")
-	public void getInitStates(final ProceedingJoinPoint call) throws Throwable {
-		final ActionItemList acts = (ActionItemList) call.getArgs()[0];
-
-		final TLCState ps = (TLCState) call.getArgs()[1];
-
-		final CostModel cm = (CostModel) call.getArgs()[3];
-
+	@Around("getInitStates(acts, ps, cm)")
+	public void getInitStates(final ActionItemList acts, final TLCState ps, final CostModel cm, final ProceedingJoinPoint call) throws Throwable {
 		if (acts.isEmpty() || ps.allAssigned()) {
 			cm.incInvocations();
 			cm.getRoot().incInvocations();
@@ -79,14 +76,13 @@ public class CostModelAspect {
 */
 
 	@Pointcut("execution(public tlc2.tool.StateVec tlc2.tool.Tool.getNextStates(tlc2.tool.Action, tlc2.tool.TLCState))"
+			 + "&& args(action, state)"
 			 + "&& !within(tlc2.value.CostModelAspect)")
-	public static void getNextStatesAction() {
+	public static void getNextStatesAction(Action action, TLCState state) {
 	}
 	
-	@Around("getNextStatesAction()")
-	public Object getNextStatesAction(final ProceedingJoinPoint call) throws Throwable {
-		final Action action = ((Action) call.getArgs()[0]);
-		
+	@Around("getNextStatesAction(action, state)")
+	public Object getNextStatesAction(final Action action, final TLCState state, final ProceedingJoinPoint call) throws Throwable {
 		final StateVec nss = (StateVec) call.proceed();
 		action.cm.incInvocations(nss.size());
 		
@@ -106,16 +102,15 @@ public class CostModelAspect {
 */
 
 	@Pointcut("execution(private tlc2.tool.TLCState tlc2.tool.Tool.getNextStates(tlc2.tool.ActionItemList, tlc2.tool.TLCState, ..))"
+			 + "&& args(acts, s0, s1, nss, cm)"
 			 + "&& !within(tlc2.value.CostModelAspect)")
-	public static void getNextStates() {
+	public static void getNextStates(ActionItemList acts, TLCState s0, TLCState s1, StateVec nss, CostModel cm) {
 	}
 	
-	@Around("getNextStates()")
-	public Object getNextStates(final ProceedingJoinPoint call) throws Throwable {
-		final CostModel cm = (CostModel) call.getArgs()[4];
-		
-		final TLCState copy = (TLCState) call.proceed(call.getArgs());
-		if (copy != call.getArgs()[2]) {
+	@Around("getNextStates(acts, s0, s1, nss, cm)")
+	public Object getNextStates(final ActionItemList acts, final TLCState s0, final TLCState s1, final StateVec nss, final CostModel cm, final ProceedingJoinPoint call) throws Throwable {
+		final TLCState copy = (TLCState) call.proceed();
+		if (copy != s1) {
 			cm.incInvocations();
 		}
 		return copy;
@@ -129,21 +124,15 @@ public class CostModelAspect {
 */
 
 	@Pointcut("execution(private tlc2.value.Value tlc2.tool.Tool.setSource(tla2sany.semantic.SemanticNode, ..))"
+			 + "&& args(expr, value, cm)"
 			 + "&& !within(tlc2.value.CostModelAspect)")
-	public static void setSource() {
+	public static void setSource(SemanticNode expr, final Value value, CostModel cm) {
 	}
 	
-	@Around("setSource()")
-	public Object setSource(final ProceedingJoinPoint call) throws Throwable {
-		final Object[] args = call.getArgs();
-		
-		final OpApplNode oan = (OpApplNode) args[0];
-		final Value v = (Value) call.getArgs()[1];
-		final CostModel cm = (CostModel) args[2];
-		final CostModel cmNew = cm.incInvocations();
-		
-		v.setCostModel(cmNew);
-		return call.proceed(new Object[] {oan, v, cmNew});
+	@Around("setSource(expr, value, cm)")
+	public Object setSource(final SemanticNode expr, final Value value, final CostModel cm, final ProceedingJoinPoint call) throws Throwable {
+		value.setCostModel(cm.get(expr));
+		return call.proceed();
 	}
 
 	// -------------------------------- //
@@ -155,17 +144,15 @@ public class CostModelAspect {
 */
 
 	@Pointcut("execution(private tlc2.value.Value tlc2.tool.Tool.evalAppl(tla2sany.semantic.OpApplNode, ..))"
+			 + "&& args(expr, c, s0, s1, control, cm)"
 			 + "&& !within(tlc2.value.CostModelAspect)")
-	public static void evalsAppl() {
+	public static void evalsAppl(OpApplNode expr, Context c, TLCState s0, TLCState s1, int control, CostModel cm) {
 	}
 	
-	@Around("evalsAppl()")
-	public Object evalsAppl(final ProceedingJoinPoint call) throws Throwable {
-		final Object[] args = call.getArgs();
-		final SemanticNode oan = (SemanticNode) args[0];
-		final CostModel cm = (CostModel) args[5];
-		final CostModel cmNew = cm.incInvocations();
-		return call.proceed(new Object[] {oan, args[1], args[2], args[3], args[4], cmNew});
+	@Around("evalsAppl(expr, c, s0, s1, control, cm)")
+	public Object evalsAppl(final OpApplNode expr, final Context c, final TLCState s0, final TLCState s1, final int control, final CostModel cm, final ProceedingJoinPoint call) throws Throwable {
+		final CostModel cmNew = cm.get(expr).incInvocations();
+		return call.proceed(new Object[] {expr, c, s0, s1, control, cmNew});
 	}
 	
 	// -------------------------------- //
@@ -181,16 +168,14 @@ public class CostModelAspect {
 
 	@Pointcut("(execution(private tlc2.tool.TLCState tlc2.tool.Tool.getNextStates(tla2sany.semantic.SemanticNode, ..)) ||"
 			 + "execution(private tlc2.tool.TLCState tlc2.tool.Tool.processUnchanged(tla2sany.semantic.SemanticNode, ..)))"
+			 + "&& args(expr, acts, c, s0, s1, nss, cm)"
 			 + "&& !within(tlc2.value.CostModelAspect)")
-	public static void evals6() {
+	public static void evals6(SemanticNode expr, ActionItemList acts, Context c, TLCState s0, TLCState s1, StateVec nss, CostModel cm) {
 	}
 	
-	@Around("evals6()")
-	public Object beforeEvals6(final ProceedingJoinPoint call) throws Throwable {
-		final Object[] args = call.getArgs();
-		final SemanticNode oan = (SemanticNode) args[0];
-		final CostModel cm = (CostModel) args[6];
-		return call.proceed(new Object[] {oan, args[1], args[2], args[3], args[4], args[5], cm.get(oan)});
+	@Around("evals6(expr, acts, c, s0, s1, nss, cm)")
+	public Object evals6(SemanticNode expr, ActionItemList acts, Context c, TLCState s0, TLCState s1, StateVec nss, CostModel cm, final ProceedingJoinPoint call) throws Throwable {
+		return call.proceed(new Object[] {expr, acts, c, s0, s1, nss, cm.get(expr)});
 	}
 
 	// -------------------------------- //
@@ -198,27 +183,53 @@ public class CostModelAspect {
 /*
   private final void getInitStatesAppl(OpApplNode init, ActionItemList acts, Context c, TLCState ps, IStateFunctor states, CostModel cm) {
     cm = cm.get(init);
-
+*/
+	
+	@Pointcut("execution(private void tlc2.tool.Tool.getInitStatesAppl(tla2sany.semantic.OpApplNode, .., tlc2.tool.coverage.CostModel))"
+			 + "&& args(expr, acts, c, s0, states, cm)"
+			 + "&& !within(tlc2.value.CostModelAspect)")
+	public static void getInitStatesAppl(OpApplNode expr, ActionItemList acts, Context c, TLCState s0, IStateFunctor states, CostModel cm) {
+	}
+	
+	@Around("getInitStatesAppl(expr, acts, c, s0, states, cm)")
+	public Object getInitStatesAppl(final OpApplNode expr, final ActionItemList acts, final Context c, final TLCState s0, final IStateFunctor states, final CostModel cm, final ProceedingJoinPoint call) throws Throwable {
+		return call.proceed(new Object[] {expr, acts, c, s0, states, cm.get(expr)});
+	}
+	
+	// -------------------------------- //
+	
+/*
   private final TLCState enabledAppl(OpApplNode pred, ActionItemList acts, Context c, TLCState s0, TLCState s1, CostModel cm) {
     cm = cm.get(pred);
-
+*/
+	
+	@Pointcut("execution(private tlc2.tool.TLCState tlc2.tool.Tool.enabledAppl(tla2sany.semantic.OpApplNode, .., tlc2.tool.coverage.CostModel))"
+			 + "&& args(expr, acts, c, s0, s1, cm)"
+			 + "&& !within(tlc2.value.CostModelAspect)")
+	public static void enableAppl(OpApplNode expr, ActionItemList acts, Context c, TLCState s0, TLCState s1, CostModel cm) {
+	}
+	
+	@Around("enableAppl(expr, acts, c, s0, s1, cm)")
+	public Object enableAppl(final OpApplNode expr, final ActionItemList acts, final Context c, final TLCState s0, final TLCState s1, final CostModel cm, final ProceedingJoinPoint call) throws Throwable {
+		return call.proceed(new Object[] {expr, acts, c, s0, s1, cm.get(expr)});
+	}
+	
+	// -------------------------------- //
+	
+/*
   public final Value eval(SemanticNode expr, Context c, TLCState s0, TLCState s1, final int control, CostModel cm) {
 	 cm = cm.get(expr)
 */
-
-	@Pointcut("(execution(private void tlc2.tool.Tool.getInitStatesAppl(tla2sany.semantic.OpApplNode, .., tlc2.tool.coverage.CostModel)) ||"
-			 + "execution(private tlc2.tool.TLCState tlc2.tool.Tool.enabledAppl(tla2sany.semantic.OpApplNode, .., tlc2.tool.coverage.CostModel)) || "
-			 + "execution(public tlc2.value.Value tlc2.tool.Tool.eval(tla2sany.semantic.SemanticNode, tlc2.util.Context, tlc2.tool.TLCState, tlc2.tool.TLCState, int, tlc2.tool.coverage.CostModel)))"
+	
+	@Pointcut("execution(public tlc2.value.Value tlc2.tool.Tool.eval(tla2sany.semantic.SemanticNode, tlc2.util.Context, tlc2.tool.TLCState, tlc2.tool.TLCState, int, tlc2.tool.coverage.CostModel))"
+			 + "&& args(expr, c, s0, s1, control, cm)"
 			 + "&& !within(tlc2.value.CostModelAspect)")
-	public static void evals5() {
+	public static void evals5(SemanticNode expr, Context c, TLCState s0, TLCState s1, int control, CostModel cm) {
 	}
 	
-	@Around("evals5()")
-	public Object beforeEvals5(final ProceedingJoinPoint call) throws Throwable {
-		final Object[] args = call.getArgs();
-		final SemanticNode oan = (SemanticNode) args[0];
-		final CostModel cm = (CostModel) args[5];
-		return call.proceed(new Object[] {oan, args[1], args[2], args[3], args[4], cm.get(oan)});
+	@Around("evals5(expr, c, s0, s1, control, cm)")
+	public Object evals5(final SemanticNode expr, final Context c, final TLCState s0, final TLCState s1, final int control, final CostModel cm, final ProceedingJoinPoint call) throws Throwable {
+		return call.proceed(new Object[] {expr, c, s0, s1, control, cm.get(expr)});
 	}
 
 	// -------------------------------- //
@@ -242,13 +253,15 @@ public class CostModelAspect {
 
 	// -------------------------------- //
 
-	@Pointcut("execution(public tlc2.value.ValueEnumeration tlc2.value.Enumerable+.elements(..)) && !within(tlc2.value.CostModelAspect)")
-	public static void elementsExec() {
+	@Pointcut("execution(public tlc2.value.ValueEnumeration tlc2.value.Enumerable+.elements(..))"
+			+ " && target(en)"
+			+ " && !within(tlc2.value.CostModelAspect)")
+	public static void elementsExec(Enumerable en) {
 	}
 	
-	@Around("elementsExec()")
-	public Object procedeElements(final ProceedingJoinPoint call) throws Throwable {
-		return new WrappingValueEnumeration(((EnumerableValue) call.getTarget()).getCostModel(), (ValueEnumeration) call.proceed());
+	@Around("elementsExec(en)")
+	public Object procedeElements(final Enumerable en, final ProceedingJoinPoint call) throws Throwable {
+		return new WrappingValueEnumeration(((EnumerableValue) en).getCostModel(), (ValueEnumeration) call.proceed());
 	}
 	
 	private static class WrappingValueEnumeration implements ValueEnumeration {
