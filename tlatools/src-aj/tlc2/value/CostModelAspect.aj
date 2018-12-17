@@ -32,7 +32,6 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 
-import tlc2.TLCGlobals;
 import tlc2.tool.Action;
 import tlc2.tool.ActionItemList;
 import tlc2.tool.StateVec;
@@ -48,36 +47,11 @@ public class CostModelAspect {
 	
 /*
   private final void getInitStates(ActionItemList acts, TLCState ps, IStateFunctor states, CostModel cm) {
-		if (acts.isEmpty()) {
-			states.addElement(ps.copy());
-			return;
-		} else if (ps.allAssigned()) {
-			while (!acts.isEmpty()) {
-				final Value bval = this.eval(acts.carPred(), acts.carContext(), ps, TLCState.Empty, EvalControl.Init, acts.cm);
-				if (!(bval instanceof BoolValue)) {
-					//TODO Choose more fitting error message.
-					Assert.fail(EC.TLC_EXPECTED_EXPRESSION_IN_COMPUTING,
-							new String[] { "initial states", "boolean", bval.toString(), acts.pred.toString() });
-				}
-				if (!((BoolValue) bval).val) {
-					return;
-				}
-				// Move on to the next action in the ActionItemList.
-				acts = acts.cdr();
-			}
-			states.addElement(ps.copy());
-			return;
-		}
-		// Assert.check(act.kind > 0 || act.kind == -1);
-		ActionItemList acts1 = acts.cdr();
-		this.getInitStates(acts.carPred(), acts1, acts.carContext(), ps, states, acts.cm);
-	  }
  */
 
 	@Pointcut("execution(private void tlc2.tool.Tool.getInitStates(tlc2.tool.ActionItemList, tlc2.tool.TLCState, ..))"
-			 + "&& !within(tlc2.value.CostModelAspect) && if()")
-	public static boolean getInitStates() {
-		return TLCGlobals.isCoverageEnabled();
+			 + "&& !within(tlc2.value.CostModelAspect)")
+	public static void getInitStates() {
 	}
 	
 	@Around("getInitStates()")
@@ -105,9 +79,8 @@ public class CostModelAspect {
 */
 
 	@Pointcut("execution(public tlc2.tool.StateVec tlc2.tool.Tool.getNextStates(tlc2.tool.Action, tlc2.tool.TLCState))"
-			 + "&& !within(tlc2.value.CostModelAspect) && if()")
-	public static boolean getNextStatesAction() {
-		return TLCGlobals.isCoverageEnabled();
+			 + "&& !within(tlc2.value.CostModelAspect)")
+	public static void getNextStatesAction() {
 	}
 	
 	@Around("getNextStatesAction()")
@@ -133,9 +106,8 @@ public class CostModelAspect {
 */
 
 	@Pointcut("execution(private tlc2.tool.TLCState tlc2.tool.Tool.getNextStates(tlc2.tool.ActionItemList, tlc2.tool.TLCState, ..))"
-			 + "&& !within(tlc2.value.CostModelAspect) && if()")
-	public static boolean getNextStates() {
-		return TLCGlobals.isCoverageEnabled();
+			 + "&& !within(tlc2.value.CostModelAspect)")
+	public static void getNextStates() {
 	}
 	
 	@Around("getNextStates()")
@@ -157,9 +129,8 @@ public class CostModelAspect {
 */
 
 	@Pointcut("execution(private tlc2.value.Value tlc2.tool.Tool.setSource(tla2sany.semantic.SemanticNode, ..))"
-			 + "&& !within(tlc2.value.CostModelAspect) && if()")
-	public static boolean setSource() {
-		return TLCGlobals.isCoverageEnabled();
+			 + "&& !within(tlc2.value.CostModelAspect)")
+	public static void setSource() {
 	}
 	
 	@Around("setSource()")
@@ -184,9 +155,8 @@ public class CostModelAspect {
 */
 
 	@Pointcut("execution(private tlc2.value.Value tlc2.tool.Tool.evalAppl(tla2sany.semantic.OpApplNode, ..))"
-			 + "&& !within(tlc2.value.CostModelAspect) && if()")
-	public static boolean evalsAppl() {
-		return TLCGlobals.isCoverageEnabled();
+			 + "&& !within(tlc2.value.CostModelAspect)")
+	public static void evalsAppl() {
 	}
 	
 	@Around("evalsAppl()")
@@ -211,9 +181,8 @@ public class CostModelAspect {
 
 	@Pointcut("(execution(private tlc2.tool.TLCState tlc2.tool.Tool.getNextStates(tla2sany.semantic.SemanticNode, ..)) ||"
 			 + "execution(private tlc2.tool.TLCState tlc2.tool.Tool.processUnchanged(tla2sany.semantic.SemanticNode, ..)))"
-			 + "&& !within(tlc2.value.CostModelAspect) && if()")
-	public static boolean evals6() {
-		return TLCGlobals.isCoverageEnabled();
+			 + "&& !within(tlc2.value.CostModelAspect)")
+	public static void evals6() {
 	}
 	
 	@Around("evals6()")
@@ -240,9 +209,8 @@ public class CostModelAspect {
 	@Pointcut("(execution(private void tlc2.tool.Tool.getInitStatesAppl(tla2sany.semantic.OpApplNode, .., tlc2.tool.coverage.CostModel)) ||"
 			 + "execution(private tlc2.tool.TLCState tlc2.tool.Tool.enabledAppl(tla2sany.semantic.OpApplNode, .., tlc2.tool.coverage.CostModel)) || "
 			 + "execution(public tlc2.value.Value tlc2.tool.Tool.eval(tla2sany.semantic.SemanticNode, tlc2.util.Context, tlc2.tool.TLCState, tlc2.tool.TLCState, int, tlc2.tool.coverage.CostModel)))"
-			 + "&& !within(tlc2.value.CostModelAspect) && if()")
-	public static boolean evals5() {
-		return TLCGlobals.isCoverageEnabled();
+			 + "&& !within(tlc2.value.CostModelAspect)")
+	public static void evals5() {
 	}
 	
 	@Around("evals5()")
@@ -255,9 +223,8 @@ public class CostModelAspect {
 
 	// -------------------------------- //
 	
-	@Pointcut("call(tlc2.value.Value+.new(..)) && !within(tlc2.value.CostModelAspect) && if()")
-	public static boolean newValueCtor() {
-		return TLCGlobals.isCoverageEnabled();
+	@Pointcut("call(tlc2.value.Value+.new(..)) && !within(tlc2.value.CostModelAspect)")
+	public static void newValueCtor() {
 	}
 	
 	@AfterReturning(pointcut="newValueCtor()", returning="newValue")
@@ -275,9 +242,8 @@ public class CostModelAspect {
 
 	// -------------------------------- //
 
-	@Pointcut("execution(public tlc2.value.ValueEnumeration tlc2.value.Enumerable+.elements(..)) && !within(tlc2.value.CostModelAspect) && if()")
-	public static boolean elementsExec() {
-		return TLCGlobals.isCoverageEnabled();
+	@Pointcut("execution(public tlc2.value.ValueEnumeration tlc2.value.Enumerable+.elements(..)) && !within(tlc2.value.CostModelAspect)")
+	public static void elementsExec() {
 	}
 	
 	@Around("elementsExec()")
