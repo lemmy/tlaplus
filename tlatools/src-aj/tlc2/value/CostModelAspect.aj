@@ -197,68 +197,47 @@ public aspect CostModelAspect {
 		return proceed(expr, c, s0, s1, control, cm.get(expr));
 	}
 
-	// -------------------------------- //
+	// ---------------- Pass on CostModel instances from existing Value to newly instantiated ones. ---------------- //
 	
-//	pointcut newValueCtor(final Value newValue): 
-//		call(tlc2.value.Value+.new(..)) && !within(CostModelAspect);
-//
-//	after(args) returning(final Value newValue) : newValueCtor(newValue) {
-//		
-//	}
-//	
-//	Object around(final Value newValue): (newValueCtor(expr, c, s0, s1, control, cm)) {
-//		return proceed(expr, c, s0, s1, control, cm.get(expr));
-//	}
+	pointcut newValueCtor() : call(tlc2.value.Value+.new(..)) && !within(CostModelAspect);
 	
-//	@Pointcut(" && !within(CostModelAspect)")
-//	public static void newValueCtor() {
-//	}
-//	
-//	@AfterReturning(pointcut="newValueCtor()", returning="newValue")
-//	public void afterNewValue(final Value newValue, final JoinPoint jp) {
-//		afterNewValueImpl(newValue, jp);
-//	}
-//
-//	private void afterNewValueImpl(final Value newValue, final JoinPoint jp) {
-//		if (jp.getThis() instanceof Value) {
-//			// Get CostModel instance from existing Value and attach to new one.
-//			final Value existingValue = (Value) jp.getThis();
-//			newValue.setCostModel(existingValue.getCostModel());
-//		}
-//	}
-//
-//	// -------------------------------- //
-//
-//	@Pointcut("execution(public tlc2.value.ValueEnumeration tlc2.value.Enumerable+.elements(..))"
-//			+ " && target(en)"
-//			+ " && !within(CostModelAspect)")
-//	public static void elementsExec(Enumerable en) {
-//	}
-//	
-//	@Around("elementsExec(en)")
-//	public Object procedeElements(final Enumerable en, final ProceedingJoinPoint call) throws Throwable {
-//		return new WrappingValueEnumeration(((EnumerableValue) en).getCostModel(), (ValueEnumeration) call.proceed());
-//	}
-//	
-//	private static class WrappingValueEnumeration implements ValueEnumeration {
-//
-//		private final CostModel cm;
-//		private final ValueEnumeration ve;
-//		
-//		public WrappingValueEnumeration(CostModel costModel, ValueEnumeration ve) {
-//			this.cm = costModel.incInvocations(1);
-//			this.ve = ve;
-//		}
-//
-//		@Override
-//		public void reset() {
-//			ve.reset();
-//		}
-//
-//		@Override
-//		public Value nextElement() {
-//			cm.incSecondary();
-//			return ve.nextElement();
-//		}
-//	}
+	after() returning(final Value newValue) : newValueCtor() {
+		if (thisJoinPoint.getThis() instanceof Value) {
+			// Get CostModel instance from existing Value and attach to new one.
+			final Value existingValue = (Value) thisJoinPoint.getThis();
+			newValue.setCostModel(existingValue.getCostModel());
+		}
+	}
+
+	// ---------------- (Finally) count invocations to ValueEnumerator#elements to measure costs. ---------------- //
+
+	pointcut elementsExec(Enumerable en): 
+		execution(public tlc2.value.ValueEnumeration tlc2.value.Enumerable+.elements(..))
+		&& target(en) && !within(CostModelAspect);
+
+	Object around(Enumerable en): (elementsExec(en)) {
+		return new WrappingValueEnumeration(((EnumerableValue) en).getCostModel(), (ValueEnumeration) proceed(en));
+	}
+
+	private static class WrappingValueEnumeration implements ValueEnumeration {
+
+		private final CostModel cm;
+		private final ValueEnumeration ve;
+		
+		public WrappingValueEnumeration(CostModel costModel, ValueEnumeration ve) {
+			this.cm = costModel.incInvocations(1);
+			this.ve = ve;
+		}
+
+		@Override
+		public void reset() {
+			ve.reset();
+		}
+
+		@Override
+		public Value nextElement() {
+			cm.incSecondary();
+			return ve.nextElement();
+		}
+	}
 }
