@@ -47,12 +47,12 @@ public aspect CostModelAspect {
 		execution(private void tlc2.tool.Tool.getInitStates(ActionItemList, TLCState, IStateFunctor, CostModel))
 		&& args(acts, ps, states, cm) && !within(CostModelAspect);
 
-	Object around(ActionItemList acts, TLCState ps, IStateFunctor states, CostModel cm): (getInitStates(acts, ps, states, cm)) {
+	void around(ActionItemList acts, TLCState ps, IStateFunctor states, CostModel cm): (getInitStates(acts, ps, states, cm)) {
 		if (acts.isEmpty() || ps.allAssigned()) {
 			cm.incInvocations();
 			cm.getRoot().incInvocations();
 		}
-		return proceed(acts, ps, states, cm);
+		proceed(acts, ps, states, cm);
 	}
 
 	// -------------------------------- //
@@ -68,7 +68,7 @@ public aspect CostModelAspect {
 		&& args(action, state) && !within(CostModelAspect);
 
 	//TODO Rewrite to after returning?
-	Object around(final Action action, final TLCState state): (getNextStatesAction(action, state)) {
+	StateVec around(final Action action, final TLCState state): (getNextStatesAction(action, state)) {
 		final StateVec nss = (StateVec) proceed(action, state);
 		action.cm.incInvocations(nss.size());
 		
@@ -91,7 +91,7 @@ public aspect CostModelAspect {
 		execution(private tlc2.tool.TLCState tlc2.tool.Tool.getNextStates(ActionItemList, TLCState, TLCState, StateVec, CostModel))
 		&& args(acts, s0, s1, nss, cm) && !within(CostModelAspect);
 
-	Object around(ActionItemList acts, TLCState s0, TLCState s1, StateVec nss, CostModel cm): (getNextStates(acts, s0, s1, nss, cm)) {
+	TLCState around(ActionItemList acts, TLCState s0, TLCState s1, StateVec nss, CostModel cm): (getNextStates(acts, s0, s1, nss, cm)) {
 		final TLCState copy = (TLCState) proceed(acts, s0, s1, nss, cm);
 		if (copy != s1) {
 			cm.incInvocations();
@@ -110,7 +110,7 @@ public aspect CostModelAspect {
 		execution(private tlc2.value.Value tlc2.tool.Tool.setSource(SemanticNode, Value, CostModel))
 		&& args(expr, value, cm) && !within(CostModelAspect);
 
-	Object around(SemanticNode expr, final Value value, CostModel cm): (setSource(expr, value, cm)) {
+	Value around(SemanticNode expr, final Value value, CostModel cm): (setSource(expr, value, cm)) {
 		value.setCostModel(cm.get(expr));
 		return proceed(expr, value, cm);
 	}
@@ -127,7 +127,7 @@ public aspect CostModelAspect {
 		execution(private tlc2.value.Value tlc2.tool.Tool.evalAppl(tla2sany.semantic.OpApplNode, Context, TLCState, TLCState, int, CostModel))
 		&& args(expr, c, s0, s1, control, cm) && !within(CostModelAspect);
 
-	Object around(OpApplNode expr, Context c, TLCState s0, TLCState s1, int control, CostModel cm): (evalsAppl(expr, c, s0, s1, control, cm)) {
+	Value around(OpApplNode expr, Context c, TLCState s0, TLCState s1, int control, CostModel cm): (evalsAppl(expr, c, s0, s1, control, cm)) {
 		return proceed(expr, c, s0, s1, control, cm.get(expr).incInvocations());
 	}
 	
@@ -148,7 +148,7 @@ public aspect CostModelAspect {
 				execution(private tlc2.tool.TLCState tlc2.tool.Tool.processUnchanged(SemanticNode, ActionItemList, Context, TLCState, TLCState, StateVec, CostModel)))
 				&& args(expr, acts, c, s0, s1, nss, cm) && !within(CostModelAspect);
 
-	Object around(SemanticNode expr, ActionItemList acts, Context c, TLCState s0, TLCState s1, StateVec nss, CostModel cm): (evals6(expr, acts, c, s0, s1, nss, cm)) {
+	TLCState around(SemanticNode expr, ActionItemList acts, Context c, TLCState s0, TLCState s1, StateVec nss, CostModel cm): (evals6(expr, acts, c, s0, s1, nss, cm)) {
 		return proceed(expr, acts, c, s0, s1, nss, cm.get(expr));
 	}
 	
@@ -163,8 +163,8 @@ public aspect CostModelAspect {
 				execution(private void tlc2.tool.Tool.getInitStatesAppl(OpApplNode, ActionItemList, Context, TLCState, IStateFunctor, CostModel))
 				&& args(expr, acts, c, ps, states, cm) && !within(CostModelAspect);
 
-	Object around(OpApplNode expr, ActionItemList acts, Context c, TLCState ps, IStateFunctor states, CostModel cm): (getInitStatesAppl(expr, acts, c, ps, states, cm)) {
-		return proceed(expr, acts, c, ps, states, cm.get(expr));
+	void around(OpApplNode expr, ActionItemList acts, Context c, TLCState ps, IStateFunctor states, CostModel cm): (getInitStatesAppl(expr, acts, c, ps, states, cm)) {
+		proceed(expr, acts, c, ps, states, cm.get(expr));
 	}
 	
 	// -------------------------------- //
@@ -178,7 +178,7 @@ public aspect CostModelAspect {
 				execution(private tlc2.tool.TLCState tlc2.tool.Tool.enabledAppl(OpApplNode, ActionItemList, Context, TLCState, TLCState, CostModel))
 		&& args(expr, acts, c, s0, s1, cm) && !within(CostModelAspect);
 
-	Object around(OpApplNode expr, ActionItemList acts, Context c, TLCState s0, TLCState s1, CostModel cm): (enableAppl(expr, acts, c, s0, s1, cm)) {
+	TLCState around(OpApplNode expr, ActionItemList acts, Context c, TLCState s0, TLCState s1, CostModel cm): (enableAppl(expr, acts, c, s0, s1, cm)) {
 		return proceed(expr, acts, c, s0, s1, cm.get(expr));
 	}
 	
@@ -193,7 +193,7 @@ public aspect CostModelAspect {
 		execution(public tlc2.value.Value tlc2.tool.Tool.eval(SemanticNode, Context, TLCState, TLCState, int, CostModel))
 			&& args(expr, c, s0, s1, control, cm) && !within(CostModelAspect);
 
-	Object around(SemanticNode expr, Context c, TLCState s0, TLCState s1, int control, CostModel cm): (eval(expr, c, s0, s1, control, cm)) {
+	Value around(SemanticNode expr, Context c, TLCState s0, TLCState s1, int control, CostModel cm): (eval(expr, c, s0, s1, control, cm)) {
 		return proceed(expr, c, s0, s1, control, cm.get(expr));
 	}
 
@@ -215,7 +215,7 @@ public aspect CostModelAspect {
 		execution(public tlc2.value.ValueEnumeration tlc2.value.Enumerable+.elements(..))
 		&& target(en) && !within(CostModelAspect);
 
-	Object around(Enumerable en): (elementsExec(en)) {
+	ValueEnumeration around(Enumerable en): (elementsExec(en)) {
 		return new WrappingValueEnumeration(((EnumerableValue) en).getCostModel(), (ValueEnumeration) proceed(en));
 	}
 
