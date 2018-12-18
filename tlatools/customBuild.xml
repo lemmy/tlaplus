@@ -158,10 +158,9 @@
 			====================================================================
 		</echo>
 		<!-- compile aspectj related class files -->
-		<iajc destdir="${class.dir}" debug="true" source="1.8" target="1.8">
+		<iajc destdir="${class.dir}" debug="true" verbose="true" source="1.8" target="1.8">
 			<sourceroots>
 				<pathelement location="${src-aj.dir}"/>
-				<pathelement location="${src.dir}"/>
 			</sourceroots>
 			<classpath refid="project.classpath" />
 			<classpath>
@@ -173,6 +172,7 @@
 			<excludesfile name="tlc2.tool.distributed.TLCServerMonitorAspect"/>
 			<excludesfile name="tlc2.tool.distributed.RMIMethodMonitorAspect"/>
 			<excludesfile name="tlc2.tool.WorkerMonitorAspect"/>
+			<excludesfile name="tlc2.value.CostModelAspect"/>
 		</iajc>
 		<!-- copy the resource files -->
 		<copy todir="${class.dir}">
