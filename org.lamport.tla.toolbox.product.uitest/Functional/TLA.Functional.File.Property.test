@@ -1,0 +1,45 @@
+--- RCPTT testcase ---
+Format-Version: 1.0
+Element-Name: TLA.Functional.File.Property
+Element-Type: testcase
+Element-Version: 3.0
+External-Reference: 
+Id: _cCrygP25EeiCTvrXzYZPCg
+Runtime-Version: 2.3.0.201806262310
+Save-Time: 12/19/18 8:58 AM
+Testcase-Type: ecl
+
+------=_.description-216f885c-d591-38ce-8ea2-e4f8cb4d6ffa
+Content-Type: text/plain
+Entry-Name: .description
+
+Create TLA
+on New -File Select Properties
+
+Note: Error on dialog as file name does not display
+------=_.description-216f885c-d591-38ce-8ea2-e4f8cb4d6ffa--
+------=_.content-0a7243a0-75d3-3d5f-9791-539de0e5b7ac
+Content-Type: text/ecl
+Entry-Name: .content
+
+
+//New Spec
+OpenTLACreateNew
+
+
+get-view "Spec Explorer" | get-tree | get-item -path $TLA-TREE-NAME | get-property caption 
+    | equals "new [ new.tla ]" | verify-true
+get-view "Spec Explorer" | get-tree | select "new [ new.tla ]/modules/new" | get-menu -path "New Specification" | click
+get-window -class WizardDialog | get-label "New TLA+ Specification" | get-property caption 
+    | equals "New TLA+ Specification" | verify-true
+get-window -class WizardDialog | get-button Cancel | click
+get-view "Spec Explorer" | get-tree | select "new [ new.tla ]/modules/new" | get-menu -path Properties | click
+get-window "Property Pages" | get-label "No property pages for ." | get-property "isVisible()" | equals true 
+    | verify-true
+get-window "Property Pages" | get-button OK | click
+
+//Delete spec
+DeleteSpecNew
+
+
+------=_.content-0a7243a0-75d3-3d5f-9791-539de0e5b7ac--

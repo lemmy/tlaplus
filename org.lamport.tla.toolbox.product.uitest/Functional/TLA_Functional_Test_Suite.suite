@@ -1,0 +1,28 @@
+--- RCPTT testcase ---
+Format-Version: 1.0
+Element-Name: TLA.Functional.Test.Suite
+Element-Type: testsuite
+Element-Version: 2.0
+Id: _XtCd4APNEemtrbArmQOOJA
+Runtime-Version: 2.3.0.201806262310
+Save-Time: 12/19/18 12:34 PM
+
+------=_testcase-items-62c497da-4241-31f4-811a-6b453a3ecff8
+Content-Type: text/testcase
+Entry-Name: testcase-items
+
+_QZqp4AL8EemtrbArmQOOJA	// kind: 'test' name: 'TLA-Functional.Long.Name.Spec' path: 'TLA-Functional_Long_Name_Spec.test'
+_7jq7EAOuEemtrbArmQOOJA	// kind: 'test' name: 'TLA-Functional.Tree.Collapse' path: '../TLA-Functional_Tree_Collapse.test'
+_44K9cAJWEemDc-4PKyNT9w	// kind: 'test' name: 'TLA.Functional.Basic.Model' path: 'TLA_Functional_Basic_Model.test'
+_ARWUAAJjEemDc-4PKyNT9w	// kind: 'test' name: 'TLA.Functional.Clone.Model' path: 'TLA_Functional_Clone_Model.test'
+_dOXZwAJfEemDc-4PKyNT9w	// kind: 'test' name: 'TLA.Functional.Exp' path: 'TLA_Functional_Exp.test'
+_cCrygP25EeiCTvrXzYZPCg	// kind: 'test' name: 'TLA.Functional.File.Property' path: 'TLA.Functional.File.Property.test'
+_orbhsAJZEemDc-4PKyNT9w	// kind: 'test' name: 'TLA.Functional.Fingerprint' path: 'TLA_Functional_Fingerprint.test'
+_y2T94AL0EemtrbArmQOOJA	// kind: 'test' name: 'TLA.Functional.Help.Menu' path: 'TLA.Functional.Help.Menu.test'
+_3CVCoAMFEemtrbArmQOOJA	// kind: 'test' name: 'TLA.Functional.Multiple.Models' path: 'TLA_Functional_Multiple_Models.test'
+_DliAUAMNEemtrbArmQOOJA	// kind: 'test' name: 'TLA.Functional.Multiple.Models.Description' path: 'TLA_Functional_Multiple_Models_Description.test'
+_LxG3gAJFEemDc-4PKyNT9w	// kind: 'test' name: 'TLA.Functional.New.Model' path: 'TLA.Functional.New.Model.test'
+_eblOcP23EeiCTvrXzYZPCg	// kind: 'test' name: 'TLA.Functional.Parse.Pref' path: 'TLA.Functional.Parse.Pref.test'
+_Lbbs8AMKEemtrbArmQOOJA	// kind: 'test' name: 'TLA.Functional.Spec.Properties' path: 'TLA_Functional_Spec_Properties.test'
+
+------=_testcase-items-62c497da-4241-31f4-811a-6b453a3ecff8--
