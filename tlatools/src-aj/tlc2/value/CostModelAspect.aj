@@ -32,6 +32,7 @@ import tlc2.tool.StateVec;
 import tlc2.tool.TLCState;
 import tlc2.tool.coverage.CostModel;
 import tlc2.util.Context;
+import tlc2.TLCGlobals;
 import tla2sany.semantic.OpApplNode;
 import tla2sany.semantic.SemanticNode;
 
@@ -45,7 +46,7 @@ public aspect CostModelAspect {
 	
 	pointcut getInitStates(ActionItemList acts, TLCState ps, IStateFunctor states, CostModel cm): 
 		execution(private void tlc2.tool.Tool.getInitStates(ActionItemList, TLCState, IStateFunctor, CostModel))
-		&& args(acts, ps, states, cm) && !within(CostModelAspect);
+		&& args(acts, ps, states, cm) && !within(CostModelAspect) && if(TLCGlobals.isCoverageEnabled()) ;
 
 	void around(ActionItemList acts, TLCState ps, IStateFunctor states, CostModel cm): (getInitStates(acts, ps, states, cm)) {
 		if (acts.isEmpty() || ps.allAssigned()) {
@@ -65,7 +66,7 @@ public aspect CostModelAspect {
 
 	pointcut getNextStatesAction(Action action, TLCState state): 
 		execution(public tlc2.tool.StateVec tlc2.tool.Tool.getNextStates(Action, TLCState))
-		&& args(action, state) && !within(CostModelAspect);
+		&& args(action, state) && !within(CostModelAspect) && if(TLCGlobals.isCoverageEnabled());
 
 	//TODO Rewrite to after returning?
 	StateVec around(final Action action, final TLCState state): (getNextStatesAction(action, state)) {
@@ -89,7 +90,7 @@ public aspect CostModelAspect {
 
 	pointcut getNextStates(ActionItemList acts, TLCState s0, TLCState s1, StateVec nss, CostModel cm): 
 		execution(private tlc2.tool.TLCState tlc2.tool.Tool.getNextStates(ActionItemList, TLCState, TLCState, StateVec, CostModel))
-		&& args(acts, s0, s1, nss, cm) && !within(CostModelAspect);
+		&& args(acts, s0, s1, nss, cm) && !within(CostModelAspect) && if(TLCGlobals.isCoverageEnabled());
 
 	TLCState around(ActionItemList acts, TLCState s0, TLCState s1, StateVec nss, CostModel cm): (getNextStates(acts, s0, s1, nss, cm)) {
 		final TLCState copy = (TLCState) proceed(acts, s0, s1, nss, cm);
@@ -108,7 +109,7 @@ public aspect CostModelAspect {
 
 	pointcut setSource(SemanticNode expr, final Value value, CostModel cm): 
 		execution(private tlc2.value.Value tlc2.tool.Tool.setSource(SemanticNode, Value, CostModel))
-		&& args(expr, value, cm) && !within(CostModelAspect);
+		&& args(expr, value, cm) && !within(CostModelAspect) && if(TLCGlobals.isCoverageEnabled());
 
 	Value around(SemanticNode expr, final Value value, CostModel cm): (setSource(expr, value, cm)) {
 		value.setCostModel(cm.get(expr));
@@ -125,7 +126,7 @@ public aspect CostModelAspect {
 
 	pointcut evalsAppl(OpApplNode expr, Context c, TLCState s0, TLCState s1, int control, CostModel cm): 
 		execution(private tlc2.value.Value tlc2.tool.Tool.evalAppl(tla2sany.semantic.OpApplNode, Context, TLCState, TLCState, int, CostModel))
-		&& args(expr, c, s0, s1, control, cm) && !within(CostModelAspect);
+		&& args(expr, c, s0, s1, control, cm) && !within(CostModelAspect) && if(TLCGlobals.isCoverageEnabled());
 
 	Value around(OpApplNode expr, Context c, TLCState s0, TLCState s1, int control, CostModel cm): (evalsAppl(expr, c, s0, s1, control, cm)) {
 		return proceed(expr, c, s0, s1, control, cm.get(expr).incInvocations());
@@ -146,7 +147,7 @@ public aspect CostModelAspect {
 			CostModel cm): 
 		(execution(private tlc2.tool.TLCState tlc2.tool.Tool.getNextStates(SemanticNode, ActionItemList, Context, TLCState, TLCState, StateVec, CostModel)) ||
 				execution(private tlc2.tool.TLCState tlc2.tool.Tool.processUnchanged(SemanticNode, ActionItemList, Context, TLCState, TLCState, StateVec, CostModel)))
-				&& args(expr, acts, c, s0, s1, nss, cm) && !within(CostModelAspect);
+				&& args(expr, acts, c, s0, s1, nss, cm) && !within(CostModelAspect) && if(TLCGlobals.isCoverageEnabled());
 
 	TLCState around(SemanticNode expr, ActionItemList acts, Context c, TLCState s0, TLCState s1, StateVec nss, CostModel cm): (evals6(expr, acts, c, s0, s1, nss, cm)) {
 		return proceed(expr, acts, c, s0, s1, nss, cm.get(expr));
@@ -161,7 +162,7 @@ public aspect CostModelAspect {
 	
 	pointcut getInitStatesAppl(OpApplNode expr, ActionItemList acts, Context c, TLCState ps, IStateFunctor states, CostModel cm): 
 				execution(private void tlc2.tool.Tool.getInitStatesAppl(OpApplNode, ActionItemList, Context, TLCState, IStateFunctor, CostModel))
-				&& args(expr, acts, c, ps, states, cm) && !within(CostModelAspect);
+				&& args(expr, acts, c, ps, states, cm) && !within(CostModelAspect) && if(TLCGlobals.isCoverageEnabled());
 
 	void around(OpApplNode expr, ActionItemList acts, Context c, TLCState ps, IStateFunctor states, CostModel cm): (getInitStatesAppl(expr, acts, c, ps, states, cm)) {
 		proceed(expr, acts, c, ps, states, cm.get(expr));
@@ -176,7 +177,7 @@ public aspect CostModelAspect {
 	
 	pointcut enableAppl(OpApplNode expr, ActionItemList acts, Context c, TLCState s0, TLCState s1, CostModel cm): 
 				execution(private tlc2.tool.TLCState tlc2.tool.Tool.enabledAppl(OpApplNode, ActionItemList, Context, TLCState, TLCState, CostModel))
-		&& args(expr, acts, c, s0, s1, cm) && !within(CostModelAspect);
+		&& args(expr, acts, c, s0, s1, cm) && !within(CostModelAspect) && if(TLCGlobals.isCoverageEnabled());
 
 	TLCState around(OpApplNode expr, ActionItemList acts, Context c, TLCState s0, TLCState s1, CostModel cm): (enableAppl(expr, acts, c, s0, s1, cm)) {
 		return proceed(expr, acts, c, s0, s1, cm.get(expr));
@@ -191,7 +192,7 @@ public aspect CostModelAspect {
 	
 	pointcut eval(SemanticNode expr, Context c, TLCState s0, TLCState s1, int control, CostModel cm): 
 		execution(public tlc2.value.Value tlc2.tool.Tool.eval(SemanticNode, Context, TLCState, TLCState, int, CostModel))
-			&& args(expr, c, s0, s1, control, cm) && !within(CostModelAspect);
+			&& args(expr, c, s0, s1, control, cm) && !within(CostModelAspect) && if(TLCGlobals.isCoverageEnabled());
 
 	Value around(SemanticNode expr, Context c, TLCState s0, TLCState s1, int control, CostModel cm): (eval(expr, c, s0, s1, control, cm)) {
 		return proceed(expr, c, s0, s1, control, cm.get(expr));
@@ -199,7 +200,7 @@ public aspect CostModelAspect {
 
 	// ---------------- Pass on CostModel instances from existing Value to newly instantiated ones. ---------------- //
 	
-	pointcut newValueCtor() : call(tlc2.value.Value+.new(..)) && !within(CostModelAspect);
+	pointcut newValueCtor() : call(tlc2.value.Value+.new(..)) && !within(CostModelAspect) && if(TLCGlobals.isCoverageEnabled());
 	
 	after() returning(final Value newValue) : newValueCtor() {
 		if (thisJoinPoint.getThis() instanceof Value) {
@@ -213,7 +214,7 @@ public aspect CostModelAspect {
 
 	pointcut elementsExec(Enumerable en): 
 		execution(public tlc2.value.ValueEnumeration tlc2.value.Enumerable+.elements(..))
-		&& target(en) && !within(CostModelAspect);
+		&& target(en) && !within(CostModelAspect) && if(TLCGlobals.isCoverageEnabled());
 
 	ValueEnumeration around(Enumerable en): (elementsExec(en)) {
 		return new WrappingValueEnumeration(((EnumerableValue) en).getCostModel(), (ValueEnumeration) proceed(en));
