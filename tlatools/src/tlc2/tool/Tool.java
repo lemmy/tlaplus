@@ -415,8 +415,10 @@ public class Tool
 
   private final void getInitStates(ActionItemList acts, TLCState ps, IStateFunctor states, CostModel cm) {
 		if (acts.isEmpty()) {
-			cm.incInvocations();
-			cm.getRoot().incInvocations();
+			if (coverage) {
+				cm.incInvocations();
+				cm.getRoot().incInvocations();
+			}
 			states.addElement(ps.copy());
 			return;
 		} else if (ps.allAssigned()) {
@@ -439,8 +441,10 @@ public class Tool
 				// Move on to the next action in the ActionItemList.
 				acts = acts.cdr();
 			}
-			cm.incInvocations();
-			cm.getRoot().incInvocations();
+			if (coverage) {
+				cm.incInvocations();
+				cm.getRoot().incInvocations();
+			}
 			states.addElement(ps.copy());
 			return;
 		}
@@ -452,7 +456,7 @@ public class Tool
   private final void getInitStatesAppl(OpApplNode init, ActionItemList acts,
                                        Context c, TLCState ps, IStateFunctor states, CostModel cm) {
     if (this.callStack != null) this.callStack.push(init);
-    cm = cm.get(init);
+    if (coverage) {cm = cm.get(init);}
     try {
         ExprOrOpArgNode[] args = init.getArgs();
         int alen = args.length;
@@ -765,7 +769,7 @@ public class Tool
     TLCState s1 = TLCState.Empty.createEmpty();
     StateVec nss = new StateVec(0);
     this.getNextStates(action.pred, acts, action.con, state, s1, nss, action.cm);
-    action.cm.incInvocations(nss.size());
+    if (coverage) { action.cm.incInvocations(nss.size()); }
     return nss;
   }
 
@@ -794,7 +798,7 @@ public class Tool
   
   private final TLCState getNextStatesImpl(SemanticNode pred, ActionItemList acts, Context c,
               TLCState s0, TLCState s1, StateVec nss, CostModel cm) {
-    cm = cm.get(pred);
+    if (coverage) {cm = cm.get(pred);}
         switch (pred.getKind()) {
         case OpApplKind:
           {
@@ -854,7 +858,7 @@ public class Tool
   private final TLCState getNextStates(ActionItemList acts, final TLCState s0, final TLCState s1,
           final StateVec nss, CostModel cm) {
 	  final TLCState copy = getNextStates0(acts, s0, s1, nss, cm);
-	  if (copy != s1) {
+	  if (coverage && copy != s1) {
 		  cm.incInvocations();
 	  }
 	  return copy;
@@ -1147,14 +1151,14 @@ public class Tool
                 other = pairArgs[1];
               }
               else {
-                Value bval = this.eval(pairArgs[0], c, s0, s1, EvalControl.Clear, cm.get(args[i]));
+                Value bval = this.eval(pairArgs[0], c, s0, s1, EvalControl.Clear, coverage ? cm.get(args[i]) : cm);
                 if (!(bval instanceof BoolValue)) {
                   Assert.fail("In computing next states, a non-boolean expression (" +
                               bval.getKindString() + ") was used as a guard condition" +
                               " of a CASE.\n" + pairArgs[1]);
                 }
                 if (((BoolValue)bval).val) {
-                  return this.getNextStates(pairArgs[1], acts, c, s0, s1, nss, cm.get(args[i]));
+                  return this.getNextStates(pairArgs[1], acts, c, s0, s1, nss, coverage ? cm.get(args[i]) : cm);
                 }
               }
             }
@@ -1162,7 +1166,7 @@ public class Tool
               Assert.fail("In computing next states, TLC encountered a CASE with no" +
                           " conditions true.\n" + pred);
             }
-            return this.getNextStates(other, acts, c, s0, s1, nss, cm.get(args[alen - 1]));
+            return this.getNextStates(other, acts, c, s0, s1, nss, coverage ? cm.get(args[alen - 1]) : cm);
           }
         case OPCODE_eq:
           {
@@ -1303,7 +1307,7 @@ public class Tool
   }
   private final TLCState processUnchangedImpl(SemanticNode expr, ActionItemList acts, Context c,
           TLCState s0, TLCState s1, StateVec nss, CostModel cm) {
-    cm = cm.get(expr);
+    if (coverage){cm = cm.get(expr);}
         SymbolNode var = this.getVar(expr, c, false);
         TLCState resState = s1;
         if (var != null) {
@@ -1319,7 +1323,7 @@ public class Tool
           int opcode = BuiltInOPs.getOpCode(opName);
 
           if (opcode == OPCODE_tup) {
-            return processUnchangedImplTuple(acts, c, s0, s1, nss, args, alen, cm, cm.get(expr1));
+            return processUnchangedImplTuple(acts, c, s0, s1, nss, args, alen, cm, coverage ? cm.get(expr1) : cm);
           }
 
           if (opcode == 0 && alen == 0) {
@@ -1425,7 +1429,7 @@ public class Tool
   
   private final Value evalImpl(final SemanticNode expr, final Context c, final TLCState s0,
           final TLCState s1, final int control, CostModel cm) {
-    cm = cm.get(expr);
+    if (coverage) {cm = cm.get(expr);}
         switch (expr.getKind()) {
         /***********************************************************************
         * LabelKind class added by LL on 13 Jun 2007.                          *
@@ -1548,8 +1552,10 @@ public class Tool
   
   private final Value evalApplImpl(final OpApplNode expr, Context c, TLCState s0,
                               TLCState s1, final int control, CostModel cm) {
-    cm = cm.get(expr);
-    cm.incInvocations();
+    if (coverage){
+    	cm = cm.get(expr);
+    	cm.incInvocations();
+    }
         ExprOrOpArgNode[] args = expr.getArgs();
         SymbolNode opNode = expr.getOperator();
         int opcode = BuiltInOPs.getOpCode(opNode.getName());
@@ -1853,13 +1859,13 @@ public class Tool
                 other = pairArgs[1];
               }
               else {
-                Value bval = this.eval(pairArgs[0], c, s0, s1, control, cm.get(pairNode));
+                Value bval = this.eval(pairArgs[0], c, s0, s1, control, coverage ? cm.get(pairNode) : cm);
                 if (!(bval instanceof BoolValue)) {
                   Assert.fail("A non-boolean expression (" + bval.getKindString() +
                               ") was used as a condition of a CASE. " + pairArgs[0]);
                 }
                 if (((BoolValue)bval).val) {
-                  return this.eval(pairArgs[1], c, s0, s1, control, cm.get(pairNode));
+                  return this.eval(pairArgs[1], c, s0, s1, control, coverage ? cm.get(pairNode) : cm);
                 }
               }
             }
@@ -1919,7 +1925,7 @@ public class Tool
 
               Value[] lhs = new Value[cmpts.length];
               for (int j = 0; j < lhs.length; j++) {
-                lhs[j] = this.eval(cmpts[j], c, s0, s1, control, cm.get(pairNode).get(pairArgs[0]));
+                lhs[j] = this.eval(cmpts[j], c, s0, s1, control,  coverage ? cm.get(pairNode).get(pairArgs[0]) : cm);
               }
               Value atVal = result.select(lhs);
               if (atVal == null) {
@@ -1928,7 +1934,7 @@ public class Tool
               }
               else {
                 Context c1 = c.cons(EXCEPT_AT, atVal);
-                Value rhs = this.eval(pairArgs[1], c1, s0, s1, control, cm.get(pairNode));
+                Value rhs = this.eval(pairArgs[1], c1, s0, s1, control,  coverage ? cm.get(pairNode) : cm);
                 ValueExcept vex = new ValueExcept(lhs, rhs);
                 result = result.takeExcept(vex);
               }
@@ -2008,10 +2014,9 @@ public class Tool
             Value[] vals = new Value[alen];
             for (int i = 0; i < alen; i++) {
               OpApplNode pairNode = (OpApplNode)args[i];
-              CostModel costModel = cm.get(pairNode);
               ExprOrOpArgNode[] pair = pairNode.getArgs();
               names[i] = ((StringValue)Value.getValue(pair[0])).getVal();
-              vals[i] = this.eval(pair[1], c, s0, s1, control, costModel);
+              vals[i] = this.eval(pair[1], c, s0, s1, control, coverage ? cm.get(pairNode) : cm);
             }
             return setSource(expr, new RecordValue(names, vals, false, cm));
           }
@@ -2067,7 +2072,7 @@ public class Tool
               OpApplNode pairNode = (OpApplNode)args[i];
               ExprOrOpArgNode[] pair = pairNode.getArgs();
               names[i] = ((StringValue)Value.getValue(pair[0])).getVal();
-              vals[i] = this.eval(pair[1], c, s0, s1, control, cm.get(pairNode));
+              vals[i] = this.eval(pair[1], c, s0, s1, control, coverage ? cm.get(pairNode) : cm);
             }
             return setSource(expr, new SetOfRcdsValue(names, vals, false, cm));
           }
@@ -2584,7 +2589,7 @@ public class Tool
   private final TLCState enabledAppl(OpApplNode pred, ActionItemList acts, Context c, TLCState s0, TLCState s1, CostModel cm)
   {
     if (this.callStack != null) this.callStack.push(pred);
-    cm = cm.get(pred);
+    if (coverage) {cm = cm.get(pred);}
     try {
         ExprOrOpArgNode[] args = pred.getArgs();
         int alen = args.length;

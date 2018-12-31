@@ -67,6 +67,7 @@ import util.UniqueString;
 
 public class Spec implements ValueConstants, ToolGlobals, Serializable
 {
+	protected static final boolean coverage = TLCGlobals.isCoverageEnabled();
 
     public String specDir; // The spec directory.
     public String rootFile; // The root file of this spec.
@@ -1756,7 +1757,7 @@ public class Spec implements ValueConstants, ToolGlobals, Serializable
 
     public final Object getVal(ExprOrOpArgNode expr, Context c, final boolean cachable, CostModel cm)
     {
-    	cm = cm.get(expr);
+    	if (coverage) {cm = cm.get(expr);}
         if (expr instanceof ExprNode)
         {
             return new LazyValue(expr, c, cachable, cm);
