@@ -354,6 +354,7 @@ public class SetPredValue extends EnumerableValue implements Enumerable {
     public final Value nextElement() {
       Value elem;
       while ((elem = this.Enum.nextElement()) != null) {
+    	  if (coverage) { cm.incSecondary(); }
         Context con1 = con;
         if (vars instanceof FormalParamNode) {
           con1 = con1.cons((FormalParamNode)vars, elem);
@@ -373,7 +374,7 @@ public class SetPredValue extends EnumerableValue implements Enumerable {
             "\nis an element of a set of " + ids.length + "-tuples.");
           }
         }
-        Value res = tool.eval(pred, con1, state, pstate, control);
+        Value res = tool.eval(pred, con1, state, pstate, control, cm);
         if (!(res instanceof BoolValue)) {
           Assert.fail("Evaluating predicate " + pred + " yielded non-Boolean value.");
         }

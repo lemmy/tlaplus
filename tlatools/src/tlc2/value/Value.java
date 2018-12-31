@@ -19,6 +19,7 @@ import util.Assert;
 import util.WrongInvocationException;
 
 public abstract class Value implements ValueConstants, Serializable {
+	protected static final boolean coverage = TLCGlobals.isCoverageEnabled();
   /**
    * For each kind of value, we introduce a subclass of Value.
    * All the subclasses are given in this value package.

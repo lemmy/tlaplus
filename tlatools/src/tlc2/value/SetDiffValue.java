@@ -295,6 +295,7 @@ public class SetDiffValue extends EnumerableValue implements Enumerable {
     public final Value nextElement() {
       Value elem = this.enum1.nextElement();
       while (elem != null) {
+    	  if (coverage) { cm.incSecondary(); }
         if (!set2.member(elem)) return elem;
         elem = this.enum1.nextElement();
       }

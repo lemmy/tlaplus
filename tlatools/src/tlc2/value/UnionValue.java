@@ -350,6 +350,7 @@ public class UnionValue extends EnumerableValue implements Enumerable {
         this.elemSetEnum = ((Enumerable)this.elemSet).elements();
         val = this.nextElement();
       }
+	  if (coverage) { cm.incSecondary(); }
       return val;
     }
 

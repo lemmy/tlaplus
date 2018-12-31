@@ -396,6 +396,7 @@ implements Enumerable, Reducible {
     public final void reset() { this.index = 0; }
 
     public final Value nextElement() {
+    	if (coverage) { cm.incSecondary(); }
       if (this.index < elems.size()) {
         return elems.elementAt(this.index++);
       }

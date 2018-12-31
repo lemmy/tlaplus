@@ -295,6 +295,7 @@ public class SetCupValue extends EnumerableValue implements Enumerable {
     }
 
     public final Value nextElement() {
+  	  if (coverage) { cm.incSecondary(); }
       Value elem = this.enum1.nextElement();
       if (elem != null) return elem;
       elem = this.enum2.nextElement();

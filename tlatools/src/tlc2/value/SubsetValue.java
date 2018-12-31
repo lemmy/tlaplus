@@ -706,34 +706,36 @@ public class SubsetValue extends EnumerableValue implements Enumerable {
     }
 
     public final Value nextElement() {
-      if (this.descriptor == null) return null;
-      ValueVec vals = new ValueVec();
-      int sz = this.elems.size();
-      if (sz == 0) {
-        this.descriptor = null;
-      }
-      else {
-        for (int i = 0; i < sz; i++) {
-          if (this.descriptor.get(i)) {
-            vals.addElement(this.elems.elementAt(i));
-          }
-        }
-        for (int i = 0; i < sz; i++) {
-          if (this.descriptor.get(i)) {
-            this.descriptor.clear(i);
-            if (i >= sz - 1) {
-              this.descriptor = null;
-              break;
-            }
-          }
-          else {
-            this.descriptor.set(i);
-            break;
-          }
-        }
-      }
-      return new SetEnumValue(vals, true, cm);
-    }
+			if (this.descriptor == null)
+				return null;
+			ValueVec vals;
+			int sz = this.elems.size();
+			if (sz == 0) {
+				vals = new ValueVec(0);
+				this.descriptor = null;
+			} else {
+				vals = new ValueVec(this.descriptor.cardinality());
+				for (int i = 0; i < sz; i++) {
+					if (this.descriptor.get(i)) {
+						vals.addElement(this.elems.elementAt(i));
+					}
+				}
+				for (int i = 0; i < sz; i++) {
+					if (this.descriptor.get(i)) {
+						this.descriptor.clear(i);
+						if (i >= sz - 1) {
+							this.descriptor = null;
+							break;
+						}
+					} else {
+						this.descriptor.set(i);
+						break;
+					}
+				}
+			}
+	    	  if (coverage) { cm.incSecondary(vals.size()); }
+			return new SetEnumValue(vals, true, cm);
+	    }
 
   }
 

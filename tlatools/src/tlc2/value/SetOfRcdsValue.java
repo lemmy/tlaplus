@@ -451,7 +451,8 @@ public class SetOfRcdsValue extends SetOfFcnsOrRcdsValue implements Enumerable {
 
     public final Value nextElement() {
       if (this.isDone) return null;
-      Value[] elems = new Value[this.currentElems.length];
+     Value[] elems = new Value[this.currentElems.length];
+     if (coverage) { cm.incSecondary(elems.length); }
       for (int i = 0; i < elems.length; i++) {
         elems[i] = this.currentElems[i];
       }

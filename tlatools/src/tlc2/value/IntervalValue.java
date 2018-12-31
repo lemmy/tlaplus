@@ -316,6 +316,7 @@ implements Enumerable, Reducible {
 
     public final Value nextElement() {
       if (this.index <= high) {
+    	  if (coverage) { cm.incSecondary(); }
         return IntValue.gen(this.index++);
       }
       return null;

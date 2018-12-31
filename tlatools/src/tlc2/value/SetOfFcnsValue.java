@@ -408,8 +408,9 @@ public class SetOfFcnsValue extends SetOfFcnsOrRcdsValue implements Enumerable {
 				return null;
 			}
 			if (this.currentElems.length == 0) {
+		    	  if (coverage) { cm.incSecondary(); }
 				this.isDone = true;
-				return new FcnRcdValue(this.dom, new Value[this.currentElems.length], true);
+				return new FcnRcdValue(this.dom, new Value[this.currentElems.length], true, cm);
 			} else {
 				// Take and store a snapshot of currentElems as the element to return for
 				// this invocation of nextElement().
@@ -418,6 +419,7 @@ public class SetOfFcnsValue extends SetOfFcnsOrRcdsValue implements Enumerable {
 
 				// Eagerly generate the next element which is going to be returned the upon next
 				// invocation of nextElement().
+		    	  if (coverage) { cm.incSecondary(this.currentElems.length); }
 				for (int i = this.currentElems.length - 1; i >= 0; i--) {
 					this.currentElems[i] = this.enums[i].nextElement();
 					if (this.currentElems[i] != null) {
@@ -431,7 +433,7 @@ public class SetOfFcnsValue extends SetOfFcnsOrRcdsValue implements Enumerable {
 					this.currentElems[i] = this.enums[i].nextElement();
 				}
 				
-				return new FcnRcdValue(this.dom, elems, true);
+				return new FcnRcdValue(this.dom, elems, true, cm);
 			}
 		}
 
