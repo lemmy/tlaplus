@@ -113,9 +113,6 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 				}
 				stack.peek().addChild(item);
 				stack.push(item);
-				
-				// Set siblings if any:
-				item.addSiblings(loc2cci.get(item.getModuleLocation()));
 			}
 		}
 		
@@ -150,6 +147,11 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 	public CoverageInformation prepare(final IDocument document) throws BadLocationException {
 		final TreeSet<Long> ciiCounts = new TreeSet<>();
 		final TreeSet<Long> aiiCounts = new TreeSet<>();
+
+		for (CoverageInformationItem item : items) {
+			// Set siblings if any:
+			item.setSiblings(loc2cci.get(item.getModuleLocation()));
+		}
 		
 		for (final CoverageInformationItem item : items) {
 			// Convert Location to IRegion

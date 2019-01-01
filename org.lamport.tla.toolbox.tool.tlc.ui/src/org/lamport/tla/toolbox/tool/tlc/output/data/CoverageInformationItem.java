@@ -171,10 +171,15 @@ public class CoverageInformationItem implements IModuleLocatable
     	return this;
     }
     
-	CoverageInformationItem addSiblings(List<CoverageInformationItem> siblings) {
+	CoverageInformationItem setSiblings(List<CoverageInformationItem> siblings) {
+		this.siblings.clear();
 		this.siblings.addAll(siblings);
 		this.siblings.remove(this);
 		return this;
+	}
+	
+	boolean hasSiblings() {
+		return !this.siblings.isEmpty();
 	}
     
 	List<CoverageInformationItem> getChildren() {
@@ -230,7 +235,7 @@ public class CoverageInformationItem implements IModuleLocatable
 		}
 	}
 	
-	protected void style(final TextPresentation textPresentation, boolean merge) {
+	protected void style(final TextPresentation textPresentation, final boolean merge) {
 		if (!isRoot()) {
 			final StyleRange rs = new StyleRange();
 			
