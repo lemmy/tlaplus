@@ -27,9 +27,7 @@ package org.lamport.tla.toolbox.tool.tlc.ui.editor;
 
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.resource.JFaceResources;
-import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.DefaultTextHover;
-import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.ITextHover;
 import org.eclipse.jface.text.ITextPresentationListener;
@@ -92,13 +90,7 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 	}
 
 	public void setInput(final CoverageInformation ci) throws PartInitException {
-		this.coverage = ci;
-		final IDocument document = getDocumentProvider().getDocument(getEditorInput());
-		try {
-			this.coverage.prepare(document);
-		} catch (BadLocationException e) {
-			throw new PartInitException(e.getMessage(), e);
-		}
+		this.coverage = ci.prepare();
 	}
 
 	/* TLASourceViewerConfiguration */

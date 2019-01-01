@@ -38,11 +38,15 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IRegion;
 import org.eclipse.swt.graphics.RGB;
+import org.eclipse.ui.editors.text.FileDocumentProvider;
+import org.eclipse.ui.part.FileEditorInput;
 import org.lamport.tla.toolbox.util.AdapterFactory;
 
 import tla2sany.st.Location;
@@ -55,7 +59,44 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 	
 	private final TreeMap<Integer, List<CoverageInformationItem>> offset2cii = new TreeMap<>();
 
+	private final Map<String, IDocument> nameToDocument = new HashMap<>();
+	
+	private IFile file;
+	
+	public CoverageInformation() {
+		// Testing only
+	}
+
+	public CoverageInformation(final IFile file) {
+		this.file = file;
+	}
+	
+	public CoverageInformation(final List<IFile> savedTLAFiles) {
+		for (final IFile iFile : savedTLAFiles) {
+			try {
+				final FileDocumentProvider fileDocumentProvider = new FileDocumentProvider();
+				final FileEditorInput fei = new FileEditorInput(iFile);
+				fileDocumentProvider.connect(fei);
+				final IDocument document = fileDocumentProvider.getDocument(fei);
+				nameToDocument.put(iFile.getName(), document);
+			} catch (final CoreException notExpectedToHappen) {
+				notExpectedToHappen.printStackTrace();
+			}
+		}
+	}
+
 	public void add(final CoverageInformationItem item) {
+		try {
+			final String filename = item.getModuleLocation().source() + ".tla";
+			if (nameToDocument.containsKey(filename)) {
+				final IDocument document = nameToDocument.get(filename);
+				final IRegion region = AdapterFactory.locationToRegion(document , item.getModuleLocation());
+				item.setRegion(region);
+			}
+		} catch (BadLocationException notExpectedToHappen) {
+			notExpectedToHappen.printStackTrace();
+		}
+		
 		this.items.add(item);
 		
 		this.loc2cci.computeIfAbsent(item.getModuleLocation(), c -> new ArrayList<>()).add(item);
@@ -121,7 +162,7 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 	
 	public CoverageInformationItem getRoot() {
 		if (root == null) {
-			root = getRoot(items.get(0).getModuleLocation().source());
+			root = getRoot(file.getName().replace(".tla", ""));
 		}
 		return root;
 	}
@@ -144,7 +185,7 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 
 	public static final String RED = "RED";
 
-	public CoverageInformation prepare(final IDocument document) throws BadLocationException {
+	public CoverageInformation prepare() {
 		final TreeSet<Long> ciiCounts = new TreeSet<>();
 		final TreeSet<Long> aiiCounts = new TreeSet<>();
 
@@ -154,11 +195,7 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 		}
 		
 		for (final CoverageInformationItem item : items) {
-			// Convert Location to IRegion
-			final IRegion region = AdapterFactory.locationToRegion(document, item.getModuleLocation());
-			item.setRegion(region);
-			
-			offset2cii.computeIfAbsent(region.getOffset(), c -> new ArrayList<>()).add(item);
+			offset2cii.computeIfAbsent(item.getRegion().getOffset(), c -> new ArrayList<>()).add(item);
 			
 			if (item instanceof ActionInformationItem) {
 				aiiCounts.add(((ActionInformationItem) item).getUnseen());

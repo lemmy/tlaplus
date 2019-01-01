@@ -448,7 +448,7 @@ public class TLCModelLaunchDataProvider implements ITLCOutputListener
                 // Coverage information
                 case EC.TLC_COVERAGE_START:
                     this.coverageTimestamp = CoverageInformationItem.parseCoverageTimestamp(outputMessage);
-                    this.coverageInfo = new CoverageInformation();
+                    this.coverageInfo = new CoverageInformation(model.getSavedTLAFiles());
                     informPresenter(ITLCModelLaunchDataPresenter.COVERAGE_TIME);
                     informPresenter(ITLCModelLaunchDataPresenter.COVERAGE);
                     break;
@@ -979,15 +979,20 @@ public class TLCModelLaunchDataProvider implements ITLCOutputListener
     {
         return coverageInfo;
     }
-
+    
     public CoverageInformation getCoverageInfo(IFile file)
     {
-        CoverageInformation subset = new CoverageInformation();
-    	for (CoverageInformationItem coverageInformationItem : coverageInfo) {
-			if (coverageInformationItem.getModuleLocation().source().equals(file.getName().replace(".tla", ""))) {
-				subset.add(coverageInformationItem);
-			}
-		}
+    	return getCoverageInfo(file, true);
+    }
+
+    public CoverageInformation getCoverageInfo(IFile file, boolean remove)
+    {
+        CoverageInformation subset = new CoverageInformation(file);
+       	for (CoverageInformationItem coverageInformationItem : coverageInfo) {
+       		if (!remove || coverageInformationItem.getModuleLocation().source().equals(file.getName().replace(".tla", ""))) {
+       			subset.add(coverageInformationItem);
+       		}
+       	}
         return subset;
     }
 
@@ -1015,19 +1020,9 @@ public class TLCModelLaunchDataProvider implements ITLCOutputListener
         return userOutput;
     }
 
-    public void setUserOutput(Document userOutput)
-    {
-        this.userOutput = userOutput;
-    }
-
     public Document getProgressOutput()
     {
         return progressOutput;
-    }
-
-    public void setProgressOutput(Document progressOutput)
-    {
-        this.progressOutput = progressOutput;
     }
 
     public long getLastCheckpointTimeStamp()
