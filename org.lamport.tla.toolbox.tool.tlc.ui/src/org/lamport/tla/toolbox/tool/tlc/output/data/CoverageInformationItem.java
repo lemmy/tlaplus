@@ -2,6 +2,7 @@ package org.lamport.tla.toolbox.tool.tlc.output.data;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -331,5 +332,10 @@ public class CoverageInformationItem implements IModuleLocatable
 
 	public boolean hasLocation() {
 		return this.location != null;
+	}
+
+	public Set<LegendItem> getLegend() {
+		//TODO Implement!
+		return new TreeSet<>();
 	}
 }

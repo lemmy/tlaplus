@@ -25,6 +25,8 @@
  ******************************************************************************/
 package org.lamport.tla.toolbox.tool.tlc.ui.editor;
 
+import java.util.Set;
+
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.DefaultTextHover;
@@ -36,12 +38,18 @@ import org.eclipse.jface.text.JFaceTextUtil;
 import org.eclipse.jface.text.TextPresentation;
 import org.eclipse.jface.text.TextViewer;
 import org.eclipse.jface.text.source.ISourceViewer;
+import org.eclipse.jface.text.source.IVerticalRuler;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Cursor;
 import org.eclipse.swt.graphics.RGB;
+import org.eclipse.swt.layout.FillLayout;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorSite;
@@ -50,8 +58,9 @@ import org.eclipse.ui.texteditor.SourceViewerDecorationSupport;
 import org.lamport.tla.toolbox.editor.basic.TLAEditor;
 import org.lamport.tla.toolbox.editor.basic.TLAEditorReadOnly;
 import org.lamport.tla.toolbox.editor.basic.TLASourceViewerConfiguration;
-import org.lamport.tla.toolbox.tool.tlc.output.data.CoverageInformation;
 import org.lamport.tla.toolbox.tool.tlc.output.data.CoverageInformationItem;
+import org.lamport.tla.toolbox.tool.tlc.output.data.FileCoverageInformation;
+import org.lamport.tla.toolbox.tool.tlc.output.data.LegendItem;
 
 public class TLACoverageEditor2 extends TLAEditorReadOnly {
 
@@ -72,6 +81,40 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 	}
 
 	@Override
+	protected ISourceViewer createSourceViewer(final Composite parent, IVerticalRuler ruler, int styles) {
+		// Create composite inside of parent (of which we don't control the layout) to
+		// place heatMap with a fixed height below the editor.
+		
+		final Composite composite = new Composite(parent, SWT.BORDER);
+		final GridLayout layout = new GridLayout(1, false);
+		layout.marginHeight = 0;
+		layout.marginWidth = 0;
+		layout.horizontalSpacing = 0;
+		layout.verticalSpacing = 0;
+		composite.setLayout(layout);
+
+		// Inside editor use again a FillLayout to let super.create... use all available
+		// space.
+		final Composite editorComposite = new Composite(composite, SWT.NONE);
+		editorComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
+		final FillLayout fillLayout = new FillLayout(SWT.VERTICAL);
+		fillLayout.marginHeight = 0;
+		fillLayout.marginWidth = 0;
+		fillLayout.spacing = 0;
+		editorComposite.setLayout(fillLayout);
+
+		heatMapComposite = new Composite(composite, SWT.BORDER);
+		final GridData layoutData = new GridData(SWT.FILL, SWT.TOP, true, false);
+		heatMapComposite.setLayoutData(layoutData);
+
+		// Inside of heatMap, use a horizontally FillLayout to place individuals heat
+		// map item next to each other.
+		heatMapComposite.setLayout(new FillLayout(SWT.HORIZONTAL));
+		
+		return super.createSourceViewer(editorComposite, ruler, styles);
+	}
+
+	@Override
     protected TLASourceViewerConfiguration getTLASourceViewerConfiguration(IPreferenceStore preferenceStore) {
     	return new TLACoverageSourceViewerConfiguration(preferenceStore, this); 
     }
@@ -80,7 +123,7 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 	protected SourceViewerDecorationSupport getSourceViewerDecorationSupport(ISourceViewer viewer) {
 		//TODO Initialize painter after editor input has been set.
 		final TextViewer textViewer = (TextViewer) viewer;
-		textViewer.addTextPresentationListener(new TLACoveragePainter(viewer, coverage));
+		textViewer.addTextPresentationListener(new TLACoveragePainter(viewer, coverage, heatMapComposite));
 		
 		return super.getSourceViewerDecorationSupport(viewer);
 	}
@@ -120,27 +163,59 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 		private final ISourceViewer viewer;
 		private final TextPresentation textPresentation;
 		private final FileCoverageInformation coverage;
+		private Composite heatMapComposite;
 
-		public TextPresentationListener(FileCoverageInformation coverage, ISourceViewer viewer, TextPresentation textPresentation) {
+		public TextPresentationListener(FileCoverageInformation coverage, ISourceViewer viewer, TextPresentation textPresentation, Composite heatMapComposite) {
 			this.coverage = coverage;
 			this.viewer = viewer;
 			this.textPresentation = textPresentation;
+			this.heatMapComposite = heatMapComposite;
 		}
 
 		@Override
 		public void handleEvent(Event event) {
 			final int offset = JFaceTextUtil.getOffsetForCursorLocation(viewer);
 			if (offset == -1) {
+				textPresentation.clear();
 				coverage.getRoot().style(textPresentation);
 				viewer.changeTextPresentation(textPresentation, true);
+				updateLegend(this.coverage.getLegend());
 			} else {
 				final CoverageInformationItem node = coverage.getNode(offset);
 				if (node != null) {
 					coverage.getRoot().style(textPresentation, JFaceResources.getColorRegistry().get(FileCoverageInformation.GRAY));
 					node.style(textPresentation);
 					viewer.changeTextPresentation(textPresentation, true);
+					updateLegend(node.getLegend());
 				}
 			}
+		}
+		
+		private void updateLegend(final Set<LegendItem> legend) {
+			final Composite parent = heatMapComposite.getParent();
+			if (legend.isEmpty()) {
+				heatMapComposite.setVisible(false);
+			} else {
+				heatMapComposite.dispose();
+				
+				heatMapComposite = new Composite(parent, SWT.BORDER);
+				final GridData layoutData = new GridData(SWT.FILL, SWT.TOP, true, false);
+				heatMapComposite.setLayoutData(layoutData);
+				
+				// Inside of heatMap, use a horizontally FillLayout to place individuals heat
+				// map item next to each other.
+				heatMapComposite.setLayout(new FillLayout(SWT.HORIZONTAL));
+				
+				Label label = new Label(heatMapComposite, SWT.BORDER);
+				label.setText("Invocations:");
+				for (LegendItem cii : legend) {
+					label = new Label(heatMapComposite, SWT.BORDER);
+					label.setAlignment(SWT.CENTER);
+					label.setText(Long.toString(cii.getWeight()));
+					label.setBackground(cii.getColor());
+				}
+			}
+			parent.layout();
 		}
 	}
 	
@@ -148,10 +223,12 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 
 		private final FileCoverageInformation coverage;
 		private final ISourceViewer viewer;
+		private final Composite heatMapComposite;
 
-		public TLACoveragePainter(ISourceViewer viewer, FileCoverageInformation coverage) {
+		public TLACoveragePainter(ISourceViewer viewer, FileCoverageInformation coverage, Composite heatMapComposite) {
 			this.viewer = viewer;
 			this.coverage = coverage;
+			this.heatMapComposite = heatMapComposite;
 		}
 		
 		@Override
@@ -163,7 +240,7 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 			textWidget.setCursor(new Cursor(textWidget.getDisplay(), SWT.CURSOR_HAND));
 			
 			// Attach a listener to react to mouse clicks to reveal coverage for selected expressions.
-			final TextPresentationListener listener = new TextPresentationListener(coverage, viewer, textPresentation);
+			final TextPresentationListener listener = new TextPresentationListener(coverage, viewer, textPresentation, heatMapComposite);
 			textWidget.addListener(SWT.MouseDown, listener);
 			
 			// Unregister this to not rerun the initialization above.

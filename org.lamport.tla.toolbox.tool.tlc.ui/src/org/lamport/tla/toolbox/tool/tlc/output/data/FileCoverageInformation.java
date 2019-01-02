@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -103,6 +104,8 @@ public class FileCoverageInformation {
 	private final Map<Location, List<CoverageInformationItem>> loc2cci = new HashMap<>();
 	
 	private final TreeMap<Integer, List<CoverageInformationItem>> offset2cii = new TreeMap<>();
+	
+	private final Set<LegendItem> rootLegend = new TreeSet<>();
 
 	private final CoverageInformationItem root;
 
@@ -147,6 +150,9 @@ public class FileCoverageInformation {
 			} else {
 				// Calculate colors just for CII because the values of ACII are unrelated.
 				final Color c = item.colorItem(ciiCounts);
+				
+				// While looping, create a legend item.
+				rootLegend.add(new LegendItem(item.getCountIncludingSiblings(), c));
 			}
 		}
 		
@@ -212,5 +218,9 @@ public class FileCoverageInformation {
 		}
 		
 		return hover.replaceAll("^\n", "").replaceAll("\n$", "");
+	}
+
+	public Set<LegendItem> getLegend() {
+		return rootLegend;
 	}
 }
