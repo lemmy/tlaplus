@@ -63,9 +63,11 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 
 	private static final Color lightYellow = JFaceResources.getColorRegistry().get("LIGHT_YELLOW");
 	
-	private CoverageInformation coverage;
+	private FileCoverageInformation coverage;
 
-	public TLACoverageEditor2(final CoverageInformation coverage) {
+	private Composite heatMapComposite;
+
+	public TLACoverageEditor2(final FileCoverageInformation coverage) {
 		this.coverage = coverage;
 	}
 
@@ -89,8 +91,8 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 		setInput(coverage);
 	}
 
-	public void setInput(final CoverageInformation ci) throws PartInitException {
-		this.coverage = ci.prepare();
+	public void setInput(final FileCoverageInformation ci) throws PartInitException {
+		this.coverage = ci;
 	}
 
 	/* TLASourceViewerConfiguration */
@@ -117,9 +119,9 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 
 		private final ISourceViewer viewer;
 		private final TextPresentation textPresentation;
-		private final CoverageInformation coverage;
+		private final FileCoverageInformation coverage;
 
-		public TextPresentationListener(CoverageInformation coverage, ISourceViewer viewer, TextPresentation textPresentation) {
+		public TextPresentationListener(FileCoverageInformation coverage, ISourceViewer viewer, TextPresentation textPresentation) {
 			this.coverage = coverage;
 			this.viewer = viewer;
 			this.textPresentation = textPresentation;
@@ -134,7 +136,7 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 			} else {
 				final CoverageInformationItem node = coverage.getNode(offset);
 				if (node != null) {
-					coverage.getRoot().style(textPresentation, JFaceResources.getColorRegistry().get(CoverageInformation.GRAY));
+					coverage.getRoot().style(textPresentation, JFaceResources.getColorRegistry().get(FileCoverageInformation.GRAY));
 					node.style(textPresentation);
 					viewer.changeTextPresentation(textPresentation, true);
 				}
@@ -144,10 +146,10 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 	
 	public class TLACoveragePainter implements ITextPresentationListener {
 
-		private final CoverageInformation coverage;
+		private final FileCoverageInformation coverage;
 		private final ISourceViewer viewer;
 
-		public TLACoveragePainter(ISourceViewer viewer, CoverageInformation coverage) {
+		public TLACoveragePainter(ISourceViewer viewer, FileCoverageInformation coverage) {
 			this.viewer = viewer;
 			this.coverage = coverage;
 		}

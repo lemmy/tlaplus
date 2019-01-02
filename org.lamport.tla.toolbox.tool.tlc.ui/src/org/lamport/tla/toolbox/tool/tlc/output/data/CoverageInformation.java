@@ -25,50 +25,29 @@
  ******************************************************************************/
 package org.lamport.tla.toolbox.tool.tlc.output.data;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.SortedSet;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.stream.Collectors;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IRegion;
-import org.eclipse.swt.graphics.RGB;
 import org.eclipse.ui.editors.text.FileDocumentProvider;
 import org.eclipse.ui.part.FileEditorInput;
 import org.lamport.tla.toolbox.util.AdapterFactory;
-
-import tla2sany.st.Location;
 
 public class CoverageInformation implements Iterable<CoverageInformationItem> {
 	
 	private final List<CoverageInformationItem> items = new ArrayList<>();
 
-	private Map<Location, List<CoverageInformationItem>> loc2cci = new HashMap<>();
-	
-	private final TreeMap<Integer, List<CoverageInformationItem>> offset2cii = new TreeMap<>();
-
 	private final Map<String, IDocument> nameToDocument = new HashMap<>();
-	
-	private IFile file;
-	
-	public CoverageInformation() {
-		// Testing only
-	}
 
-	public CoverageInformation(final IFile file) {
-		this.file = file;
+	public CoverageInformation() {
+		// Testing only!
 	}
 	
 	public CoverageInformation(final List<IFile> savedTLAFiles) {
@@ -98,12 +77,6 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 		}
 		
 		this.items.add(item);
-		
-		this.loc2cci.computeIfAbsent(item.getModuleLocation(), c -> new ArrayList<>()).add(item);
-	}
-
-	private int numSiblings(CoverageInformationItem item) {
-		return this.loc2cci.get(item.getModuleLocation()).size();
 	}
 	
 	@Override
@@ -119,149 +92,13 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 		return this.items.toArray();
 	}
 
-	private static final int BLUE = 240;
-
-	static int getHue(final long count, final TreeSet<Long> counts) {
-		final int size = counts.size();
-		final float r = 240f / size;
-		final SortedSet<Long> headSet = counts.headSet(count);
-		return BLUE - Math.round(r * (headSet.size() + 1));
-	}
-	
-	private CoverageInformationItem root;
-
-	public CoverageInformationItem getRoot(final String filename) {
-		// Root is the technical root acting as entry point for the editor. It doesn't
-		// have a location or counts.
-		final CoverageInformationItem root = new CoverageInformationItem();
-		
-		final Deque<CoverageInformationItem> stack = new ArrayDeque<>();
-		stack.push(root.setLayer(-1));
-		
-		// AII is the (logical) root of the current CostModel. It has a location and
-		// counts.
-		ActionInformationItem aiiRoot = null;
-		for (CoverageInformationItem item : items) {
-			if (filename.equals(item.getModuleLocation().source())) {
-				if (item instanceof ActionInformationItem) {
-					aiiRoot = (ActionInformationItem) item;
-				} else {
-					item.setRoot(aiiRoot);
-				}
-				int layer = item.getLayer();
-				while (layer <= stack.peek().getLayer()) {
-					stack.pop();
-				}
-				stack.peek().addChild(item);
-				stack.push(item);
-			}
-		}
-		
-		return root;
-	}
-	
-	public CoverageInformationItem getRoot() {
-		if (root == null) {
-			root = getRoot(file.getName().replace(".tla", ""));
-		}
-		return root;
-	}
-	
-	public CoverageInformationItem getNode(final int offset) {
-		return getNodes(offset).stream().findFirst().orElse(null);
-	}
-	
-	public List<CoverageInformationItem> getNodes(final int offset) {
-		final Entry<Integer, List<CoverageInformationItem>> entry = this.offset2cii.floorEntry(offset);
-		if (entry != null) {
-			return entry.getValue().stream()
-					.filter(cii -> offset <= cii.getRegion().getOffset() + cii.getRegion().getLength())
-					.collect(Collectors.toList());
-		}
-		return new ArrayList<>();
-	}
-	
-	public static final String GRAY = "GRAY";
-
-	public static final String RED = "RED";
-
-	public CoverageInformation prepare() {
-		final TreeSet<Long> ciiCounts = new TreeSet<>();
-		final TreeSet<Long> aiiCounts = new TreeSet<>();
-
-		for (CoverageInformationItem item : items) {
-			// Set siblings if any:
-			item.setSiblings(loc2cci.get(item.getModuleLocation()));
-		}
-		
-		for (final CoverageInformationItem item : items) {
-			offset2cii.computeIfAbsent(item.getRegion().getOffset(), c -> new ArrayList<>()).add(item);
-			
-			if (item instanceof ActionInformationItem) {
-				aiiCounts.add(((ActionInformationItem) item).getUnseen());
-			} else {
-				ciiCounts.add(item.getWeight());
-				ciiCounts.add(item.getWeight() * numSiblings(item));
-			}
-		}
-
-		JFaceResources.getColorRegistry().put(RED, new RGB(255,0,0));
-		JFaceResources.getColorRegistry().put(GRAY, new RGB(211,211,211));
-
-		// Sum of all distinct states.
-		final long sum = items.stream().filter(cii -> cii instanceof ActionInformationItem).map(ActionInformationItem.class::cast)
-				.mapToLong(ActionInformationItem::getUnseen).sum();
-		for (final CoverageInformationItem item : items) {
-			if (item instanceof ActionInformationItem) {
-				item.colorItem(aiiCounts, 0);
-				((ActionInformationItem) item).setSum(sum);
-			} else {
-				// Calculate colors just for CII because the values of ACII are unrelated.
-				item.colorItem(ciiCounts, numSiblings(item));
-			}
-		}
-
-		return this;
+	public boolean has(final IFile iFile) {
+		return items.stream().filter(i -> i.isInFile(iFile)).findAny().isPresent();
 	}
 
-	public String getHoverInfo(final int offset) {
-		final List<CoverageInformationItem> nodes = getNodes(offset);
-		
-		final List<CoverageInformationItem> sorted = nodes.stream()
-				.filter(cii -> !(cii instanceof ActionInformationItem))
-				.sorted((c1, c2) -> c1.isActive() ? -1 : c2.isActive() ? 1 : Long.compare(c1.getCount(), c2.getCount()))
-				.collect(Collectors.toList());
-		
-		String hover = "", plus = "";
-		Long sum = 0L;
-		for (CoverageInformationItem cii : sorted) {
-			final long count = cii.getCount();
-			sum += count;
-			String cost = "";
-			if (cii.getCost() > 0) {
-				cost = String.format(", cost %s", cii.getCost());
-			}
-			hover = String.format("%s%s%,d invocation%s%s (%s)\n", hover, plus, count, count == 1 ? "" : "s", cost,
-					cii.getRoot().getLocation());
-			plus = "+";
-		}
-
-		if (sorted.size() > 1 && sum > 0) {
-			hover += String.format("---------\n%,d invocations", sum);
-		}
-		
-		
-		final List<CoverageInformationItem> actionItems = nodes.stream().filter(cii -> cii instanceof ActionInformationItem)
-				.collect(Collectors.toList());
-		if (!actionItems.isEmpty()) {
-			hover += "\n";
-			for (CoverageInformationItem cii : actionItems) {
-				final ActionInformationItem aii = (ActionInformationItem) cii;
-				hover += aii.getHover();
-				hover += "\n";
-			}
-		}
-		
-		return hover.replaceAll("^\n", "").replaceAll("\n$", "");
+	public FileCoverageInformation projectionFor(final IFile iFile) {
+		// The CoverageInformation keeps the CoverageInformationItems for the complete
+		// model whereas a FileCoverageInformation keeps the CII for a single module.
+		return new FileCoverageInformation(iFile, items);
 	}
 }

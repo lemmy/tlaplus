@@ -980,22 +980,6 @@ public class TLCModelLaunchDataProvider implements ITLCOutputListener
         return coverageInfo;
     }
     
-    public CoverageInformation getCoverageInfo(IFile file)
-    {
-    	return getCoverageInfo(file, true);
-    }
-
-    public CoverageInformation getCoverageInfo(IFile file, boolean remove)
-    {
-        CoverageInformation subset = new CoverageInformation(file);
-       	for (CoverageInformationItem coverageInformationItem : coverageInfo) {
-       		if (!remove || coverageInformationItem.getModuleLocation().source().equals(file.getName().replace(".tla", ""))) {
-       			subset.add(coverageInformationItem);
-       		}
-       	}
-        return subset;
-    }
-
     public void setCoverageInfo(CoverageInformation coverageInfo)
     {
         this.coverageInfo = coverageInfo;

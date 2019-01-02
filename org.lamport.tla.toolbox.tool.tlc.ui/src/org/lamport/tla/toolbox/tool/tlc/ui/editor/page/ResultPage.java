@@ -283,8 +283,8 @@ public class ResultPage extends BasicFormPage implements ITLCModelLaunchDataPres
 						
 						final List<IFile> savedTLAFiles = modelEditor.getModel().getSavedTLAFiles();
 						for (IFile iFile : savedTLAFiles) {
-							final CoverageInformation ci = dataProvider.getCoverageInfo(iFile);
-							if (ci.isEmpty()) {
+							final CoverageInformation ci = dataProvider.getCoverageInfo();
+							if (!ci.has(iFile)) {
 								continue;
 							}
 							// Open the files as pages of the current model editor.
@@ -292,10 +292,10 @@ public class ResultPage extends BasicFormPage implements ITLCModelLaunchDataPres
 							final IEditorPart[] findEditors = modelEditor.findEditors(input);
 							try {
 								if (findEditors.length == 0) {
-									modelEditor.addPage(new TLACoverageEditor2(ci), input);
+									modelEditor.addPage(new TLACoverageEditor2(ci.projectionFor(iFile)), input);
 								} else {
 									if (findEditors[0] instanceof TLACoverageEditor2) {
-										((TLACoverageEditor2) findEditors[0]).setInput(ci);
+										((TLACoverageEditor2) findEditors[0]).setInput(ci.projectionFor(iFile));
 									}
 								}
 							} catch (PartInitException e) {

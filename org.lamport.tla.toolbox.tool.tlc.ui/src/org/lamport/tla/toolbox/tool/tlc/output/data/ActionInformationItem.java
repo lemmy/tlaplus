@@ -152,16 +152,17 @@ public class ActionInformationItem extends CoverageInformationItem {
 	}
 
 	/* (non-Javadoc)
-	 * @see org.lamport.tla.toolbox.tool.tlc.output.data.CoverageInformationItem#colorItem(java.util.TreeSet, int)
+	 * @see org.lamport.tla.toolbox.tool.tlc.output.data.CoverageInformationItem#colorItem(java.util.TreeSet)
 	 */
 	@Override
-	void colorItem(TreeSet<Long> counts, final int ignored) {
-		final int hue = CoverageInformation.getHue(getUnseen(), counts);
+	Color colorItem(TreeSet<Long> counts) {
+		final int hue = FileCoverageInformation.getHue(getUnseen(), counts);
 		final String key = Integer.toString(hue);
 		if (!JFaceResources.getColorRegistry().hasValueFor(key)) {
 			JFaceResources.getColorRegistry().put(key, new RGB(hue, .25f, 1f));
 		}
 		setColor(JFaceResources.getColorRegistry().get(key), null);
+		return JFaceResources.getColorRegistry().get(key);
 	}
 
 	public String getHover() {

@@ -6,6 +6,7 @@ import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.eclipse.core.resources.IFile;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.TextPresentation;
@@ -78,11 +79,20 @@ public class CoverageInformationItem implements IModuleLocatable
     {
         return locationString.substring(0, locationString.indexOf(MOD));
     }
+    
+    public final boolean isInFile(IFile f) {
+    	final String nameWithoutSuffix = f.getName().replace(".tla", "");
+		return nameWithoutSuffix.equalsIgnoreCase(location.source());
+    }
 
     public final long getCount()
     {
         return count;
     }
+    
+	public final long getCountIncludingSiblings() {
+		return this.siblings.stream().mapToLong(CoverageInformationItem::getCount).sum() + this.getCount();
+	}
 
     public final long getCost() {
     	return cost;
@@ -254,7 +264,7 @@ public class CoverageInformationItem implements IModuleLocatable
 			if (getCount() == 0L) {
 				rs.background = null;
 				rs.borderStyle = SWT.BORDER_SOLID;
-				rs.borderColor = JFaceResources.getColorRegistry().get(CoverageInformation.RED);
+				rs.borderColor = JFaceResources.getColorRegistry().get(FileCoverageInformation.RED);
 			}
 			
 			// Track active subtree
@@ -277,7 +287,7 @@ public class CoverageInformationItem implements IModuleLocatable
 			if (getCount() == 0L) {
 				rs.background = null;
 				rs.borderStyle = SWT.BORDER_SOLID;
-				rs.borderColor = JFaceResources.getColorRegistry().get(CoverageInformation.RED);
+				rs.borderColor = JFaceResources.getColorRegistry().get(FileCoverageInformation.RED);
 			}
 			active = false;
 			textPresentation.replaceStyleRange(addStlye(rs));
@@ -287,23 +297,28 @@ public class CoverageInformationItem implements IModuleLocatable
 		}
 	}
 
-	void colorItem(TreeSet<Long> counts, final int numSiblings) {
-		int hue = CoverageInformation.getHue(getWeight(), counts);
+	Color colorItem(TreeSet<Long> counts) {
+		int hue = FileCoverageInformation.getHue(getCount(), counts);
 		String key = Integer.toString(hue);
 		if (!JFaceResources.getColorRegistry().hasValueFor(key)) {
 			JFaceResources.getColorRegistry().put(key, new RGB(hue, .25f, 1f));
 		}
-		Color color = JFaceResources.getColorRegistry().get(key);
+		final Color color = JFaceResources.getColorRegistry().get(key);
+		setColor(color, color);
 		
-		// Aggregated color (might be identical to color).
-		hue = CoverageInformation.getHue(getWeight() * numSiblings, counts);
-		key = Integer.toString(hue);
-		if (!JFaceResources.getColorRegistry().hasValueFor(key)) {
-			JFaceResources.getColorRegistry().put(key, new RGB(hue, .25f, 1f));
+		if (hasSiblings()) {
+			// Aggregated color (might be identical to color).
+			hue = FileCoverageInformation.getHue(getCountIncludingSiblings(), counts);
+			key = Integer.toString(hue);
+			if (!JFaceResources.getColorRegistry().hasValueFor(key)) {
+				JFaceResources.getColorRegistry().put(key, new RGB(hue, .25f, 1f));
+			}
+			Color aggregate = JFaceResources.getColorRegistry().get(key);
+			setColor(color, aggregate);
+			return aggregate;
 		}
-		Color aggregate = JFaceResources.getColorRegistry().get(key);
 		
-		setColor(color, aggregate);
+		return color;
 	}
 
 	public CoverageInformationItem getParent() {
