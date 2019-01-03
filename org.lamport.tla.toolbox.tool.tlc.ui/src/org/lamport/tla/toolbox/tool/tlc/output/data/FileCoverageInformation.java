@@ -159,7 +159,7 @@ public class FileCoverageInformation {
 				final Color c = item.colorItem(ciiCounts);
 				
 				// While looping, create a legend item.
-				rootLegend.add(new LegendItem(item.getCountIncludingSiblings(), c));
+				rootLegend.add(new LegendItem(item.getCountIncludingSiblings(), c, item.getRegion()));
 			}
 		}
 	}

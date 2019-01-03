@@ -25,7 +25,13 @@
  ******************************************************************************/
 package org.lamport.tla.toolbox.tool.tlc.ui.editor;
 
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.resource.JFaceResources;
@@ -41,6 +47,8 @@ import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.jface.text.source.IVerticalRuler;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.events.MouseAdapter;
+import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Cursor;
 import org.eclipse.swt.graphics.RGB;
@@ -164,6 +172,8 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 			};
 		}
     }
+    
+	private static final DecimalFormat df = new DecimalFormat("0.0E0");
 	
 	public static class TextPresentationListener implements Listener {
 
@@ -198,32 +208,54 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 			}
 		}
 		
-		private void updateLegend(final Set<LegendItem> legend) {
-			final Composite parent = heatMapComposite.getParent();
-			if (legend.isEmpty()) {
-				heatMapComposite.setVisible(false);
-			} else {
-				heatMapComposite.dispose();
-				
-				heatMapComposite = new Composite(parent, SWT.BORDER);
-				final GridData layoutData = new GridData(SWT.FILL, SWT.TOP, true, false);
-				heatMapComposite.setLayoutData(layoutData);
-				
-				// Inside of heatMap, use a horizontally FillLayout to place individuals heat
-				// map item next to each other.
-				heatMapComposite.setLayout(new FillLayout(SWT.HORIZONTAL));
-				
-				Label label = new Label(heatMapComposite, SWT.BORDER);
-				label.setText("Invocations:");
-				for (LegendItem cii : legend) {
-					label = new Label(heatMapComposite, SWT.BORDER);
-					label.setAlignment(SWT.CENTER);
-					label.setText(Long.toString(cii.getWeight()));
-					label.setBackground(cii.getColor());
+			private void updateLegend(List<LegendItem> legend) {
+				final Composite parent = heatMapComposite.getParent();
+				if (legend.isEmpty()) {
+					heatMapComposite.setVisible(false);
+				} else {
+					heatMapComposite.dispose();
+					
+					heatMapComposite = new Composite(parent, SWT.BORDER);
+					final GridData layoutData = new GridData(SWT.FILL, SWT.TOP, true, false);
+					heatMapComposite.setLayoutData(layoutData);
+					
+					// Inside of heatMap, use a horizontally FillLayout to place individuals heat
+					// map item next to each other.
+					heatMapComposite.setLayout(new FillLayout(SWT.HORIZONTAL));
+					
+					Label label = new Label(heatMapComposite, SWT.BORDER);
+					label.setText("Invocations:");
+					
+					// Cannot fit more than N labels into the legend. Thus, only take N elements
+					// out of legend (even distribution).
+					//TODO take composites's width into account to determine actual number of possible labels. 20 just a wild guess.
+					if (legend.size() > 20) {
+						final int nth = legend.size() / 20;
+						legend = IntStream.range(0, legend.size()).filter(n -> n % nth == 0).mapToObj(legend::get)
+								.collect(Collectors.toList());
+					}
+					
+					for (LegendItem cii : legend) {
+						label = new Label(heatMapComposite, SWT.BORDER);
+						label.setAlignment(SWT.CENTER);
+						if (cii.getValue() > 1000) {
+							label.setText(df.format(cii.getValue()));
+						} else {
+							label.setText(String.format("%,d", cii.getValue()));
+						}
+						label.setToolTipText(String.format("%,d", cii.getValue()));
+						label.setBackground(cii.getColor());
+						label.addMouseListener(new MouseAdapter() {
+							@Override
+							public void mouseDoubleClick(MouseEvent e) {
+								final IRegion region = cii.getRegion();
+								editor.selectAndReveal(region.getOffset(), cii.getRegion().getLength());
+							}
+						});
+					}
 				}
+				parent.layout();
 			}
-			parent.layout();
-		}
 	}
 	
 	public class TLACoveragePainter implements ITextPresentationListener {
