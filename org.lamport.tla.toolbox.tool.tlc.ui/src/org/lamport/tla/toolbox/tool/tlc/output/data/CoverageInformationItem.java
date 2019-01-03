@@ -199,7 +199,10 @@ public class CoverageInformationItem implements IModuleLocatable
 	}
 
 	CoverageInformationItem addChild(CoverageInformationItem child) {
+		assert child != this;
 		this.childs.add(child);
+		
+		assert child.parent == null;
 		child.parent = this;
 		
 		child.root = this.root;
