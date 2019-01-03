@@ -89,7 +89,7 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 
 	private static class ResizeListener implements Listener {
 		
-		private final Point size = new Point(Integer.MAX_VALUE,Integer.MAX_VALUE);
+		private final Point size = new Point(1024,768);
 
 		@Override
 		public void handleEvent(final Event event) {
@@ -316,7 +316,7 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 					
 					// Cannot fit more than N labels into the legend. Thus, only take N elements
 					// out of legend (even distribution).
-					final int numLabel = resizeListener.getWidth() / 40; // 40 pixel per label seems to fit most text and still looks pleasant.
+					final int numLabel = resizeListener.getWidth() / 47; // 47 pixel per label seems to fit most text and still looks pleasant.
 					if (legend.size() > numLabel) {
 						final int nth = legend.size() / numLabel;
 						legend = IntStream.range(0, legend.size()).filter(n -> n % nth == 0).mapToObj(legend::get)
