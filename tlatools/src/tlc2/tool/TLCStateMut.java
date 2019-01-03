@@ -15,7 +15,6 @@ import tla2sany.semantic.OpDeclNode;
 import tla2sany.semantic.SemanticNode;
 import tla2sany.semantic.SymbolNode;
 import tlc2.TLCGlobals;
-import tlc2.tool.coverage.CostModel;
 import tlc2.util.Context;
 import tlc2.util.FP64;
 import tlc2.value.MVPerm;
@@ -82,14 +81,14 @@ public final class TLCStateMut extends TLCState implements Cloneable, Serializab
     return false;
   }
   
-  public final TLCState bind(UniqueString name, Value value, SemanticNode expr, CostModel cm) {
+  public final TLCState bind(UniqueString name, Value value, SemanticNode expr) {
 	  // Note, tla2sany.semantic.OpApplNode.toString(Value) relies on this ordering.
     int loc = name.getVarLoc();
     this.values[loc] = value;
     return this;
   }
 
-  public final TLCState bind(SymbolNode id, Value value, SemanticNode expr, CostModel cm) {
+  public final TLCState bind(SymbolNode id, Value value, SemanticNode expr) {
     throw new WrongInvocationException("TLCStateMut.bind: This is a TLC bug.");
   }
   

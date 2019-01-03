@@ -12,7 +12,6 @@ import java.util.Set;
 import tla2sany.semantic.OpDeclNode;
 import tla2sany.semantic.SemanticNode;
 import tla2sany.semantic.SymbolNode;
-import tlc2.tool.coverage.CostModel;
 import tlc2.util.Context;
 import tlc2.value.Value;
 import tlc2.value.ValueInputStream;
@@ -41,11 +40,11 @@ public final class TLCStateFun extends TLCState {
 
   public final TLCState createEmpty() { return Empty; }
 
-  public final TLCState bind(UniqueString name, Value value, SemanticNode expr, CostModel cm) {
+  public final TLCState bind(UniqueString name, Value value, SemanticNode expr) {
       throw new WrongInvocationException("TLCStateFun.bind: This is a TLC bug.");
   }
 
-  public final TLCState bind(SymbolNode id, Value value, SemanticNode expr, CostModel cm) {
+  public final TLCState bind(SymbolNode id, Value value, SemanticNode expr) {
     return new TLCStateFun(id, value, this);
   }
   

@@ -665,7 +665,7 @@ public class Tool
               Value lval = ps.lookup(varName);
               Value rval = this.eval(args[1], c, ps, TLCState.Empty, EvalControl.Init, cm);
               if (lval == null) {
-                ps = ps.bind(varName, rval, init, cm);
+                ps = ps.bind(varName, rval, init);
                 this.getInitStates(acts, ps, states, cm);
                 ps.unbind(varName);
                 return;
@@ -700,7 +700,7 @@ public class Tool
                 ValueEnumeration Enum = ((Enumerable)rval).elements();
                 Value elem;
                 while ((elem = Enum.nextElement()) != null) {
-                  ps.bind(varName, elem, init, cm);
+                  ps.bind(varName, elem, init);
                   this.getInitStates(acts, ps, states, cm);
                   ps.unbind(varName);
                 }
@@ -1183,7 +1183,7 @@ public class Tool
               Value lval = s1.lookup(varName);
               Value rval = this.eval(args[1], c, s0, s1, EvalControl.Clear, cm);
               if (lval == null) {
-                resState.bind(varName, rval, pred, cm);
+                resState.bind(varName, rval, pred);
                 resState = this.getNextStates(acts, s0, resState, nss, cm);
                 resState.unbind(varName);
                 return resState;
@@ -1216,7 +1216,7 @@ public class Tool
                 ValueEnumeration Enum = ((Enumerable)rval).elements();
                 Value elem;
                 while ((elem = Enum.nextElement()) != null) {
-                  resState.bind(varName, elem, pred, cm);
+                  resState.bind(varName, elem, pred);
                   resState = this.getNextStates(acts, s0, resState, nss, cm);
                   resState.unbind(varName);
                 }
@@ -1377,7 +1377,7 @@ public class Tool
           final Value val0 = s0.lookup(varName);
           final Value val1 = s1.lookup(varName);
           if (val1 == null) {
-		  	resState.bind(varName, val0, expr, cm);
+		  	resState.bind(varName, val0, expr);
 		  	resState = this.getNextStates(acts, s0, resState, nss, cm);
 		  	resState.unbind(varName);
           }
@@ -2878,7 +2878,7 @@ public class Tool
               Value rval = this.eval(args[1], c, s0, s1, EvalControl.Enabled, cm);
               if (lval == null)
               {
-                TLCState s2 = s1.bind(var, rval, pred, cm);
+                TLCState s2 = s1.bind(var, rval, pred);
                 return this.enabled(acts, s0, s2, cm);
               } else
               {
@@ -2953,7 +2953,7 @@ public class Tool
                 Value val;
                 while ((val = Enum.nextElement()) != null)
                 {
-                  TLCState s2 = s1.bind(var, val, pred, cm);
+                  TLCState s2 = s1.bind(var, val, pred);
                   s2 = this.enabled(acts, s0, s2, cm);
                   if (s2 != null) {
                     return s2;
@@ -3011,7 +3011,7 @@ public class Tool
           Value v0 = this.eval(expr, c, s0, s1, EvalControl.Enabled, cm);
           Value v1 = s1.lookup(varName);
           if (v1 == null) {
-            s1 = s1.bind(var, v0, expr, cm);
+            s1 = s1.bind(var, v0, expr);
             return this.enabled(acts, s0, s1, cm);
           }
           if (v1.equals(v0)) {
