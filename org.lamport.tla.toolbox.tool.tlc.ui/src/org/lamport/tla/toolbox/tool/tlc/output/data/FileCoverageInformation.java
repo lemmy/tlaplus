@@ -67,11 +67,11 @@ public class FileCoverageInformation {
 
 	private static CoverageInformationItem getRoot(final List<CoverageInformationItem> items, final IFile file) {
 		// Root is the technical root acting as entry point for the editor. It doesn't
-		// have a location or counts.
-		final CoverageInformationItem root = new CoverageInformationItem();
+		// have a location or counts. Its only children are ActionInformationItems.
+		final CoverageInformationItem root = new RootCoverageInformationItem();
 		
 		final Deque<CoverageInformationItem> stack = new ArrayDeque<>();
-		stack.push(root.setLayer(-1));
+		stack.push(root);
 		
 		// AII is the (logical) root of the current CostModel. It has a location and
 		// counts.
@@ -80,9 +80,6 @@ public class FileCoverageInformation {
 			if (item.isInFile(file)) {
 				if (item instanceof ActionInformationItem) {
 					aiiRoot = (ActionInformationItem) item;
-				} else {
-					assert aiiRoot != null;
-					item.setRoot(aiiRoot);
 				}
 				int layer = item.getLayer();
 				while (layer <= stack.peek().getLayer()) {
@@ -92,9 +89,13 @@ public class FileCoverageInformation {
 				stack.push(item);
 			} else if (aiiRoot == null && item instanceof ActionInformationItem) {
 				// aiiroot is in a different file, e.g. definition of Init or Next in MC.tla.
-				aiiRoot = (ActionInformationItem) item;
+				aiiRoot = new ActionInformationItem((ActionInformationItem) item);
+				aiiRoot.setIsNotInFile();
+				root.addChild(aiiRoot);
+				stack.push(aiiRoot);
 			}
 		}
+		assert root.getChildren().stream().noneMatch(c -> c instanceof CoverageInformationItem);
 		
 		return root;
 	}

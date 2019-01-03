@@ -60,6 +60,7 @@ public class CoverageInformationItem implements IModuleLocatable
         this.locationString = this.location.toString();
         this.count = count;
         this.modelName = modelName;
+        assert layer > ActionInformationItem.actionLayer;
         this.layer = layer;
     }
     
@@ -200,10 +201,14 @@ public class CoverageInformationItem implements IModuleLocatable
 	CoverageInformationItem addChild(CoverageInformationItem child) {
 		this.childs.add(child);
 		child.parent = this;
+		
+		child.root = this.root;
+		
 		return this;
 	}
 
 	CoverageInformationItem setLayer(int i) {
+        assert layer > ActionInformationItem.actionLayer;
 		this.layer = i;
 		return this;
 	}
@@ -225,8 +230,8 @@ public class CoverageInformationItem implements IModuleLocatable
 		return this;
 	}
 
-	private boolean isRoot() {
-		return layer == -1;
+	protected boolean isRoot() {
+		return false;
 	}
 	
 	public boolean isActive() {

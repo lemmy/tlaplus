@@ -41,6 +41,8 @@ import tlc2.tool.coverage.ActionWrapper.Relation;
 
 public class ActionInformationItem extends CoverageInformationItem {
 
+	public static final int actionLayer = RootCoverageInformationItem.rootLayer + 1;
+	
 	public static ActionInformationItem parseInit(String outputMessage, String modelName) {
 		final Pattern pattern = Pattern.compile("^<(.*?) (.*)>: ([0-9]+)$");
 		final Matcher matcher = pattern.matcher(outputMessage);
@@ -80,24 +82,32 @@ public class ActionInformationItem extends CoverageInformationItem {
 	private final String name;
 	private long unseen = 0L;
 	private long sum;
+	private boolean isNotInFile = false;
 
 	public ActionInformationItem(final String name, Location loc, final String modelName) {
-		super(loc, 0, modelName, 0);
+		super(loc, 0, modelName, actionLayer);
 		this.name = name;
 		this.relation = Relation.PROP;
 	}
 	
 	public ActionInformationItem(final String name, Location loc, final String modelName, long generated) {
-		super(loc, generated, modelName, 0);
+		super(loc, generated, modelName, actionLayer);
 		this.name = name;
 		this.relation = Relation.INIT;
 	}
 
 	public ActionInformationItem(final String name, Location loc, final String modelName, long generated, long unseen) {
-		super(loc, generated, modelName, 0);
+		super(loc, generated, modelName, actionLayer);
 		this.name = name;
 		this.unseen = unseen;
 		this.relation = Relation.NEXT;
+	}
+
+	ActionInformationItem(ActionInformationItem item) {
+		super(item.location, item.count, item.modelName, item.layer);
+		this.name = item.name;
+		this.unseen = item.unseen;
+		this.relation = item.relation;
 	}
 
 	public String getName() {
@@ -112,6 +122,20 @@ public class ActionInformationItem extends CoverageInformationItem {
 		return unseen;
 	}
 	
+	public CoverageInformationItem setIsNotInFile() {
+		this.isNotInFile = true;
+		return this;
+	}
+	
+	@Override
+	CoverageInformationItem addChild(CoverageInformationItem child) {
+		super.addChild(child);
+		
+		assert child.getRoot() == null;
+		child.setRoot(this); // overwrite root set by super.addChild
+		return this;
+	}
+
 	@Override
 	protected StyleRange addStlye(final StyleRange sr) {
 		sr.borderStyle = SWT.BORDER_DOT;
@@ -125,6 +149,12 @@ public class ActionInformationItem extends CoverageInformationItem {
 	public void style(TextPresentation textPresentation) {
 		if (relation == Relation.PROP) {
 			return;
+		} else if (isNotInFile) {
+			// Skip styling this item but style its children.
+			for (CoverageInformationItem child : getChildren()) {
+				child.style(textPresentation);
+			}
+			return;
 		}
 		super.style(textPresentation);
 	}
@@ -136,6 +166,12 @@ public class ActionInformationItem extends CoverageInformationItem {
 	protected void style(final TextPresentation textPresentation, boolean merge) {
 		if (relation == Relation.PROP) {
 			return;
+		} else if (isNotInFile) {
+			// Skip styling this item but style its children.
+			for (CoverageInformationItem child : getChildren()) {
+				child.style(textPresentation, merge);
+			}
+			return;
 		}
 		super.style(textPresentation, merge);
 	}
@@ -146,7 +182,7 @@ public class ActionInformationItem extends CoverageInformationItem {
 	@Override
 	public void style(final TextPresentation textPresentation, final Color c) {
 		// Do not unstyle AII when specific CostModel tree gets selected.
-		for (CoverageInformationItem child : super.getChildren()) {
+		for (CoverageInformationItem child : getChildren()) {
 			child.style(textPresentation, c);
 		}
 	}
