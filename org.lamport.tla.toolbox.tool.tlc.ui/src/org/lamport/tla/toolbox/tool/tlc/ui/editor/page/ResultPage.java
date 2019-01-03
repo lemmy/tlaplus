@@ -295,7 +295,8 @@ public class ResultPage extends BasicFormPage implements ITLCModelLaunchDataPres
 									modelEditor.addPage(new TLACoverageEditor2(ci.projectionFor(iFile)), input);
 								} else {
 									if (findEditors[0] instanceof TLACoverageEditor2) {
-										((TLACoverageEditor2) findEditors[0]).setInput(ci.projectionFor(iFile));
+										final TLACoverageEditor2 coverageEditor = (TLACoverageEditor2) findEditors[0];
+										coverageEditor.resetInput(ci.projectionFor(iFile));
 									}
 								}
 							} catch (PartInitException e) {

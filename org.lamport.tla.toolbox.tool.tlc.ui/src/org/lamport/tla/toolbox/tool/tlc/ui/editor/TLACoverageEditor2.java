@@ -158,8 +158,10 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 		return super.getSourceViewerDecorationSupport(viewer);
 	}
 
-	public void setInput(final FileCoverageInformation ci) throws PartInitException {
+	public void resetInput(final FileCoverageInformation ci) throws PartInitException {
 		this.coverage = ci;
+		// Trigger the editor's coverage painter.
+		painter.queue.offer(ALL);
 	}
 
 	/* TLASourceViewerConfiguration */
