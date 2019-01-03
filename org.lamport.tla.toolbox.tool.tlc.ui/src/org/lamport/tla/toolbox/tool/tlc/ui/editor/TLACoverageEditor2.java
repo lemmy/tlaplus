@@ -111,7 +111,14 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 		// map item next to each other.
 		heatMapComposite.setLayout(new FillLayout(SWT.HORIZONTAL));
 		
-		return super.createSourceViewer(editorComposite, ruler, styles);
+		final ISourceViewer createSourceViewer = super.createSourceViewer(editorComposite, ruler, styles);
+		
+		// Make TLACoverageEditor distinguishable from regular TLAEditor.
+		final StyledText textWidget = createSourceViewer.getTextWidget();
+		textWidget.setBackground(lightYellow);
+		textWidget.setCursor(new Cursor(textWidget.getDisplay(), SWT.CURSOR_HAND));
+		
+		return createSourceViewer;
 	}
 
 	@Override
@@ -234,10 +241,6 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 		@Override
 		public void applyTextPresentation(final TextPresentation textPresentation) {
 			final StyledText textWidget = viewer.getTextWidget();
-			
-			// Make TLACoverageEditor distinguishable from regular TLAEditor.
-			textWidget.setBackground(lightYellow);
-			textWidget.setCursor(new Cursor(textWidget.getDisplay(), SWT.CURSOR_HAND));
 			
 			// Attach a listener to react to mouse clicks to reveal coverage for selected expressions.
 			final TextPresentationListener listener = new TextPresentationListener(coverage, viewer, textPresentation, heatMapComposite);
