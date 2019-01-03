@@ -59,6 +59,7 @@ import org.eclipse.swt.events.MouseAdapter;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Cursor;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
@@ -67,6 +68,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Widget;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.texteditor.SourceViewerDecorationSupport;
 import org.lamport.tla.toolbox.editor.basic.TLAEditor;
@@ -83,9 +85,30 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 		JFaceResources.getColorRegistry().put("LIGHT_YELLOW", new RGB(245,245,245));
 	}
 	
+	private static final Color lightYellow = JFaceResources.getColorRegistry().get("LIGHT_YELLOW");
+
+	private static class ResizeListener implements Listener {
+		
+		private final Point size = new Point(Integer.MAX_VALUE,Integer.MAX_VALUE);
+
+		@Override
+		public void handleEvent(final Event event) {
+			final Widget widget = event.widget;
+			if (widget instanceof Composite) {
+				final Composite c = (Composite) widget;
+				size.x = c.getSize().x;
+				size.y = c.getSize().y;
+			}
+		}
+		
+		public int getWidth() {
+			return size.x;
+		}
+	}
+	
 	/* TLACoverageEditor */
 
-	private static final Color lightYellow = JFaceResources.getColorRegistry().get("LIGHT_YELLOW");
+	private final ResizeListener resizeListener = new ResizeListener();
 	
 	private FileCoverageInformation coverage;
 
@@ -115,6 +138,7 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 		layout.horizontalSpacing = 0;
 		layout.verticalSpacing = 0;
 		composite.setLayout(layout);
+		composite.addListener(SWT.Resize, resizeListener);
 
 		// Inside editor use again a FillLayout to let super.create... use all available
 		// space.
@@ -282,9 +306,9 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 					
 					// Cannot fit more than N labels into the legend. Thus, only take N elements
 					// out of legend (even distribution).
-					//TODO take composites's width into account to determine actual number of possible labels. 20 just a wild guess.
-					if (legend.size() > 20) {
-						final int nth = legend.size() / 20;
+					final int numLabel = resizeListener.getWidth() / 40; // 40 pixel per label seems to fit most text and still looks pleasant.
+					if (legend.size() > numLabel) {
+						final int nth = legend.size() / numLabel;
 						legend = IntStream.range(0, legend.size()).filter(n -> n % nth == 0).mapToObj(legend::get)
 								.collect(Collectors.toList());
 					}
