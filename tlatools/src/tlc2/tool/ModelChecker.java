@@ -44,6 +44,7 @@ import util.UniqueString;
 public class ModelChecker extends AbstractChecker
 {
 
+	protected static final boolean coverage = TLCGlobals.isCoverageEnabled();
 	/**
 	 * If the state/ dir should be cleaned up after a successful model run
 	 */
@@ -473,7 +474,9 @@ public class ModelChecker extends AbstractChecker
 		    // be in the trace in case either invariant or implied action
 		    // checks want to print the trace. 
 			worker.writeState(curState, fp, succState);
-			action.cm.incSecondary();
+			if (coverage) {
+				action.cm.incSecondary();
+			}
 		}
 		// For liveness checking:
 		if (this.checkLiveness)
