@@ -979,11 +979,6 @@ public class TLCModelLaunchDataProvider implements ITLCOutputListener
     {
         return coverageInfo;
     }
-    
-    public void setCoverageInfo(CoverageInformation coverageInfo)
-    {
-        this.coverageInfo = coverageInfo;
-    }
 
     public boolean hasZeroCoverage() {
     	return this.zeroCoverage;
