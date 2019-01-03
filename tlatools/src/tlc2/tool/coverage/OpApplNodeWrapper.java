@@ -40,6 +40,16 @@ public class OpApplNodeWrapper extends CostModelNode implements Comparable<OpApp
 	private final Set<Long> childCounts = new HashSet<>();
 	private final CostModelNode root;
 	private final OpApplNode node;
+	// Periodic coverage reporting executes concurrently with the evaluation of the
+	// init and next-state relation. Traversing the CostModel trees to collect the
+	// individual eval counts creates thus an inconsistent snapshot. To reduce the
+	// inconsistency, freeze the eval count for all tree nodes on the first tree
+	// traversal while the child counts are calculated. The snapshot is still
+	// inconsistent from the perspective of the evaluation, but at least the
+	// reporting in print (eval counts reported to parent - childCounts - and eval
+	// counts printed is consistent. Alternatively, evaluation of init and next
+	// could be suspended for the duration of the snapshot, but that seems overkill.
+	private long snapshotEvalCount = 0;
 	private boolean primed = false;
 	private int level;
 	private OpApplNodeWrapper recursive;
@@ -184,18 +194,29 @@ public class OpApplNodeWrapper extends CostModelNode implements Comparable<OpApp
 	}
 	
 	// ---------------- Print ---------------- //
-	
+
+	protected long getEvalCount(Calculate fresh) {
+		if (fresh == Calculate.FRESH) {
+			return super.getEvalCount();
+		} else {
+			return snapshotEvalCount;
+		}
+	}
+
 	public CostModel report() {
 		print(0, Calculate.FRESH);
 		return this;
 	}
 
 	protected void print(int level, final Calculate fresh) {
+		if(getLocation().beginLine() == 577) {
+			System.out.println();
+		}
 		final Set<Long> collectedEvalCounts = new HashSet<>();
 		this.collectChildren(collectedEvalCounts, fresh);
 		if (collectedEvalCounts.isEmpty()) {
 			// Subtree has nothing to report.
-			if (getEvalCount() == 0l && !isPrimed()) {
+			if (getEvalCount(fresh) == 0l && !isPrimed()) {
 				// ..this node neither.
 				return;
 			} else {
@@ -207,18 +228,18 @@ public class OpApplNodeWrapper extends CostModelNode implements Comparable<OpApp
 		if (collectedEvalCounts.size() == 1) {
 			final long count = getCount(collectedEvalCounts);
 
-			if (count < getEvalCount()) {
+			if (count < getEvalCount(fresh)) {
 				// Cannot collapse subtree because inconsistent with this node.
 				printSelf(level++);
 				printChildren(level);
 				return;
 			}
-			if (!isPrimed() && getEvalCount() == 0l && count != 0l) {
+			if (!isPrimed() && getEvalCount(fresh) == 0l && count != 0l) {
 				// Collapse consistent subtree into this node unless this node is primed.
 				printSelf(level++, count);
 				return;
 			}
-			if (getEvalCount() == count && count == 0l) {
+			if (getEvalCount(fresh) == count && count == 0l) {
 				if (isPrimed()) {
 					printSelf(level++);
 				}
@@ -226,7 +247,7 @@ public class OpApplNodeWrapper extends CostModelNode implements Comparable<OpApp
 				printChildren(level);
 				return;
 			}
-			if (getEvalCount() == count) {
+			if (getEvalCount(fresh) == count) {
 				// Have a primed in subtree.
 				printSelf(level++);
 				return;
@@ -234,7 +255,7 @@ public class OpApplNodeWrapper extends CostModelNode implements Comparable<OpApp
 		}
 
 		// Subtree is inconsistent and needs to report itself.
-		if (getEvalCount() > 0 || isPrimed()) {
+		if (getEvalCount(fresh) > 0 || isPrimed()) {
 			printSelf(level++);
 		}
 		printChildren(level);
@@ -287,15 +308,16 @@ public class OpApplNodeWrapper extends CostModelNode implements Comparable<OpApp
 
 	protected void collectChildren(final Set<Long> result, Calculate c) {
 		for (CostModelNode cmn : children.values()) {
-			((OpApplNodeWrapper) cmn).collectEvalCounts(result, c);
+			((OpApplNodeWrapper) cmn).collectAndFreezeEvalCounts(result, c);
 		}
 	}
 
-	protected void collectEvalCounts(final Set<Long> result, Calculate c) {
+	protected void collectAndFreezeEvalCounts(final Set<Long> result, final Calculate c) {
 		if (c == Calculate.FRESH) {
+			snapshotEvalCount = this.getEvalCount(c);
 			childCounts.clear();
-			if (getEvalCount() > 0 || this.isPrimed()) {
-				childCounts.add(this.getEvalCount());
+			if (snapshotEvalCount > 0 || this.isPrimed()) {
+				childCounts.add(snapshotEvalCount);
 			}
 			collectChildren(childCounts, c);
 		}
