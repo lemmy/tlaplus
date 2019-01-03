@@ -6,6 +6,8 @@
 
 package tlc2.value;
 
+import java.io.IOException;
+
 import tlc2.output.EC;
 import tlc2.output.MP;
 import tlc2.tool.EvalControl;
@@ -257,6 +259,22 @@ public class TupleValue extends Value implements Applicable {
     }
   }
 
+	@Override
+	public void write(ValueOutputStream vos) throws IOException {
+		final int index = vos.put(this);
+		if (index == -1) {
+			vos.writeByte(TUPLEVALUE);
+			final int len = elems.length;
+			vos.writeNat(len);
+			for (int i = 0; i < len; i++) {
+				elems[i].write(vos);
+			}
+		} else {
+			vos.writeByte(DUMMYVALUE);
+			vos.writeNat(index);
+		}
+	}
+
   /* The fingerprint method: tuples are functions. */
   public final long fingerPrint(long fp) {
     try {
@@ -316,4 +334,15 @@ public class TupleValue extends Value implements Applicable {
     }
   }
 
+	public static Value createFrom(final ValueInputStream vos) throws IOException {
+		final int index = vos.getIndex();
+		final int len = vos.readNat();
+		final Value[] elems = new Value[len];
+		for (int i = 0; i < len; i++) {
+			elems[i] = vos.read();
+		}
+		final Value res = new TupleValue(elems);
+		vos.assign(res, index);
+		return res;
+	}
 }

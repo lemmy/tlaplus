@@ -6,6 +6,7 @@
 
 package tlc2.value;
 
+import java.io.IOException;
 import java.util.Arrays;
 
 import tlc2.tool.EvalControl;
@@ -607,6 +608,33 @@ public class FcnRcdValue extends Value implements Applicable {
     }
   }
 
+	@Override
+	public void write(final ValueOutputStream vos) throws IOException {
+		final int index = vos.put(this);
+		if (index == -1) {
+			vos.writeByte(FCNRCDVALUE);
+			int len = values.length;
+			vos.writeNat(len);
+			if (intv != null) {
+				vos.writeByte((byte) 0);
+				vos.writeInt(intv.low);
+				vos.writeInt(intv.high);
+				for (int i = 0; i < len; i++) {
+					values[i].write(vos);
+				}
+			} else {
+				vos.writeByte((isNormalized()) ? (byte) 1 : (byte) 2);
+				for (int i = 0; i < len; i++) {
+					domain[i].write(vos);
+					values[i].write(vos);
+				}
+			}
+		} else {
+			vos.writeByte(DUMMYVALUE);
+			vos.writeNat(index);
+		}
+	}
+
   /* The fingerprint method.  */
   public final long fingerPrint(long fp) {
     try {
@@ -774,4 +802,29 @@ public class FcnRcdValue extends Value implements Applicable {
     }
   }
 
+	public static Value createFrom(final ValueInputStream vos) throws IOException {
+		final int index = vos.getIndex();
+		final int len = vos.readNat();
+		final int info = vos.readByte();
+		Value res;
+		final Value[] rvals = new Value[len];
+		if (info == 0) {
+			final int low = vos.readInt();
+			final int high = vos.readInt();
+			for (int i = 0; i < len; i++) {
+				rvals[i] = vos.read();
+			}
+			final IntervalValue intv = new IntervalValue(low, high);
+			res = new FcnRcdValue(intv, rvals);
+		} else {
+			final Value[] dvals = new Value[len];
+			for (int i = 0; i < len; i++) {
+				dvals[i] = vos.read();
+				rvals[i] = vos.read();
+			}
+			res = new FcnRcdValue(dvals, rvals, (info == 1));
+		}
+		vos.assign(res, index);
+		return res;
+	}
 }

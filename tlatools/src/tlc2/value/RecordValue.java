@@ -6,6 +6,8 @@
 
 package tlc2.value;
 
+import java.io.EOFException;
+import java.io.IOException;
 import java.util.Arrays;
 
 import tlc2.output.EC;
@@ -371,6 +373,30 @@ public class RecordValue extends Value implements Applicable {
     }
   }
 
+	@Override
+	public void write(final ValueOutputStream vos) throws IOException {
+		final int index = vos.put(this);
+		if (index == -1) {
+			vos.writeByte(RECORDVALUE);
+			final int len = names.length;
+			vos.writeInt((isNormalized()) ? len : -len);
+			for (int i = 0; i < len; i++) {
+				final int index1 = vos.put(names[i]);
+				if (index1 == -1) {
+					vos.writeByte(STRINGVALUE);
+					names[i].write(vos.getOutputStream());
+				} else {
+					vos.writeByte(DUMMYVALUE);
+					vos.writeNat(index1);
+				}
+				values[i].write(vos);
+			}
+		} else {
+			vos.writeByte(DUMMYVALUE);
+			vos.writeNat(index);
+		}
+	}
+
   /* The fingerprint methods.  */
   public final long fingerPrint(long fp) {
     try {
@@ -437,4 +463,30 @@ public class RecordValue extends Value implements Applicable {
     }
   }
 
+	public static Value createFrom(final ValueInputStream vos) throws EOFException, IOException {
+		final int index = vos.getIndex();
+		boolean isNorm = true;
+		int len = vos.readInt();
+		if (len < 0) {
+			len = -len;
+			isNorm = false;
+		}
+		final UniqueString[] names = new UniqueString[len];
+		final Value[] vals = new Value[len];
+		for (int i = 0; i < len; i++) {
+			final byte kind1 = vos.readByte();
+			if (kind1 == DUMMYVALUE) {
+				final int index1 = vos.readNat();
+				names[i] = vos.getValue(index1);
+			} else {
+				final int index1 = vos.getIndex();
+				names[i] = UniqueString.read(vos.getInputStream());
+				vos.assign(names[i], index1);
+			}
+			vals[i] = vos.read();
+		}
+		final Value res = new RecordValue(names, vals, isNorm);
+		vos.assign(res, index);
+		return res;
+	}
 }
