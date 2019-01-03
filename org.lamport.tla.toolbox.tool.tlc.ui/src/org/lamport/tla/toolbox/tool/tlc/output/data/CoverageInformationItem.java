@@ -1,6 +1,7 @@
 package org.lamport.tla.toolbox.tool.tlc.output.data;
 
-import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -37,8 +38,8 @@ public class CoverageInformationItem implements IModuleLocatable
     protected long cost;
     protected int layer;
     
-    private final List<CoverageInformationItem> siblings = new ArrayList<>();
-    private final List<CoverageInformationItem> childs = new ArrayList<>();
+    private final Set<CoverageInformationItem> siblings = new HashSet<>();
+    private final Set<CoverageInformationItem> childs = new HashSet<>();
     private CoverageInformationItem parent;
     private ActionInformationItem root;
 	
@@ -194,7 +195,7 @@ public class CoverageInformationItem implements IModuleLocatable
 		return !this.siblings.isEmpty();
 	}
     
-	List<CoverageInformationItem> getChildren() {
+	Collection<CoverageInformationItem> getChildren() {
 		return childs;
 	}
 
