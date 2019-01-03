@@ -30,14 +30,22 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.text.DefaultTextHover;
+import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.ITextHover;
+import org.eclipse.jface.text.ITextInputListener;
 import org.eclipse.jface.text.ITextPresentationListener;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.JFaceTextUtil;
@@ -59,8 +67,6 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
-import org.eclipse.ui.IEditorInput;
-import org.eclipse.ui.IEditorSite;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.texteditor.SourceViewerDecorationSupport;
 import org.lamport.tla.toolbox.editor.basic.TLAEditor;
@@ -69,6 +75,7 @@ import org.lamport.tla.toolbox.editor.basic.TLASourceViewerConfiguration;
 import org.lamport.tla.toolbox.tool.tlc.output.data.CoverageInformationItem;
 import org.lamport.tla.toolbox.tool.tlc.output.data.FileCoverageInformation;
 import org.lamport.tla.toolbox.tool.tlc.output.data.LegendItem;
+import org.lamport.tla.toolbox.util.UIHelper;
 
 public class TLACoverageEditor2 extends TLAEditorReadOnly {
 
@@ -84,8 +91,16 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 
 	private Composite heatMapComposite;
 
+	private TLACoveragePainter painter;
+
 	public TLACoverageEditor2(final FileCoverageInformation coverage) {
 		this.coverage = coverage;
+	}
+
+	@Override
+	public void dispose() {
+		painter.queue.offer(TERMINATE);
+		super.dispose();
 	}
 
 	@Override
@@ -137,16 +152,10 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 	@Override
 	protected SourceViewerDecorationSupport getSourceViewerDecorationSupport(ISourceViewer viewer) {
 		//TODO Initialize painter after editor input has been set.
-		final TextViewer textViewer = (TextViewer) viewer;
-		textViewer.addTextPresentationListener(new TLACoveragePainter(viewer, coverage, heatMapComposite));
+		painter = new TLACoveragePainter(this, heatMapComposite);
+		((TextViewer) viewer).addTextPresentationListener(painter);
 		
 		return super.getSourceViewerDecorationSupport(viewer);
-	}
-	
-	@Override
-	public void init(IEditorSite site, IEditorInput input) throws PartInitException {
-		super.init(site, input);
-		setInput(coverage);
 	}
 
 	public void setInput(final FileCoverageInformation ci) throws PartInitException {
@@ -172,42 +181,85 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 			};
 		}
     }
-    
-	private static final DecimalFormat df = new DecimalFormat("0.0E0");
 	
-	public static class TextPresentationListener implements Listener {
+	private static final DecimalFormat df = new DecimalFormat("0.0E0");
 
-		private final ISourceViewer viewer;
-		private final TextPresentation textPresentation;
-		private final FileCoverageInformation coverage;
-		private Composite heatMapComposite;
+	private static final int ALL = -1;
+	
+	private static final int TERMINATE = -42;
+	
+	public class TLACoveragePainter implements ITextPresentationListener {
+		
+		private final TLACoverageEditor2 editor;
+		
+		private final BlockingQueue<Integer> queue = new ArrayBlockingQueue<>(10);
+		
+		private final Job annotator = new Job("Coverage Painter") {
+			@Override
+			protected IStatus run(IProgressMonitor monitor) {
+				while (true) {
+					final int offset = getOffset();
+					if (offset == TERMINATE || monitor.isCanceled()) {
+						return Status.OK_STATUS;
+					} else {
+						monitor.beginTask(String.format("Painting coverage for %s", offset), 1);
+					}
+					
+					// Do not clear old style ranges before creating new ones as clear removes TLA+ syntax highlighting.
+					//textPresentation.clear(); 
+					
+					// Create new style ranges (and the legend)
+					Set<LegendItem> legend = new HashSet<>(0);
+					if (offset == ALL) {
+						coverage.getRoot().style(textPresentation);
+						legend = coverage.getLegend();
+					} else {
+						final CoverageInformationItem node = coverage.getNode(offset);
+						if (node != null) {
+							// Style all unrelated parts gray.
+							coverage.getRoot().style(textPresentation, JFaceResources.getColorRegistry().get(FileCoverageInformation.GRAY));
+							
+							node.style(textPresentation);
+							legend = node.getLegend();
+						}
+					}
+					
+					if (monitor.isCanceled()) {
+						return Status.OK_STATUS;
+					}
+					
+					final List<LegendItem> fLegend = new ArrayList<>(legend);
+					UIHelper.runUISync(new Runnable() {
+						@Override
+						public void run() {
+							final TextViewer viewer = editor.getViewer();
+							// viewer might have been disposed by the time the outer thread styled the presentation.
+							if (viewer == null || viewer.getTextWidget() == null
+									|| viewer.getTextWidget().isDisposed()) {
+								return;
+							}
+							viewer.getTextWidget().removeListener(SWT.MouseDown, listener);
 
-		public TextPresentationListener(FileCoverageInformation coverage, ISourceViewer viewer, TextPresentation textPresentation, Composite heatMapComposite) {
-			this.coverage = coverage;
-			this.viewer = viewer;
-			this.textPresentation = textPresentation;
-			this.heatMapComposite = heatMapComposite;
-		}
-
-		@Override
-		public void handleEvent(Event event) {
-			final int offset = JFaceTextUtil.getOffsetForCursorLocation(viewer);
-			if (offset == -1) {
-				textPresentation.clear();
-				coverage.getRoot().style(textPresentation);
-				viewer.changeTextPresentation(textPresentation, true);
-				updateLegend(this.coverage.getLegend());
-			} else {
-				final CoverageInformationItem node = coverage.getNode(offset);
-				if (node != null) {
-					coverage.getRoot().style(textPresentation, JFaceResources.getColorRegistry().get(FileCoverageInformation.GRAY));
-					node.style(textPresentation);
-					viewer.changeTextPresentation(textPresentation, true);
-					updateLegend(node.getLegend());
+							viewer.changeTextPresentation(textPresentation, true);
+							updateLegend(fLegend);
+							
+							viewer.getTextWidget().addListener(SWT.MouseDown, listener);
+						}
+					});
+					
+					monitor.done();
 				}
 			}
-		}
-		
+			
+			private int getOffset() {
+				try {
+					return queue.take();
+				} catch (InterruptedException notExpectedException) {
+					notExpectedException.printStackTrace();
+					return TERMINATE;
+				}
+			}
+
 			private void updateLegend(List<LegendItem> legend) {
 				final Composite parent = heatMapComposite.getParent();
 				if (legend.isEmpty()) {
@@ -256,33 +308,58 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 				}
 				parent.layout();
 			}
-	}
-	
-	public class TLACoveragePainter implements ITextPresentationListener {
-
-		private final FileCoverageInformation coverage;
-		private final ISourceViewer viewer;
-		private final Composite heatMapComposite;
-
-		public TLACoveragePainter(ISourceViewer viewer, FileCoverageInformation coverage, Composite heatMapComposite) {
-			this.viewer = viewer;
-			this.coverage = coverage;
-			this.heatMapComposite = heatMapComposite;
-		}
+		};
+		private final Listener listener = new Listener() {
+			@Override
+			public void handleEvent(Event event) {
+				final int offset = JFaceTextUtil.getOffsetForCursorLocation(editor.getViewer());
+				Integer peek = queue.peek();
+				if (peek == null || peek != offset) {
+					//System.out.println(String.format("Scheduling offset %s after %s", offset, peek));
+					queue.offer(offset);
+				} else {
+					//System.out.println("Skipping redundant offset " + offset);
+				}
+			}
+		};
 		
+		private TextPresentation textPresentation;
+		private Composite heatMapComposite;
+
+		public TLACoveragePainter(TLACoverageEditor2 editor, Composite heatMapComposite) {
+			this.editor = editor;
+			this.heatMapComposite = heatMapComposite;
+			
+			this.annotator.setPriority(Job.LONG);
+			this.annotator.setRule(null);
+			this.annotator.setSystem(true);
+		}
+
 		@Override
-		public void applyTextPresentation(final TextPresentation textPresentation) {
-			final StyledText textWidget = viewer.getTextWidget();
+		public synchronized void applyTextPresentation(final TextPresentation textPresentation) {
+			// Unregister this to not rerun the initialization again.
+			editor.getViewer().removeTextPresentationListener(this);
 			
-			// Attach a listener to react to mouse clicks to reveal coverage for selected expressions.
-			final TextPresentationListener listener = new TextPresentationListener(coverage, viewer, textPresentation, heatMapComposite);
-			textWidget.addListener(SWT.MouseDown, listener);
+			this.textPresentation = textPresentation;
 			
-			// Unregister this to not rerun the initialization above.
-			((TextViewer) viewer).removeTextPresentationListener(this);
-			
-			// Color the editor with coverage information initially.
-			listener.handleEvent(null);
+			editor.getViewer().addTextInputListener(new ITextInputListener() {
+				@Override
+				public synchronized void inputDocumentChanged(IDocument oldInput, IDocument newInput) {
+					editor.getViewer().removeTextInputListener(this);
+					
+					// Register listener to update coverage information based on mouse clicks.
+					final StyledText textWidget = editor.getViewer().getTextWidget();
+					textWidget.addListener(SWT.MouseDown, listener);
+
+					// Color the editor with coverage information initially.
+					queue.add(ALL);
+					annotator.schedule();
+				}
+				
+				@Override
+				public void inputDocumentAboutToBeChanged(IDocument oldInput, IDocument newInput) {
+				}
+			});
 		}
 	}
 }
