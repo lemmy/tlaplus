@@ -183,6 +183,16 @@ public class TLACoverageEditor2 extends TLAEditorReadOnly {
 	}
 
 	public void resetInput(final FileCoverageInformation ci) throws PartInitException {
+		if (this.coverage == ci) {
+			// The CoverageInformation from which the FileCoverageInformation has been
+			// projected, is identical to the one already open. No need to update the ui.
+			// This case occurs when the TLCModelLaunchDataProvider parses the MC.out of a
+			// finished model with more than one block of coverage statistics. For each it
+			// notifies ResultPage but - due to TLCModelLaunchDataProvider sending strings
+			// instead of the actual values and threading - we read a newer/more up-to-date
+			// instance of CoverageInformation before a notification reaches us.
+			return;
+		}
 		this.coverage = ci;
 		// Trigger the editor's coverage painter.
 		painter.queue.offer(ALL);

@@ -275,7 +275,8 @@ public class ResultPage extends BasicFormPage implements ITLCModelLaunchDataPres
 						}
 	                    break;
 	                case COVERAGE_END:
-	                	if (dataProvider.getCoverageInfo().isEmpty()) {
+	                	final CoverageInformation ci = dataProvider.getCoverageInfo();
+	                	if (ci.isEmpty()) {
 	                		// Cannot show coverage information without coverage data.
 	                		break;
 	                	}
@@ -283,7 +284,6 @@ public class ResultPage extends BasicFormPage implements ITLCModelLaunchDataPres
 						
 						final List<IFile> savedTLAFiles = modelEditor.getModel().getSavedTLAFiles();
 						for (IFile iFile : savedTLAFiles) {
-							final CoverageInformation ci = dataProvider.getCoverageInfo();
 							if (!ci.has(iFile)) {
 								continue;
 							}

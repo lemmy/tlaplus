@@ -46,6 +46,8 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 
 	private final Map<String, IDocument> nameToDocument = new HashMap<>();
 
+	private final Map<IFile, FileCoverageInformation> fileToFCI = new HashMap<>();
+	
 	public CoverageInformation() {
 		// Testing only!
 	}
@@ -99,6 +101,6 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 	public FileCoverageInformation projectionFor(final IFile iFile) {
 		// The CoverageInformation keeps the CoverageInformationItems for the complete
 		// model whereas a FileCoverageInformation keeps the CII for a single module.
-		return new FileCoverageInformation(iFile, items);
+		return fileToFCI.computeIfAbsent(iFile, f -> new FileCoverageInformation(f, items));
 	}
 }
