@@ -107,9 +107,16 @@ public class FileCoverageInformation {
 	
 	private final Set<LegendItem> rootLegend = new TreeSet<>();
 
-	private final CoverageInformationItem root;
+	private final IFile file;
+
+	private final List<CoverageInformationItem> allItems;
+
+	private CoverageInformationItem root;
 
 	public FileCoverageInformation(final IFile file, final List<CoverageInformationItem> allItems) {
+		this.file = file;
+		this.allItems = allItems;
+		
 		// The subset of items that belong to this file.
 		final List<CoverageInformationItem> subset = allItems.stream().filter(i -> i.isInFile(file))
 				.collect(Collectors.toList());
@@ -155,13 +162,15 @@ public class FileCoverageInformation {
 				rootLegend.add(new LegendItem(item.getCountIncludingSiblings(), c));
 			}
 		}
-		
-		// Create the tree out of the flat list of items (the tree might span multiple
-		// files which is why we pass allItems).
-		this.root = getRoot(allItems, file);
 	}
 	
 	public CoverageInformationItem getRoot() {
+		if (this.root == null) {
+			// Create the tree out of the flat list of items (the tree might span multiple
+			// files which is why we pass allItems). getRoot is expected to be called
+			// outside the UI thread.
+			this.root = getRoot(allItems, file);
+		}
 		return root;
 	}
 	
