@@ -4,10 +4,12 @@
 package tlc2.tool;
 
 import tla2sany.semantic.SemanticNode;
+import tlc2.TLCGlobals;
 import tlc2.tool.coverage.CostModel;
 import tlc2.util.Context;
 
 public class ActionItemList {
+	private static final boolean coverage = TLCGlobals.isCoverageEnabled();
 	/**
 	 * predicate of a conjunction
 	 */
@@ -64,7 +66,7 @@ public class ActionItemList {
 
   public final ActionItemList cons(SemanticNode pred,
 				   Context con, CostModel cm, int kind) {
-    return new ActionItemList(pred, con, kind, this, cm.get(pred));
+    return new ActionItemList(pred, con, kind, this, coverage ? cm.get(pred) : cm);
   }
 
   public final boolean isEmpty() { return this == Empty; }

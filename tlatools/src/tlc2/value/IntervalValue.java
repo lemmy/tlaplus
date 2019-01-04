@@ -259,7 +259,7 @@ implements Enumerable, Reducible {
       for (int i = 0; i < vals.length; i++) {
         vals[i] = IntValue.gen(i + this.low);
       }
-      cm.incSecondary(vals.length);
+      if (coverage) {cm.incSecondary(vals.length);}
       return new SetEnumValue(vals, true, cm);
   }
 

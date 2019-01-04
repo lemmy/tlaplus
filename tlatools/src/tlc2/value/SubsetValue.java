@@ -283,7 +283,7 @@ public class SubsetValue extends EnumerableValue implements Enumerable {
       // For as long as pset.elements() (SubsetValue#elements)
       // internally calls SubsetValue#elementsNormalized, the
       // result SetEnumValue here is indeed normalized.
-      cm.incSecondary(vals.size());
+      if (coverage) {cm.incSecondary(vals.size());}
       return new SetEnumValue(vals, true, cm);
   }
 

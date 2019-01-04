@@ -291,7 +291,7 @@ public class SetOfFcnsValue extends SetOfFcnsOrRcdsValue implements Enumerable {
       while ((elem = Enum.nextElement()) != null) {
         vals.addElement(elem);
       }
-      cm.incSecondary(vals.size());
+      if (coverage) {cm.incSecondary(vals.size());}
       return new SetEnumValue(vals, this.isNormalized(), cm);
   }
 

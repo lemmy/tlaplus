@@ -370,7 +370,7 @@ public class Tool
             Context c1 = c;
             for (int i = 0; i < subs.length; i++) {
               Subst sub = subs[i];
-              c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, false, sub.getCM()));
+              c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, false, coverage ? sub.getCM() : cm));
             }
             this.getInitStates(init1.getBody(), acts, c1, ps, states, cm);
             return;
@@ -839,7 +839,7 @@ public class Tool
   	Context c1 = c;
   	for (int i = 0; i < slen; i++) {
   	  Subst sub = subs[i];
-  	  c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, false, sub.getCM()));
+  	  c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, false, coverage ? sub.getCM() : cm));
   	}
   	return this.getNextStates(pred1.getBody(), acts, c1, s0, s1, nss, cm);
   }
@@ -891,7 +891,11 @@ public class Tool
       Value v1 = this.eval(pred, c, s0, cm);
       Value v2 = this.eval(pred, c, s1, cm);
       if (!v1.equals(v2)) {
-        return this.getNextStates(acts1, s0, s1, nss, cm);
+    	  if (coverage) {
+    		  return this.getNextStates(acts1, s0, s1, nss, cm);
+    	  } else {
+    		  return this.getNextStates0(acts1, s0, s1, nss, cm);
+    	  }
       }
     }
     return s1;
@@ -1030,7 +1034,11 @@ public class Tool
             }
             if (((BoolValue) bval).val)
             {
-              return this.getNextStates(acts, s0, s1, nss, cm);
+          	  if (coverage) {
+        		  return this.getNextStates(acts, s0, s1, nss, cm);
+          	  } else {
+          		  return this.getNextStates0(acts, s0, s1, nss, cm);
+          	  }
             }
             return s1;
           }
@@ -1378,11 +1386,19 @@ public class Tool
           final Value val1 = s1.lookup(varName);
           if (val1 == null) {
 		  	resState.bind(varName, val0, expr);
-		  	resState = this.getNextStates(acts, s0, resState, nss, cm);
+            if (coverage) {
+            	resState = this.getNextStates(acts, s0, resState, nss, cm);
+            } else {
+            	resState = this.getNextStates0(acts, s0, resState, nss, cm);
+            }
 		  	resState.unbind(varName);
           }
           else if (val0.equals(val1)) {
-        	  resState = this.getNextStates(acts, s0, s1, nss, cm);
+              if (coverage) {
+                  resState = this.getNextStates(acts, s0, s1, nss, cm);
+              } else {
+                  resState = this.getNextStates0(acts, s0, s1, nss, cm);
+              }
           }
           else {
         	  MP.printWarning(EC.TLC_UNCHANGED_VARIABLE_CHANGED, new String[]{varName.toString(), expr.toString()});
@@ -1500,7 +1516,7 @@ public class Tool
   	Context c1 = c;
   	for (int i = 0; i < slen; i++) {
   	  Subst sub = subs[i];
-  	  c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, true, sub.getCM()));
+  	  c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, true, coverage ? sub.getCM() : cm));
   	}
   	return this.eval(expr1.getBody(), c1, s0, s1, control, cm);
   }
@@ -2515,7 +2531,7 @@ public class Tool
             Context c1 = c;
             for (int i = 0; i < slen; i++) {
               Subst sub = subs[i];
-              c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, false, sub.getCM()));
+              c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, false, coverage ? sub.getCM() : cm));
             }
             return this.enabled(pred1.getBody(), acts, c1, s0, s1, cm);
           }

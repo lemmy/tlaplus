@@ -523,7 +523,7 @@ public class FcnRcdValue extends Value implements Applicable {
           return null;
         }
       }
-      cm.incSecondary(elems.length);
+      if (coverage) {cm.incSecondary(elems.length);}
       return new TupleValue(elems, cm);
   }
 
@@ -538,7 +538,7 @@ public class FcnRcdValue extends Value implements Applicable {
         }
         vars[i] = ((StringValue)this.domain[i]).getVal();
       }
-      cm.incSecondary(this.values.length);
+      if (coverage) {cm.incSecondary(this.values.length);}
       return new RecordValue(vars, this.values, this.isNormalized(), cm);
   }
 
