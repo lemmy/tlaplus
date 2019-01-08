@@ -140,6 +140,24 @@ public class SetDiffValue extends EnumerableValue implements Enumerable {
     }
   }
 
+  @Override
+  public final void deepNormalize() {
+	    try {
+     set1.deepNormalize();
+      set2.deepNormalize();
+      if (diffSet == null) {
+        diffSet = DummyEnum;
+      }
+      else if (diffSet != DummyEnum) {
+        diffSet.deepNormalize();
+      }
+	    }
+	    catch (RuntimeException | OutOfMemoryError e) {
+	      if (hasSource()) { throw FingerprintException.getNewHead(this, e); }
+	      else { throw e; }
+	    }
+  }
+
   public final boolean isDefined() {
     try {
       return this.set1.isDefined() && this.set2.isDefined();
@@ -163,7 +181,7 @@ public class SetDiffValue extends EnumerableValue implements Enumerable {
   }
 
 	@Override
-	public void write(final ValueOutputStream vos) throws IOException {
+	public final void write(final ValueOutputStream vos) throws IOException {
 		diffSet.write(vos);
 	}
 
@@ -209,7 +227,7 @@ public class SetDiffValue extends EnumerableValue implements Enumerable {
   }
 
   @Override
-  public SetEnumValue toSetEnum() {
+  public final SetEnumValue toSetEnum() {
       if (this.diffSet != null && this.diffSet != DummyEnum) {
         return this.diffSet;
       }

@@ -178,6 +178,23 @@ public class SubsetValue extends EnumerableValue implements Enumerable {
     }
   }
 
+  @Override
+  public final void deepNormalize() {
+	    try {
+      set.deepNormalize();
+      if (pset == null) {
+        pset = DummyEnum;
+      }
+      else if (pset != DummyEnum) {
+        pset.deepNormalize();
+      }
+	    }
+	    catch (RuntimeException | OutOfMemoryError e) {
+	      if (hasSource()) { throw FingerprintException.getNewHead(this, e); }
+	      else { throw e; }
+	    }
+  }
+
   public final boolean isDefined() {
     try {
       return this.set.isDefined();
@@ -201,7 +218,7 @@ public class SubsetValue extends EnumerableValue implements Enumerable {
   }
 
 	@Override
-	public void write(final ValueOutputStream vos) throws IOException {
+	public final void write(final ValueOutputStream vos) throws IOException {
 		pset.write(vos);
 	}
 
@@ -247,7 +264,7 @@ public class SubsetValue extends EnumerableValue implements Enumerable {
   }
 
   @Override
-  public SetEnumValue toSetEnum() {
+  public final SetEnumValue toSetEnum() {
       if (this.pset != null && this.pset != DummyEnum) {
         return this.pset;
       }

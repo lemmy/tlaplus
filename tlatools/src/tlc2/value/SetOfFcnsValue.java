@@ -193,6 +193,24 @@ public class SetOfFcnsValue extends SetOfFcnsOrRcdsValue implements Enumerable {
     }
   }
 
+  @Override
+  public final void deepNormalize() {
+	    try {
+      domain.deepNormalize();
+      range.deepNormalize();
+      if (fcnSet == null) {
+        fcnSet = DummyEnum;
+      }
+      else if (fcnSet != DummyEnum) {
+        fcnSet.deepNormalize();
+      }
+	    }
+	    catch (RuntimeException | OutOfMemoryError e) {
+	      if (hasSource()) { throw FingerprintException.getNewHead(this, e); }
+	      else { throw e; }
+	    }
+  }
+
   public final boolean isDefined() {
     try {
       return this.domain.isDefined() && this.range.isDefined();
@@ -257,7 +275,7 @@ public class SetOfFcnsValue extends SetOfFcnsOrRcdsValue implements Enumerable {
   }
 
   @Override
-  public SetEnumValue toSetEnum() {
+  public final SetEnumValue toSetEnum() {
       if (this.fcnSet != null && this.fcnSet != DummyEnum) {
         return this.fcnSet;
       }
@@ -271,7 +289,7 @@ public class SetOfFcnsValue extends SetOfFcnsOrRcdsValue implements Enumerable {
   }
 
   @Override
-  public void write(final ValueOutputStream vos) throws IOException {
+  public final void write(final ValueOutputStream vos) throws IOException {
 	  fcnSet.write(vos);
   }
 

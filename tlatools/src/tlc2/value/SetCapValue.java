@@ -204,9 +204,27 @@ public class SetCapValue extends EnumerableValue implements Enumerable {
       }
     }
   }
-
+  
   @Override
-  public SetEnumValue toSetEnum() {
+  public final void deepNormalize() {
+	    try {
+      set1.deepNormalize();
+      set2.deepNormalize();
+      if (capSet == null) {
+        capSet = DummyEnum;
+      }
+      else if (capSet != DummyEnum) {
+        capSet.deepNormalize();
+      }
+	    }
+	    catch (RuntimeException | OutOfMemoryError e) {
+	      if (hasSource()) { throw FingerprintException.getNewHead(this, e); }
+	      else { throw e; }
+	    }
+  }
+	  
+  @Override
+  public final SetEnumValue toSetEnum() {
       if (this.capSet != null && this.capSet != DummyEnum) {
         return this.capSet;
       }

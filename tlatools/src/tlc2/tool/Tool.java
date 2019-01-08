@@ -759,7 +759,7 @@ public class Tool
    * This method returns the set of next states when taking the action
    * in the given state.
    */
-  public /*final*/ StateVec getNextStates(Action action, TLCState state) {
+  public final StateVec getNextStates(Action action, TLCState state) {
     ActionItemList acts = ActionItemList.Empty;
     TLCState s1 = TLCState.Empty.createEmpty();
     StateVec nss = new StateVec(0);
@@ -769,8 +769,29 @@ public class Tool
 
   private final TLCState getNextStates(SemanticNode pred, ActionItemList acts, Context c,
                                        TLCState s0, TLCState s1, StateVec nss) {
-    if (this.callStack != null) this.callStack.push(pred);
-    try {
+	    if (this.callStack != null) {
+	    	return getNextStatesWithCallStack(pred, acts, c, s0, s1, nss);
+	    } else {
+	    	return getNextStatesImpl(pred, acts, c, s0, s1, nss);
+	    }
+  }
+  
+  private final TLCState getNextStatesWithCallStack(SemanticNode pred, ActionItemList acts, Context c,
+              TLCState s0, TLCState s1, StateVec nss) {
+	    this.callStack.push(pred);
+	    try {
+	    	return getNextStatesImpl(pred, acts, c, s0, s1, nss);
+	    } catch (TLCRuntimeException | EvalException e) {
+	    	// see tlc2.tool.Tool.getInitStates(SemanticNode, ActionItemList, Context, TLCState, IStateFunctor)
+	    	this.callStack.freeze();
+		    throw e;
+	    } finally {
+	    	this.callStack.pop();
+	    }
+  }
+  
+  private final TLCState getNextStatesImpl(SemanticNode pred, ActionItemList acts, Context c,
+              TLCState s0, TLCState s1, StateVec nss) {
         switch (pred.getKind()) {
         case OpApplKind:
           {
@@ -784,28 +805,12 @@ public class Tool
           }
         case SubstInKind:
           {
-            SubstInNode pred1 = (SubstInNode)pred;
-            Subst[] subs = pred1.getSubsts();
-            int slen = subs.length;
-            Context c1 = c;
-            for (int i = 0; i < slen; i++) {
-              Subst sub = subs[i];
-              c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, false));
-            }
-            return this.getNextStates(pred1.getBody(), acts, c1, s0, s1, nss);
+            return getNextStatesImplSubstInKind((SubstInNode) pred, acts, c, s0, s1, nss);
           }
         // Added by LL on 13 Nov 2009 to handle theorem and assumption names.
         case APSubstInKind:
           {
-            APSubstInNode pred1 = (APSubstInNode)pred;
-            Subst[] subs = pred1.getSubsts();
-            int slen = subs.length;
-            Context c1 = c;
-            for (int i = 0; i < slen; i++) {
-              Subst sub = subs[i];
-              c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, false));
-            }
-            return this.getNextStates(pred1.getBody(), acts, c1, s0, s1, nss);
+            return getNextStatesImplApSubstInKind((APSubstInNode) pred, acts, c, s0, s1, nss);
           }
         // LabelKind class added by LL on 13 Jun 2007
         case LabelKind:
@@ -819,55 +824,40 @@ public class Tool
           }
         }
     	return s1;
-    } catch (TLCRuntimeException | EvalException e) {
-    	// see tlc2.tool.Tool.getInitStates(SemanticNode, ActionItemList, Context, TLCState, IStateFunctor)
-    	if (this.callStack != null) { this.callStack.freeze(); }
-	    throw e;
-    } finally {
-    	if (this.callStack != null) { this.callStack.pop(); }
-    }
   }
 
+  private final TLCState getNextStatesImplSubstInKind(SubstInNode pred1, ActionItemList acts, Context c, TLCState s0, TLCState s1, StateVec nss) {
+  	Subst[] subs = pred1.getSubsts();
+  	int slen = subs.length;
+  	Context c1 = c;
+  	for (int i = 0; i < slen; i++) {
+  	  Subst sub = subs[i];
+  	  c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, false));
+  	}
+  	return this.getNextStates(pred1.getBody(), acts, c1, s0, s1, nss);
+  }
+  
+  private final TLCState getNextStatesImplApSubstInKind(APSubstInNode pred1, ActionItemList acts, Context c, TLCState s0, TLCState s1, StateVec nss) {
+  	Subst[] subs = pred1.getSubsts();
+  	int slen = subs.length;
+  	Context c1 = c;
+  	for (int i = 0; i < slen; i++) {
+  	  Subst sub = subs[i];
+  	  c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, false));
+  	}
+  	return this.getNextStates(pred1.getBody(), acts, c1, s0, s1, nss);
+  }
+  
   private final TLCState getNextStates(ActionItemList acts, final TLCState s0, final TLCState s1,
                                        final StateVec nss) {
-    int kind = acts.carKind();
     if (acts.isEmpty()) {
       nss.addElement(s1);
       return s1.copy();
     } else if (s1.allAssigned()) {
-      SemanticNode pred = acts.carPred();
-      Context c = acts.carContext();
-      while (!acts.isEmpty()) {
-           if (kind > 0 || kind == -1) {
-               final Value bval = this.eval(pred, c, s0, s1, EvalControl.Clear);
-               if (!(bval instanceof BoolValue)) {
-                       // TODO Choose more fitting error message.
-                       Assert.fail(EC.TLC_EXPECTED_EXPRESSION_IN_COMPUTING,
-                                       new String[] { "next states", "boolean", bval.toString(), acts.pred.toString() });
-               }
-               if (!((BoolValue) bval).val) {
-                      return s1;
-               }
-           } else if (kind == -2) {
-        	   // Identical to default handling below (line 876). Ignored during this optimization.
-               return this.processUnchanged(pred, acts.cdr(), c, s0, s1, nss);
-           } else {
-               final Value v1 = this.eval(pred, c, s0);
-               final Value v2 = this.eval(pred, c, s1);
-               if (v1.equals(v2)) {
-                   return s1;
-               }
-           }
-           // Move on to the next action in the ActionItemList.
-           acts = acts.cdr();
-           pred = acts.carPred();
-           c = acts.carContext();
-           kind = acts.carKind();
-       }
-       nss.addElement(s1);
-       return s1.copy();
+    	return getNextStatesAllAssigned(acts, s0, s1, nss);
     }
 
+    final int kind = acts.carKind();
     SemanticNode pred = acts.carPred();
     Context c = acts.carContext();
     ActionItemList acts1 = acts.cdr();
@@ -889,11 +879,70 @@ public class Tool
     }
     return s1;
   }
+  
+  private final TLCState getNextStatesAllAssigned(ActionItemList acts, final TLCState s0, final TLCState s1,
+		  								final StateVec nss) {
+	  int kind = acts.carKind();
+	  SemanticNode pred = acts.carPred();
+	  Context c = acts.carContext();
+	  while (!acts.isEmpty()) {
+		  if (kind > 0 || kind == -1) {
+			  final Value bval = this.eval(pred, c, s0, s1, EvalControl.Clear);
+			  if (!(bval instanceof BoolValue)) {
+				  // TODO Choose more fitting error message.
+				  Assert.fail(EC.TLC_EXPECTED_EXPRESSION_IN_COMPUTING,
+						  new String[] { "next states", "boolean", bval.toString(), acts.pred.toString() });
+			  }
+			  if (!((BoolValue) bval).val) {
+				  return s1;
+			  }
+		  } else if (kind == -2) {
+			  // Identical to default handling below (line 876). Ignored during this optimization.
+			  return this.processUnchanged(pred, acts.cdr(), c, s0, s1, nss);
+		  } else {
+			  final Value v1 = this.eval(pred, c, s0);
+			  final Value v2 = this.eval(pred, c, s1);
+			  if (v1.equals(v2)) {
+				  return s1;
+			  }
+		  }
+		  // Move on to the next action in the ActionItemList.
+		  acts = acts.cdr();
+		  pred = acts.carPred();
+		  c = acts.carContext();
+		  kind = acts.carKind();
+	  }
+	  nss.addElement(s1);
+	  return s1.copy();
+  }
+
+  /* getNextStatesAppl */
 
   private final TLCState getNextStatesAppl(OpApplNode pred, ActionItemList acts, Context c,
+          TLCState s0, TLCState s1, StateVec nss) {
+	  if (this.callStack != null) {
+		  return getNextStatesApplWithCallStack(pred, acts, c, s0, s1, nss);
+	  } else {
+	      return getNextStatesApplImpl(pred, acts, c, s0, s1, nss);
+	  }
+  }
+  
+  private final TLCState getNextStatesApplWithCallStack(OpApplNode pred, ActionItemList acts, Context c,
+          TLCState s0, TLCState s1, StateVec nss) {
+	    this.callStack.push(pred);
+	    try {
+	    	return getNextStatesApplImpl(pred, acts, c, s0, s1, nss);
+	    } catch (TLCRuntimeException | EvalException e) {
+	    	// see tlc2.tool.Tool.getInitStates(SemanticNode, ActionItemList, Context, TLCState, IStateFunctor)
+	    	this.callStack.freeze();
+	    	throw e;
+	    } finally {
+	    	this.callStack.pop();
+	    }
+  }
+
+  private final TLCState getNextStatesApplImpl(OpApplNode pred, ActionItemList acts, Context c,
                                            TLCState s0, TLCState s1, StateVec nss) {
-    if (this.callStack != null) this.callStack.push(pred);
-    try {
         ExprOrOpArgNode[] args = pred.getArgs();
         int alen = args.length;
         SymbolNode opNode = pred.getOperator();
@@ -1212,38 +1261,37 @@ public class Tool
             return resState;
           }
         }
-    } catch (TLCRuntimeException | EvalException e) {
-    	// see tlc2.tool.Tool.getInitStates(SemanticNode, ActionItemList, Context, TLCState, IStateFunctor)
-    	if (this.callStack != null) { this.callStack.freeze(); }
-    	throw e;
-    } finally {
-    	if (this.callStack != null) { this.callStack.pop(); }
-    }
   }
+  
+  /* processUnchanged */
 
   private final TLCState processUnchanged(SemanticNode expr, ActionItemList acts, Context c,
                                           TLCState s0, TLCState s1, StateVec nss) {
-    if (this.callStack != null) this.callStack.push(expr);
-    try {
-        SymbolNode var = this.getVar(expr, c, false);
+	  if (this.callStack != null) {
+		  return processUnchangedWithCallStack(expr, acts, c, s0, s1, nss);
+	  } else {
+		   return processUnchangedImpl(expr, acts, c, s0, s1, nss);
+	  }
+  }
+  private final TLCState processUnchangedWithCallStack(SemanticNode expr, ActionItemList acts, Context c,
+          TLCState s0, TLCState s1, StateVec nss) {
+	   this.callStack.push(expr);
+	   try {
+		   return processUnchangedImpl(expr, acts, c, s0, s1, nss);
+	    } catch (TLCRuntimeException | EvalException e) {
+	    	// see tlc2.tool.Tool.getInitStates(SemanticNode, ActionItemList, Context, TLCState, IStateFunctor)
+	    	this.callStack.freeze();
+	    	throw e;
+	    } finally {
+	    	this.callStack.pop();
+	    }
+  }
+  private final TLCState processUnchangedImpl(SemanticNode expr, ActionItemList acts, Context c,
+          TLCState s0, TLCState s1, StateVec nss) {
+         SymbolNode var = this.getVar(expr, c, false);
         TLCState resState = s1;
         if (var != null) {
-          // expr is a state variable:
-          UniqueString varName = var.getName();
-          Value val0 = s0.lookup(varName);
-          Value val1 = s1.lookup(varName);
-          if (val1 == null) {
-            resState.bind(varName, val0, expr);
-            resState = this.getNextStates(acts, s0, resState, nss);
-            resState.unbind(varName);
-          }
-          else if (val0.equals(val1)) {
-            resState = this.getNextStates(acts, s0, s1, nss);
-          }
-          else {
-            MP.printWarning(EC.TLC_UNCHANGED_VARIABLE_CHANGED, new String[]{varName.toString(), expr.toString()});
-          }
-          return resState;
+            return processUnchangedImplVar(expr, acts, s0, s1, nss, var);
         }
 
         if (expr instanceof OpApplNode) {
@@ -1255,15 +1303,7 @@ public class Tool
           int opcode = BuiltInOPs.getOpCode(opName);
 
           if (opcode == OPCODE_tup) {
-            // a tuple:
-            if (alen != 0) {
-              ActionItemList acts1 = acts;
-              for (int i = alen-1; i > 0; i--) {
-                acts1 = acts1.cons(args[i], c, ActionItemList.UNCHANGED);
-              }
-              return this.processUnchanged(args[0], acts1, c, s0, s1, nss);
-            }
-            return this.getNextStates(acts, s0, s1, nss);
+            return processUnchangedImplTuple(acts, c, s0, s1, nss, args, alen);
           }
 
           if (opcode == 0 && alen == 0) {
@@ -1291,14 +1331,43 @@ public class Tool
           resState = this.getNextStates(acts, s0, s1, nss);
         }
         return resState;
-    } catch (TLCRuntimeException | EvalException e) {
-    	// see tlc2.tool.Tool.getInitStates(SemanticNode, ActionItemList, Context, TLCState, IStateFunctor)
-    	if (this.callStack != null) { this.callStack.freeze(); }
-    	throw e;
-    } finally {
-    	if (this.callStack != null) { this.callStack.pop(); }
-    }
   }
+
+  private final TLCState processUnchangedImplTuple(ActionItemList acts, Context c, TLCState s0, TLCState s1, StateVec nss,
+  		ExprOrOpArgNode[] args, int alen) {
+  	// a tuple:
+  	if (alen != 0) {
+  	  ActionItemList acts1 = acts;
+  	  for (int i = alen-1; i > 0; i--) {
+  	    acts1 = acts1.cons(args[i], c, ActionItemList.UNCHANGED);
+  	  }
+  	  return this.processUnchanged(args[0], acts1, c, s0, s1, nss);
+  	}
+  	return this.getNextStates(acts, s0, s1, nss);
+  }
+  
+  private final TLCState processUnchangedImplVar(SemanticNode expr, ActionItemList acts, TLCState s0, TLCState s1, StateVec nss,
+  		SymbolNode var) {
+          TLCState resState = s1;
+          // expr is a state variable:
+          final UniqueString varName = var.getName();
+          final Value val0 = s0.lookup(varName);
+          final Value val1 = s1.lookup(varName);
+          if (val1 == null) {
+		  	resState.bind(varName, val0, expr);
+		  	resState = this.getNextStates(acts, s0, resState, nss);
+		  	resState.unbind(varName);
+          }
+          else if (val0.equals(val1)) {
+        	  resState = this.getNextStates(acts, s0, s1, nss);
+          }
+          else {
+        	  MP.printWarning(EC.TLC_UNCHANGED_VARIABLE_CHANGED, new String[]{varName.toString(), expr.toString()});
+          }
+          return resState;
+  }
+    
+  /* eval */
 
   /* Special version of eval for state expressions. */
   public final Value eval(SemanticNode expr, Context c, TLCState s0) {
@@ -1311,8 +1380,28 @@ public class Tool
    */
   public final Value eval(SemanticNode expr, Context c, TLCState s0,
                           TLCState s1, final int control) {
-    if (this.callStack != null) this.callStack.push(expr);
-    try {
+	    if (this.callStack != null) {
+	    	return evalWithCallStack(expr, c, s0, s1, control);
+	    } else {
+	    	return evalImpl(expr, c, s0, s1, control);
+	    }
+  }
+  private final Value evalWithCallStack(SemanticNode expr, Context c, TLCState s0,
+          TLCState s1, final int control) {
+	    this.callStack.push(expr);
+	    try {
+	    	return evalImpl(expr, c, s0, s1, control);
+	    } catch (TLCRuntimeException | EvalException e) {
+	    	// see tlc2.tool.Tool.getInitStates(SemanticNode, ActionItemList, Context, TLCState, IStateFunctor)
+	    	this.callStack.freeze();
+	    	throw e;
+	    } finally {
+	    	this.callStack.pop();
+	    }
+  }
+  
+  private final Value evalImpl(final SemanticNode expr, final Context c, final TLCState s0,
+          final TLCState s1, final int control) {
         switch (expr.getKind()) {
         /***********************************************************************
         * LabelKind class added by LL on 13 Jun 2007.                          *
@@ -1329,43 +1418,16 @@ public class Tool
           }
         case LetInKind:
           {
-            LetInNode expr1 = (LetInNode)expr;
-            OpDefNode[] letDefs = expr1.getLets();
-            int letLen = letDefs.length;
-            Context c1 = c;
-            for (int i = 0; i < letLen; i++) {
-              OpDefNode opDef = letDefs[i];
-              if (opDef.getArity() == 0) {
-                Value rhs = new LazyValue(opDef.getBody(), c1);
-                c1 = c1.cons(opDef, rhs);
-              }
-            }
-            return this.eval(expr1.getBody(), c1, s0, s1, control);
+            return evalImplLetInKind((LetInNode) expr, c, s0, s1, control);
           }
         case SubstInKind:
           {
-            SubstInNode expr1 = (SubstInNode)expr;
-            Subst[] subs = expr1.getSubsts();
-            int slen = subs.length;
-            Context c1 = c;
-            for (int i = 0; i < slen; i++) {
-              Subst sub = subs[i];
-              c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, true));
-            }
-            return this.eval(expr1.getBody(), c1, s0, s1, control);
+            return evalImplSubstInKind((SubstInNode) expr, c, s0, s1, control);
           }
         // Added by LL on 13 Nov 2009 to handle theorem and assumption names.
         case APSubstInKind:
           {
-            APSubstInNode expr1 = (APSubstInNode)expr;
-            Subst[] subs = expr1.getSubsts();
-            int slen = subs.length;
-            Context c1 = c;
-            for (int i = 0; i < slen; i++) {
-              Subst sub = subs[i];
-              c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, true));
-            }
-            return this.eval(expr1.getBody(), c1, s0, s1, control);
+            return evalImplApSubstInKind((APSubstInNode) expr, c, s0, s1, control);
           }
         case NumeralKind:
         case DecimalKind:
@@ -1379,13 +1441,7 @@ public class Tool
           }
         case OpArgKind:
           {
-            OpArgNode expr1 = (OpArgNode)expr;
-            SymbolNode opNode = expr1.getOp();
-            Object val = this.lookup(opNode, c, false);
-            if (val instanceof OpDefNode) {
-              return setSource(expr, new OpLambdaValue((OpDefNode)val, this, c, s0, s1));
-            }
-            return (Value)val;
+            return evalImplOpArgKind((OpArgNode) expr, c, s0, s1);
           }
         default:
           {
@@ -1394,19 +1450,80 @@ public class Tool
             return null;     // make compiler happy
           }
         }
-    } catch (TLCRuntimeException | EvalException e) {
-    	// see tlc2.tool.Tool.getInitStates(SemanticNode, ActionItemList, Context, TLCState, IStateFunctor)
-    	if (this.callStack != null) { this.callStack.freeze(); }
-    	throw e;
-    } finally {
-    	if (this.callStack != null) { this.callStack.pop(); }
-    }
   }
 
+  private final Value evalImplLetInKind(LetInNode expr1, Context c, TLCState s0, TLCState s1, final int control) {
+	OpDefNode[] letDefs = expr1.getLets();
+	int letLen = letDefs.length;
+	Context c1 = c;
+	for (int i = 0; i < letLen; i++) {
+	  OpDefNode opDef = letDefs[i];
+	  if (opDef.getArity() == 0) {
+	    Value rhs = new LazyValue(opDef.getBody(), c1);
+	    c1 = c1.cons(opDef, rhs);
+	  }
+	}
+	return this.eval(expr1.getBody(), c1, s0, s1, control);
+  }
+
+  private final Value evalImplSubstInKind(SubstInNode expr1, Context c, TLCState s0, TLCState s1, final int control) {
+  	Subst[] subs = expr1.getSubsts();
+  	int slen = subs.length;
+  	Context c1 = c;
+  	for (int i = 0; i < slen; i++) {
+  	  Subst sub = subs[i];
+  	  c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, true));
+  	}
+  	return this.eval(expr1.getBody(), c1, s0, s1, control);
+  }
+    
+  private final Value evalImplApSubstInKind(APSubstInNode expr1, Context c, TLCState s0, TLCState s1, final int control) {
+  	Subst[] subs = expr1.getSubsts();
+  	int slen = subs.length;
+  	Context c1 = c;
+  	for (int i = 0; i < slen; i++) {
+  	  Subst sub = subs[i];
+  	  c1 = c1.cons(sub.getOp(), this.getVal(sub.getExpr(), c, true));
+  	}
+  	return this.eval(expr1.getBody(), c1, s0, s1, control);
+  }
+  
+  private final Value evalImplOpArgKind(OpArgNode expr1, Context c, TLCState s0, TLCState s1) {
+  	SymbolNode opNode = expr1.getOp();
+  	Object val = this.lookup(opNode, c, false);
+  	if (val instanceof OpDefNode) {
+  	  return setSource(expr1, new OpLambdaValue((OpDefNode)val, this, c, s0, s1));
+  	}
+  	return (Value)val;
+  }
+  
+  /* evalAppl */
+  
   private final Value evalAppl(final OpApplNode expr, Context c, TLCState s0,
+          TLCState s1, final int control) {
+	  if (this.callStack != null) {
+		  return evalApplWithCallStack(expr, c, s0, s1, control);
+	  } else {
+		  return evalApplImpl(expr, c, s0, s1, control);
+	  }
+  }
+
+  private final Value evalApplWithCallStack(final OpApplNode expr, Context c, TLCState s0,
+          TLCState s1, final int control) {
+	    this.callStack.push(expr);
+	    try {
+	    	return evalApplImpl(expr, c, s0, s1, control);
+	    } catch (TLCRuntimeException | EvalException e) {
+	    	// see tlc2.tool.Tool.getInitStates(SemanticNode, ActionItemList, Context, TLCState, IStateFunctor)
+	    	this.callStack.freeze();
+	    	throw e;
+	    } finally {
+	    	this.callStack.pop();
+	    }
+  }
+  
+  private final Value evalApplImpl(final OpApplNode expr, Context c, TLCState s0,
                               TLCState s1, final int control) {
-    if (this.callStack != null) this.callStack.push(expr);
-    try {
         ExprOrOpArgNode[] args = expr.getArgs();
         SymbolNode opNode = expr.getOperator();
         int opcode = BuiltInOPs.getOpCode(opNode.getName());
@@ -2284,13 +2401,6 @@ public class Tool
             return null;
           }
         }
-    } catch (TLCRuntimeException | EvalException e) {
-    	// see tlc2.tool.Tool.getInitStates(SemanticNode, ActionItemList, Context, TLCState, IStateFunctor)
-    	if (this.callStack != null) { this.callStack.freeze(); }
-    	throw e;
-    } finally {
-    	if (this.callStack != null) { this.callStack.pop(); }
-    }
   }
 
   private final Value setSource(final SemanticNode expr, final Value value) {
@@ -2310,7 +2420,7 @@ public class Tool
   }
 
   /* This method determines if a state satisfies the model constraints. */
-  public /*final*/ boolean isInModel(TLCState state) throws EvalException {
+  public final boolean isInModel(TLCState state) throws EvalException {
     ExprNode[] constrs = this.getModelConstraints();
     for (int i = 0; i < constrs.length; i++) {
       Value bval = this.eval(constrs[i], Context.Empty, state);
@@ -2323,7 +2433,7 @@ public class Tool
   }
 
   /* This method determines if a pair of states satisfy the action constraints. */
-  public /*final*/ boolean isInActions(TLCState s1, TLCState s2) throws EvalException {
+  public final boolean isInActions(TLCState s1, TLCState s2) throws EvalException {
     ExprNode[] constrs = this.getActionConstraints();
     for (int i = 0; i < constrs.length; i++) {
       Value bval = this.eval(constrs[i], Context.Empty, s1, s2, EvalControl.Clear);
@@ -3100,7 +3210,7 @@ public class Tool
     return MVPerm.permutationSubgroup((Enumerable) fcns);
   }
 
-  public boolean hasSymmetry() {
+  public final boolean hasSymmetry() {
     if (this.config == null) {
       return false;
     }

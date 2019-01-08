@@ -129,6 +129,24 @@ public class SetCupValue extends EnumerableValue implements Enumerable {
     }
   }
 
+  @Override
+  public final void deepNormalize() {
+	    try {
+      set1.deepNormalize();
+      set2.deepNormalize();
+      if (cupSet == null) {
+        cupSet = DummyEnum;
+      }
+      else if (cupSet != DummyEnum) {
+        cupSet.deepNormalize();
+      }
+	    }
+	    catch (RuntimeException | OutOfMemoryError e) {
+	      if (hasSource()) { throw FingerprintException.getNewHead(this, e); }
+	      else { throw e; }
+	    }
+  }
+  
   public final boolean isDefined() {
     try {
       return this.set1.isDefined() && this.set2.isDefined();
@@ -152,7 +170,7 @@ public class SetCupValue extends EnumerableValue implements Enumerable {
   }
 
 	@Override
-	public void write(final ValueOutputStream vos) throws IOException {
+	public final void write(final ValueOutputStream vos) throws IOException {
 		cupSet.write(vos);
 	}
 
@@ -198,7 +216,7 @@ public class SetCupValue extends EnumerableValue implements Enumerable {
   }
 
   @Override
-  public SetEnumValue toSetEnum() {
+  public final SetEnumValue toSetEnum() {
       if (this.cupSet != null && this.cupSet != DummyEnum) {
         return this.cupSet;
       }

@@ -206,6 +206,25 @@ public class SetOfTuplesValue extends EnumerableValue implements Enumerable {
     }
   }
 
+  @Override
+  public final void deepNormalize() {
+	    try {
+      for (int i = 0; i < sets.length; i++) {
+          sets[i].deepNormalize();
+        }
+        if (tupleSet == null) {
+          tupleSet = DummyEnum;
+        }
+        else if (tupleSet != DummyEnum) {
+          tupleSet.deepNormalize();
+        }
+	    }
+	    catch (RuntimeException | OutOfMemoryError e) {
+	      if (hasSource()) { throw FingerprintException.getNewHead(this, e); }
+	      else { throw e; }
+	    }
+  }
+
   public final boolean isDefined() {
     try {
       boolean defined = true;
@@ -274,7 +293,7 @@ public class SetOfTuplesValue extends EnumerableValue implements Enumerable {
   }
 
   @Override
-  public SetEnumValue toSetEnum() {
+  public final SetEnumValue toSetEnum() {
       if (this.tupleSet != null && this.tupleSet != DummyEnum) {
         return this.tupleSet;
       }
@@ -288,7 +307,7 @@ public class SetOfTuplesValue extends EnumerableValue implements Enumerable {
   }
 
   @Override
-  public void write(final ValueOutputStream vos) throws IOException {
+  public final void write(final ValueOutputStream vos) throws IOException {
 	  tupleSet.write(vos);
   }
 

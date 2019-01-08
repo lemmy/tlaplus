@@ -15,13 +15,17 @@ import tlc2.output.EC;
 import tlc2.output.MP;
 import tlc2.tool.queue.IStateQueue;
 import tlc2.util.BufferedRandomAccessFile;
+import tlc2.util.IStateWriter;
 import tlc2.util.IdThread;
 import tlc2.util.ObjLongTable;
+import tlc2.util.SetOfStates;
 import tlc2.util.statistics.FixedSizedBucketStatistics;
 import tlc2.util.statistics.IBucketStatistics;
 import util.FileUtil;
 
-public class Worker extends IdThread implements IWorker {
+public final class Worker extends IdThread implements IWorker {
+
+	private static final int INITIAL_CAPACITY = 16;
 	
 	/**
 	 * Multi-threading helps only when running on multiprocessors. TLC can
@@ -37,6 +41,7 @@ public class Worker extends IdThread implements IWorker {
 
 	private long lastPtr;
 	private long statesGenerated;
+	private int unseenSuccessorStates = 0;
 	private volatile int maxLevel = 0;
 
 	// SZ Feb 20, 2009: changed due to super type introduction
@@ -54,14 +59,15 @@ public class Worker extends IdThread implements IWorker {
 		this.raf = new BufferedRandomAccessFile(filename + TLCTrace.EXT, "rw");
 	}
 
-  public final ObjLongTable<SemanticNode> getCounts() { return this.astCounts; }
+    public final ObjLongTable<SemanticNode> getCounts() { return this.astCounts; }
 
 	/**
    * This method gets a state from the queue, generates all the
    * possible next states of the state, checks the invariants, and
    * updates the state set and state queue.
 	 */
-	public final void run() {
+	public void run() {
+		final boolean checkLiveness = this.tlc.checkLiveness;
 		TLCState curState = null;
 		try {
 			while (true) {
@@ -75,9 +81,24 @@ public class Worker extends IdThread implements IWorker {
 					return;
 				}
 				setCurrentState(curState);
-				if (this.tlc.doNext(curState, this.astCounts, this)) {
+				
+				SetOfStates setOfStates = null;
+				if (checkLiveness) {
+					setOfStates = createSetOfStates();
+				}
+				
+				if (this.tlc.doNext(curState, this.astCounts, setOfStates, this)) {
 					return;
 				}
+				
+	            // Finally, add curState into the behavior graph for liveness checking:
+	            if (checkLiveness)
+	            {
+					doNextCheckLiveness(curState, setOfStates);
+	            }
+				
+				this.outDegree.addSample(unseenSuccessorStates);
+				unseenSuccessorStates = 0;
 			}
 		} catch (Throwable e) {
 			// Something bad happened. Quit ...
@@ -95,29 +116,48 @@ public class Worker extends IdThread implements IWorker {
 		}
 	}
 	
+	/* Liveness */
+	
+	private int multiplier = 1;
+
+	private final void doNextCheckLiveness(TLCState curState, SetOfStates liveNextStates) throws IOException {
+		final long curStateFP = curState.fingerPrint();
+
+		// Add the stuttering step:
+		liveNextStates.put(curStateFP, curState);
+		this.tlc.allStateWriter.writeState(curState, curState, true, IStateWriter.Visualization.STUTTERING);
+
+		this.tlc.liveCheck.addNextState(curState, curStateFP, liveNextStates);
+
+		if (liveNextStates.capacity() > (multiplier * INITIAL_CAPACITY)) {
+			// Increase initial size for as long as the set has to grow
+			multiplier++;
+		}
+	}
+	
+	private final SetOfStates createSetOfStates() {
+		return new SetOfStates(multiplier * INITIAL_CAPACITY);
+	}
+	
 	/* Statistics */
 
-	void incrementStatesGenerated(long l) {
+	final void incrementStatesGenerated(long l) {
 		this.statesGenerated += l;		
 	}
 	
-	long getStatesGenerated() {
+	final long getStatesGenerated() {
 		return this.statesGenerated;
 	}
 
-	void setOutDegree(final int numOfSuccessors) {
-		this.outDegree.addSample(numOfSuccessors);
-	}
-
-	public IBucketStatistics getOutDegree() {
+	public final IBucketStatistics getOutDegree() {
 		return this.outDegree;
 	}
 	
-	public int getMaxLevel() {
+	public final int getMaxLevel() {
 		return maxLevel;
 	}
 
-	void setLevel(int level) {
+	final void setLevel(int level) {
 		maxLevel = level;
 	}
 
@@ -137,7 +177,7 @@ public class Worker extends IdThread implements IWorker {
 	 * cache in BufferedRandomAccessFile hasn't been flushed out.
 	 */
 	
-	public synchronized void writeState(final TLCState initialState, final long fp) throws IOException {
+	public final synchronized void writeState(final TLCState initialState, final long fp) throws IOException {
 		// Write initial state to trace file.
 		this.lastPtr = this.raf.getFilePointer();
 		this.raf.writeLongNat(1L);
@@ -149,7 +189,7 @@ public class Worker extends IdThread implements IWorker {
 		initialState.uid = this.lastPtr;
 	}
 
-	public synchronized void writeState(final TLCState curState, final long sucStateFp, final TLCState sucState) throws IOException {
+	public final synchronized void writeState(final TLCState curState, final long sucStateFp, final TLCState sucState) throws IOException {
 		// Keep track of maximum diameter.
 		maxLevel = Math.max(curState.getLevel() + 1, maxLevel);
 		
@@ -163,13 +203,17 @@ public class Worker extends IdThread implements IWorker {
 		sucState.workerId = (short) myGetId();
 		sucState.uid = this.lastPtr;
 		
+		sucState.setPredecessor(curState);
+		
+    	unseenSuccessorStates++;
+		
 //		System.err.println(String.format("<<%s, %s>>: pred=<<%s, %s>>, %s -> %s", myGetId(), this.lastPtr, 
 //				curState.uid, curState.workerId,
 //				curState.fingerPrint(), sucStateFp));
 	}
 
 	// Read from previously written (see writeState) trace file.
-	public synchronized ConcurrentTLCTrace.Record readStateRecord(final long ptr) throws IOException {
+	public final synchronized ConcurrentTLCTrace.Record readStateRecord(final long ptr) throws IOException {
 		this.raf.seek(ptr);
 		
 		final long prev = this.raf.readLongNat();
@@ -186,7 +230,7 @@ public class Worker extends IdThread implements IWorker {
 	
 	/* Checkpointing */
 
-	public synchronized void beginChkpt() throws IOException {
+	public final synchronized void beginChkpt() throws IOException {
 		this.raf.flush();
 		final DataOutputStream dos = FileUtil.newDFOS(filename + ".tmp");
 		dos.writeLong(this.raf.getFilePointer());
@@ -194,7 +238,7 @@ public class Worker extends IdThread implements IWorker {
 		dos.close();
 	}
 
-	public synchronized void commitChkpt() throws IOException {
+	public final synchronized void commitChkpt() throws IOException {
 		final File oldChkpt = new File(filename + ".chkpt");
 		final File newChkpt = new File(filename + ".tmp");
 		if ((oldChkpt.exists() && !oldChkpt.delete()) || !newChkpt.renameTo(oldChkpt)) {
@@ -202,7 +246,7 @@ public class Worker extends IdThread implements IWorker {
 		}
 	}
 
-	public void recover() throws IOException {
+	public final void recover() throws IOException {
 		final DataInputStream dis = FileUtil.newDFIS(filename + ".chkpt");
 		final long filePos = dis.readLong();
 		this.lastPtr = dis.readLong();
@@ -212,7 +256,7 @@ public class Worker extends IdThread implements IWorker {
 	
 	/* Enumerator */
 	
-	public Enumerator elements() throws IOException {
+	public final Enumerator elements() throws IOException {
 		return new Enumerator();
 	}
 

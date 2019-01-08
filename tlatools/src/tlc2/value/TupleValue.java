@@ -195,17 +195,30 @@ public class TupleValue extends Value implements Applicable {
   public final int size() { return this.elems.length; }
 
   @Override
-  public TupleValue toTuple() {
+  public final void deepNormalize() {
+	  try {
+      for (int i = 0; i < elems.length; i++) {
+          elems[i].deepNormalize();
+        }
+	    }
+	    catch (RuntimeException | OutOfMemoryError e) {
+	      if (hasSource()) { throw FingerprintException.getNewHead(this, e); }
+	      else { throw e; }
+	    }
+  }
+
+  @Override
+  public final TupleValue toTuple() {
 	  return this;
   }
   
   @Override
-  public RecordValue toRcd() {
+  public final RecordValue toRcd() {
 	  return size() == 0 ? EmptyRcd : super.toRcd();
   }
 
 	@Override
-	public FcnRcdValue toFcnRcd() {
+	public final FcnRcdValue toFcnRcd() {
         IntervalValue intv = new IntervalValue(1, this.elems.length);
         return new FcnRcdValue(intv, this.elems);
 	}
@@ -260,7 +273,7 @@ public class TupleValue extends Value implements Applicable {
   }
 
 	@Override
-	public void write(ValueOutputStream vos) throws IOException {
+	public final void write(ValueOutputStream vos) throws IOException {
 		final int index = vos.put(this);
 		if (index == -1) {
 			vos.writeByte(TUPLEVALUE);

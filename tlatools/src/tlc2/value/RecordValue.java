@@ -152,17 +152,17 @@ public class RecordValue extends Value implements Applicable {
   }
 
   @Override
-  public RecordValue toRcd() {
+  public final RecordValue toRcd() {
 	  return this;
   }
   
   @Override
-  public TupleValue toTuple() {
+  public final TupleValue toTuple() {
 	  return size() == 0 ? EmptyTuple : super.toTuple();
   }
 
   @Override
-	public FcnRcdValue toFcnRcd() {
+	public final FcnRcdValue toFcnRcd() {
         this.normalize();
         Value[] dom = new Value[this.names.length];
         for (int i = 0; i < this.names.length; i++) {
@@ -320,6 +320,20 @@ public class RecordValue extends Value implements Applicable {
     }
   }
 
+  @Override
+  public final void deepNormalize() {
+	  try {
+      for (int i = 0; i < values.length; i++) {
+          values[i].deepNormalize();
+        }
+        normalize();
+	    }
+	    catch (RuntimeException | OutOfMemoryError e) {
+	      if (hasSource()) { throw FingerprintException.getNewHead(this, e); }
+	      else { throw e; }
+	    }
+  }
+
   public final boolean isDefined() {
     try {
       boolean defined = true;
@@ -374,7 +388,7 @@ public class RecordValue extends Value implements Applicable {
   }
 
 	@Override
-	public void write(final ValueOutputStream vos) throws IOException {
+	public final void write(final ValueOutputStream vos) throws IOException {
 		final int index = vos.put(this);
 		if (index == -1) {
 			vos.writeByte(RECORDVALUE);
