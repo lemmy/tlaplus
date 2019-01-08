@@ -43,7 +43,7 @@ public class FCoverageTest extends AbstractCoverageTest {
     public void testSpec () {
 		// ModelChecker has finished and generated the expected amount of states
 		assertTrue(recorder.recorded(EC.TLC_FINISHED));
-		assertTrue(recorder.recordedWithStringValue(EC.TLC_SEARCH_DEPTH, "0"));
+		assertTrue(recorder.recordedWithStringValue(EC.TLC_SEARCH_DEPTH, "1"));
 		assertTrue(recorder.recordedWithStringValues(EC.TLC_STATS, "4", "2", "0"));
 
 		// No 'general' errors recorded
