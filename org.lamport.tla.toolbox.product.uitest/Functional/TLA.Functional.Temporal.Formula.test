@@ -1,12 +1,12 @@
 --- RCPTT testcase ---
 Format-Version: 1.0
-Element-Name: TLA.Functional.Temopral.Formula
+Element-Name: TLA.Functional.Temporal.Formula
 Element-Type: testcase
 Element-Version: 3.0
 External-Reference: 
 Id: _g-dKoAPoEemwBd2liJ-qvA
 Runtime-Version: 2.3.0.201806262310
-Save-Time: 12/19/18 3:51 PM
+Save-Time: 1/7/19 4:32 PM
 Testcase-Type: ecl
 
 ------=_.description-216f885c-d591-38ce-8ea2-e4f8cb4d6ffa
