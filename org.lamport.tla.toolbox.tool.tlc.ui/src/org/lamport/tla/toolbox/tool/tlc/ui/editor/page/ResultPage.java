@@ -96,7 +96,7 @@ import org.lamport.tla.toolbox.tool.tlc.ui.TLCUIActivator;
 import org.lamport.tla.toolbox.tool.tlc.ui.contribution.DynamicContributionItem;
 import org.lamport.tla.toolbox.tool.tlc.ui.editor.ISectionConstants;
 import org.lamport.tla.toolbox.tool.tlc.ui.editor.ModelEditor;
-import org.lamport.tla.toolbox.tool.tlc.ui.editor.TLACoverageEditor2;
+import org.lamport.tla.toolbox.tool.tlc.ui.editor.TLACoverageEditor;
 import org.lamport.tla.toolbox.tool.tlc.ui.editor.part.ValidateableSectionPart;
 import org.lamport.tla.toolbox.tool.tlc.ui.preference.ITLCPreferenceConstants;
 import org.lamport.tla.toolbox.tool.tlc.ui.util.ActionClickListener;
@@ -292,10 +292,10 @@ public class ResultPage extends BasicFormPage implements ITLCModelLaunchDataPres
 							final IEditorPart[] findEditors = modelEditor.findEditors(input);
 							try {
 								if (findEditors.length == 0) {
-									modelEditor.addPage(new TLACoverageEditor2(ci.projectionFor(iFile)), input);
+									modelEditor.addPage(new TLACoverageEditor(ci.projectionFor(iFile)), input);
 								} else {
-									if (findEditors[0] instanceof TLACoverageEditor2) {
-										final TLACoverageEditor2 coverageEditor = (TLACoverageEditor2) findEditors[0];
+									if (findEditors[0] instanceof TLACoverageEditor) {
+										final TLACoverageEditor coverageEditor = (TLACoverageEditor) findEditors[0];
 										coverageEditor.resetInput(ci.projectionFor(iFile));
 									}
 								}
