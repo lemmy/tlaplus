@@ -45,7 +45,7 @@ import org.eclipse.swt.graphics.RGB;
 
 import tla2sany.st.Location;
 
-public class FileCoverageInformation {
+public class ModuleCoverageInformation {
 	
 	public static final String GRAY = "GRAY";
 
@@ -114,7 +114,7 @@ public class FileCoverageInformation {
 
 	private CoverageInformationItem root;
 
-	public FileCoverageInformation(final IFile file, final List<CoverageInformationItem> allItems) {
+	public ModuleCoverageInformation(final IFile file, final List<CoverageInformationItem> allItems) {
 		this.file = file;
 		this.allItems = allItems;
 		

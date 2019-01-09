@@ -102,6 +102,7 @@ public class CoverageInformationItem implements IModuleLocatable
     }
     
     public final long getWeight() {
+    	// Sum and not product because cost is measured across all invocations.
     	return getCount() + getCost();
     }
     
@@ -274,7 +275,7 @@ public class CoverageInformationItem implements IModuleLocatable
 			if (getCount() == 0L) {
 				rs.background = null;
 				rs.borderStyle = SWT.BORDER_SOLID;
-				rs.borderColor = JFaceResources.getColorRegistry().get(FileCoverageInformation.RED);
+				rs.borderColor = JFaceResources.getColorRegistry().get(ModuleCoverageInformation.RED);
 			}
 			
 			// Track active subtree
@@ -297,7 +298,7 @@ public class CoverageInformationItem implements IModuleLocatable
 			if (getCount() == 0L) {
 				rs.background = null;
 				rs.borderStyle = SWT.BORDER_SOLID;
-				rs.borderColor = JFaceResources.getColorRegistry().get(FileCoverageInformation.RED);
+				rs.borderColor = JFaceResources.getColorRegistry().get(ModuleCoverageInformation.RED);
 			}
 			active = false;
 			textPresentation.replaceStyleRange(addStlye(rs));
@@ -308,7 +309,7 @@ public class CoverageInformationItem implements IModuleLocatable
 	}
 
 	Color colorItem(TreeSet<Long> counts) {
-		int hue = FileCoverageInformation.getHue(getCount(), counts);
+		int hue = ModuleCoverageInformation.getHue(getCount(), counts);
 		String key = Integer.toString(hue);
 		if (!JFaceResources.getColorRegistry().hasValueFor(key)) {
 			JFaceResources.getColorRegistry().put(key, new RGB(hue, .25f, 1f));
@@ -318,7 +319,7 @@ public class CoverageInformationItem implements IModuleLocatable
 		
 		if (hasSiblings()) {
 			// Aggregated color (might be identical to color).
-			hue = FileCoverageInformation.getHue(getCountIncludingSiblings(), counts);
+			hue = ModuleCoverageInformation.getHue(getCountIncludingSiblings(), counts);
 			key = Integer.toString(hue);
 			if (!JFaceResources.getColorRegistry().hasValueFor(key)) {
 				JFaceResources.getColorRegistry().put(key, new RGB(hue, .25f, 1f));

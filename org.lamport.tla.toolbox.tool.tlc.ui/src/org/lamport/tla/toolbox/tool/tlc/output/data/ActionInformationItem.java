@@ -192,7 +192,7 @@ public class ActionInformationItem extends CoverageInformationItem {
 	 */
 	@Override
 	Color colorItem(TreeSet<Long> counts) {
-		final int hue = FileCoverageInformation.getHue(getUnseen(), counts);
+		final int hue = ModuleCoverageInformation.getHue(getUnseen(), counts);
 		final String key = Integer.toString(hue);
 		if (!JFaceResources.getColorRegistry().hasValueFor(key)) {
 			JFaceResources.getColorRegistry().put(key, new RGB(hue, .25f, 1f));

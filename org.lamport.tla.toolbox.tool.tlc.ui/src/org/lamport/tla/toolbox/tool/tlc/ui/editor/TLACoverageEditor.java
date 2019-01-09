@@ -75,7 +75,7 @@ import org.lamport.tla.toolbox.editor.basic.TLAEditor;
 import org.lamport.tla.toolbox.editor.basic.TLAEditorReadOnly;
 import org.lamport.tla.toolbox.editor.basic.TLASourceViewerConfiguration;
 import org.lamport.tla.toolbox.tool.tlc.output.data.CoverageInformationItem;
-import org.lamport.tla.toolbox.tool.tlc.output.data.FileCoverageInformation;
+import org.lamport.tla.toolbox.tool.tlc.output.data.ModuleCoverageInformation;
 import org.lamport.tla.toolbox.tool.tlc.output.data.LegendItem;
 import org.lamport.tla.toolbox.util.UIHelper;
 
@@ -110,13 +110,13 @@ public class TLACoverageEditor extends TLAEditorReadOnly {
 
 	private final ResizeListener resizeListener = new ResizeListener();
 	
-	private FileCoverageInformation coverage;
+	private ModuleCoverageInformation coverage;
 
 	private Composite heatMapComposite;
 
 	private TLACoveragePainter painter;
 
-	public TLACoverageEditor(final FileCoverageInformation coverage) {
+	public TLACoverageEditor(final ModuleCoverageInformation coverage) {
 		this.coverage = coverage;
 	}
 
@@ -182,7 +182,7 @@ public class TLACoverageEditor extends TLAEditorReadOnly {
 		return super.getSourceViewerDecorationSupport(viewer);
 	}
 
-	public void resetInput(final FileCoverageInformation ci) throws PartInitException {
+	public void resetInput(final ModuleCoverageInformation ci) throws PartInitException {
 		if (this.coverage == ci) {
 			// The CoverageInformation from which the FileCoverageInformation has been
 			// projected, is identical to the one already open. No need to update the ui.
@@ -253,7 +253,7 @@ public class TLACoverageEditor extends TLAEditorReadOnly {
 						final CoverageInformationItem node = coverage.getNode(offset);
 						if (node != null) {
 							// Style all unrelated parts gray.
-							coverage.getRoot().style(textPresentation, JFaceResources.getColorRegistry().get(FileCoverageInformation.GRAY));
+							coverage.getRoot().style(textPresentation, JFaceResources.getColorRegistry().get(ModuleCoverageInformation.GRAY));
 							
 							node.style(textPresentation);
 							legend = node.getLegend();
