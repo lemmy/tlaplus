@@ -345,7 +345,16 @@ public class CoverageInformationItem implements IModuleLocatable
 	}
 
 	public Set<LegendItem> getLegend() {
-		//TODO Implement!
-		return new TreeSet<>();
+		return getLegend(new TreeSet<LegendItem>());
+	}
+	
+	private Set<LegendItem> getLegend(final Set<LegendItem> legend) {
+		legend.add(new LegendItem(getCount(), color, getRegion()));
+		for (CoverageInformationItem child : childs) {
+			if (child.isActive()) {
+				child.getLegend(legend);
+			}
+		}
+		return legend;
 	}
 }
