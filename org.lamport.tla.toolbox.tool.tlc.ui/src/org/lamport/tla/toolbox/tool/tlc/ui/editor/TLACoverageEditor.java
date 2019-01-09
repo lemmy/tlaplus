@@ -176,7 +176,7 @@ public class TLACoverageEditor extends TLAEditorReadOnly {
 	@Override
 	protected SourceViewerDecorationSupport getSourceViewerDecorationSupport(ISourceViewer viewer) {
 		//TODO Initialize painter after editor input has been set.
-		painter = new TLACoveragePainter(this, heatMapComposite);
+		painter = new TLACoveragePainter(this);
 		((TextViewer) viewer).addTextPresentationListener(painter);
 		
 		return super.getSourceViewerDecorationSupport(viewer);
@@ -360,11 +360,9 @@ public class TLACoverageEditor extends TLAEditorReadOnly {
 		};
 		
 		private TextPresentation textPresentation;
-		private Composite heatMapComposite;
 
-		public TLACoveragePainter(TLACoverageEditor editor, Composite heatMapComposite) {
+		public TLACoveragePainter(TLACoverageEditor editor) {
 			this.editor = editor;
-			this.heatMapComposite = heatMapComposite;
 			
 			this.annotator.setPriority(Job.LONG);
 			this.annotator.setRule(null);
