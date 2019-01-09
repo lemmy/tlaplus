@@ -335,7 +335,7 @@ public class TLACoverageEditor extends TLAEditorReadOnly {
 						label.setBackground(cii.getColor());
 						label.addMouseListener(new MouseAdapter() {
 							@Override
-							public void mouseDoubleClick(MouseEvent e) {
+							public void mouseDown(final MouseEvent e) {
 								final IRegion region = cii.getRegion();
 								editor.selectAndReveal(region.getOffset(), cii.getRegion().getLength());
 							}
