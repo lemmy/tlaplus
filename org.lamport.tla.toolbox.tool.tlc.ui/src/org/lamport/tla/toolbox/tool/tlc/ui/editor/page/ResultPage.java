@@ -276,8 +276,8 @@ public class ResultPage extends BasicFormPage implements ITLCModelLaunchDataPres
 	                    break;
 	                case COVERAGE_END:
 	                	final CoverageInformation ci = dataProvider.getCoverageInfo();
-	                	if (ci.isEmpty()) {
-	                		// Cannot show coverage information without coverage data.
+	                	if (ci.isEmpty() || ci.isLegacy()) {
+							// Cannot show coverage information without (non-legacy) coverage data.
 	                		break;
 	                	}
 						final ModelEditor modelEditor = (ModelEditor) ResultPage.this.getEditor();

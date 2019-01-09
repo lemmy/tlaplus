@@ -93,6 +93,14 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 	public Object[] toArray() {
 		return this.items.toArray();
 	}
+	
+	/**
+	 * @return true if coverage information pre-dates TLC's new/hierarchical format introduced by the CostModel.
+	 */
+	public boolean isLegacy() {
+		// true if there are no ActionInformationItems.
+		return !items.stream().filter(i -> i instanceof ActionInformationItem).findAny().isPresent();
+	}
 
 	public boolean has(final IFile iFile) {
 		return items.stream().filter(i -> i.isInFile(iFile)).findAny().isPresent();
