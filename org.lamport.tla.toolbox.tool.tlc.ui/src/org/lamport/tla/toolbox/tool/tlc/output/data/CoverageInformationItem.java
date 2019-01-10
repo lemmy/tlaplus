@@ -1,3 +1,28 @@
+/*******************************************************************************
+ * Copyright (c) 2019 Microsoft Research. All rights reserved. 
+ *
+ * The MIT License (MIT)
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy 
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software. 
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * Contributors:
+ *   Simon Zambrowski - initial API and implementation
+ ******************************************************************************/
 package org.lamport.tla.toolbox.tool.tlc.output.data;
 
 import java.util.Collection;
@@ -21,10 +46,6 @@ import org.lamport.tla.toolbox.tool.tlc.ui.util.IModuleLocatable;
 import tla2sany.st.Location;
 import tlc2.TLCGlobals;
 
-/**
- * Coverage information item
- * @author Simon Zambrovski
- */
 public class CoverageInformationItem implements IModuleLocatable
 {
     private final static String MOD = " of module ";
@@ -37,9 +58,12 @@ public class CoverageInformationItem implements IModuleLocatable
     protected long count;
     protected long cost;
     protected int layer;
-    
-    private final Set<CoverageInformationItem> siblings = new HashSet<>();
+
+    // Siblings are CII instances shown at the same editor region/location. 
+	private final Set<CoverageInformationItem> siblings = new HashSet<>();
+    // Children are CII instances corresponding to nested expressions. 
     private final Set<CoverageInformationItem> childs = new HashSet<>();
+    // The parent is the CII instance this CII is a nested expressions of. 
     private CoverageInformationItem parent;
     private ActionInformationItem root;
 	
@@ -349,7 +373,7 @@ public class CoverageInformationItem implements IModuleLocatable
 	}
 	
 	private Set<LegendItem> getLegend(final Set<LegendItem> legend) {
-		legend.add(new LegendItem(getCount(), color, getRegion()));
+		legend.add(new LegendItem(getCount(), color, getRegion(), getLocation()));
 		for (CoverageInformationItem child : childs) {
 			if (child.isActive()) {
 				child.getLegend(legend);

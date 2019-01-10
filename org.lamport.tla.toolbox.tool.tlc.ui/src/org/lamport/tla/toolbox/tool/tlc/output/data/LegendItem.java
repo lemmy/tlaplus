@@ -58,11 +58,13 @@ public class LegendItem implements Comparable<LegendItem> {
 	private final long value;
 	private final Color color;
 	private final IRegion region;
+	private final String location;
 
-	public LegendItem(final long value, final Color color, final IRegion region) {
+	public LegendItem(final long value, final Color color, final IRegion region, final String location) {
 		this.value = value;
 		this.color = color;
 		this.region = region;
+		this.location = location; // human readable location in the module.
 	}
 
 	public long getValue() {
@@ -75,6 +77,10 @@ public class LegendItem implements Comparable<LegendItem> {
 	
 	public IRegion getRegion() {
 		return region;
+	}
+	
+	public String getLocation() {
+		return location;
 	}
 
 	@Override

@@ -142,9 +142,6 @@ public class ActionInformationItem extends CoverageInformationItem {
 		return sr;
 	}
 	
-	/* (non-Javadoc)
-	 * @see org.lamport.tla.toolbox.tool.tlc.output.data.CoverageInformationItem#style(org.eclipse.jface.text.TextPresentation)
-	 */
 	@Override
 	public void style(TextPresentation textPresentation) {
 		if (relation == Relation.PROP) {
@@ -159,9 +156,6 @@ public class ActionInformationItem extends CoverageInformationItem {
 		super.style(textPresentation);
 	}
 	
-	/* (non-Javadoc)
-	 * @see org.lamport.tla.toolbox.tool.tlc.output.data.CoverageInformationItem#style(org.eclipse.jface.text.TextPresentation, boolean)
-	 */
 	@Override
 	protected void style(final TextPresentation textPresentation, boolean merge) {
 		if (relation == Relation.PROP) {
@@ -176,9 +170,6 @@ public class ActionInformationItem extends CoverageInformationItem {
 		super.style(textPresentation, merge);
 	}
 
-	/* (non-Javadoc)
-	 * @see org.lamport.tla.toolbox.tool.tlc.output.data.CoverageInformationItem#style(org.eclipse.jface.text.TextPresentation, org.eclipse.swt.graphics.Color)
-	 */
 	@Override
 	public void style(final TextPresentation textPresentation, final Color c) {
 		// Do not unstyle AII when specific CostModel tree gets selected.
@@ -187,9 +178,6 @@ public class ActionInformationItem extends CoverageInformationItem {
 		}
 	}
 
-	/* (non-Javadoc)
-	 * @see org.lamport.tla.toolbox.tool.tlc.output.data.CoverageInformationItem#colorItem(java.util.TreeSet)
-	 */
 	@Override
 	Color colorItem(TreeSet<Long> counts) {
 		final int hue = ModuleCoverageInformation.getHue(getUnseen(), counts);

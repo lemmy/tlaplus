@@ -327,11 +327,12 @@ public class TLACoverageEditor extends TLAEditorReadOnly {
 						label = new Label(heatMapComposite, SWT.BORDER);
 						label.setAlignment(SWT.CENTER);
 						if (cii.getValue() > 1000) {
+							// Format numbers > 1000 in scientific notation.
 							label.setText(df.format(cii.getValue()));
 						} else {
 							label.setText(String.format("%,d", cii.getValue()));
 						}
-						label.setToolTipText(String.format("%,d", cii.getValue()));
+						label.setToolTipText(cii.getLocation());
 						label.setBackground(cii.getColor());
 						label.addMouseListener(new MouseAdapter() {
 							@Override
