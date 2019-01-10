@@ -67,6 +67,9 @@ import util.UniqueString;
 
 public class Spec implements ValueConstants, ToolGlobals, Serializable
 {
+	/**
+	 *  TODO Discuss why const instead of AspectJ
+	 */
 	protected static final boolean coverage = TLCGlobals.isCoverageEnabled();
 
     public String specDir; // The spec directory.

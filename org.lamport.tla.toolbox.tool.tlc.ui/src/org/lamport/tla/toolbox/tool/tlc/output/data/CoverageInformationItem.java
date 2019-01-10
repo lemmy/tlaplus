@@ -26,8 +26,10 @@
 package org.lamport.tla.toolbox.tool.tlc.output.data;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -41,6 +43,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.RGB;
+import org.lamport.tla.toolbox.tool.tlc.output.data.Representation.Grouping;
 import org.lamport.tla.toolbox.tool.tlc.ui.util.IModuleLocatable;
 
 import tla2sany.st.Location;
@@ -67,10 +70,10 @@ public class CoverageInformationItem implements IModuleLocatable
     private CoverageInformationItem parent;
     private ActionInformationItem root;
 	
-	private Color color, aggregateColor;
 	private boolean active = false;
 
-
+	protected final Map<Representation, Color[]> representations = new HashMap<>();
+	
     /**
      * Creates an simple item storing information about a coverage at a certain location
      * @param location
@@ -116,20 +119,14 @@ public class CoverageInformationItem implements IModuleLocatable
     {
         return count;
     }
-    
-	public final long getCountIncludingSiblings() {
-		return this.siblings.stream().mapToLong(CoverageInformationItem::getCount).sum() + this.getCount();
-	}
 
     public final long getCost() {
     	return cost;
     }
-    
-    public final long getWeight() {
-    	// Sum and not product because cost is measured across all invocations.
-    	return getCount() + getCost();
-    }
-    
+
+	public long getCountAndCost() {
+		return count + cost;
+	}    
 	/**
 	 * If two CCI are co-located (overlapping, nested, ...), the layer indicates
 	 * which one is considered more important.
@@ -220,6 +217,18 @@ public class CoverageInformationItem implements IModuleLocatable
 		return !this.siblings.isEmpty();
 	}
     
+	public long getTotalCount() {
+		return siblings.stream().mapToLong(CoverageInformationItem::getCount).sum() + getCount();
+	}
+
+	public long getTotalCost() {
+		return siblings.stream().mapToLong(CoverageInformationItem::getCost).sum() + getCost();
+	}
+
+	public long getTotalCountAndCost() {
+		return getTotalCost() + getTotalCount();
+	}
+
 	Collection<CoverageInformationItem> getChildren() {
 		return childs;
 	}
@@ -242,15 +251,9 @@ public class CoverageInformationItem implements IModuleLocatable
 		return this;
 	}
 
-	protected CoverageInformationItem setColor(Color c, Color a) {
-		this.color = c;
-		this.aggregateColor = a == null ? c : a;
-		return this;
-	}
-
 	private IRegion region;
 
-	IRegion getRegion() {
+	public IRegion getRegion() {
 		return this.region;
 	}
 
@@ -272,15 +275,15 @@ public class CoverageInformationItem implements IModuleLocatable
 		return sr;
 	}
 
-	public void style(final TextPresentation textPresentation) {
+	public void style(final TextPresentation textPresentation, final Representation rep) {
 		if (isRoot()) {
-			style(textPresentation, true);
+			style(textPresentation, true, rep);
 		} else {
-			style(textPresentation, false);
+			style(textPresentation, false, rep);
 		}
 	}
 	
-	protected void style(final TextPresentation textPresentation, final boolean merge) {
+	protected void style(final TextPresentation textPresentation, final boolean merge, final Representation rep) {
 		if (!isRoot()) {
 			final StyleRange rs = new StyleRange();
 			
@@ -289,14 +292,14 @@ public class CoverageInformationItem implements IModuleLocatable
 			rs.length = region.getLength();
 			
 			// Background Color
-			if (merge) {
-				rs.background = aggregateColor;
-			} else {
-				rs.background = color;
-			}
+			rs.background = rep.getColor(this, merge ? Grouping.COMBINED : Grouping.INDIVIDUAL);
 			
 			// Zero Coverage
-			if (getCount() == 0L) {
+			if ((rep == Representation.STATES_DISTINCT || rep == Representation.STATES) && !(this instanceof ActionInformationItem)) {
+				rs.background = JFaceResources.getColorRegistry().get(ModuleCoverageInformation.GRAY);
+				rs.borderStyle = SWT.NONE;
+				rs.borderColor = null;
+			} else if (rep != Representation.COST && rep.getValue(this, Grouping.INDIVIDUAL) == 0L) {
 				rs.background = null;
 				rs.borderStyle = SWT.BORDER_SOLID;
 				rs.borderColor = JFaceResources.getColorRegistry().get(ModuleCoverageInformation.RED);
@@ -309,17 +312,21 @@ public class CoverageInformationItem implements IModuleLocatable
 			textPresentation.mergeStyleRange(addStlye(rs));
 		}
 		for (CoverageInformationItem child : childs) {
-			child.style(textPresentation, merge);
+			child.style(textPresentation, merge, rep);
 		}
 	}
-
-	public void style(final TextPresentation textPresentation, final Color c) {
+	
+	public void style(final TextPresentation textPresentation, final Color c, final Representation rep) {
 		if (!isRoot()) {
 			final StyleRange rs = new StyleRange();
 			rs.start = region.getOffset();
 			rs.length = region.getLength();
 			rs.background = c;
-			if (getCount() == 0L) {
+			if ((rep == Representation.STATES_DISTINCT || rep == Representation.STATES) && !(this instanceof ActionInformationItem)) {
+				rs.background = JFaceResources.getColorRegistry().get(ModuleCoverageInformation.GRAY);
+				rs.borderStyle = SWT.NONE;
+				rs.borderColor = null;
+			} else if (rep != Representation.COST && rep.getValue(this, Grouping.INDIVIDUAL) == 0L) {
 				rs.background = null;
 				rs.borderStyle = SWT.BORDER_SOLID;
 				rs.borderColor = JFaceResources.getColorRegistry().get(ModuleCoverageInformation.RED);
@@ -328,28 +335,36 @@ public class CoverageInformationItem implements IModuleLocatable
 			textPresentation.replaceStyleRange(addStlye(rs));
 		}
 		for (CoverageInformationItem child : childs) {
-			child.style(textPresentation, c);
+			child.style(textPresentation, c, rep);
 		}
 	}
 
-	Color colorItem(TreeSet<Long> counts) {
-		int hue = ModuleCoverageInformation.getHue(getCount(), counts);
+	Color colorItem(TreeSet<Long> counts, final Representation rep) {
+		int hue = ModuleCoverageInformation.getHue(rep.getValue(this, Grouping.INDIVIDUAL), counts);
 		String key = Integer.toString(hue);
 		if (!JFaceResources.getColorRegistry().hasValueFor(key)) {
 			JFaceResources.getColorRegistry().put(key, new RGB(hue, .25f, 1f));
 		}
 		final Color color = JFaceResources.getColorRegistry().get(key);
-		setColor(color, color);
+
+		Color[] colors = new Color[2];
+		colors[Grouping.INDIVIDUAL.ordinal()] = color;
+		colors[Grouping.COMBINED.ordinal()] = color;
+		representations.put(rep, colors);
 		
 		if (hasSiblings()) {
 			// Aggregated color (might be identical to color).
-			hue = ModuleCoverageInformation.getHue(getCountIncludingSiblings(), counts);
+			hue = ModuleCoverageInformation.getHue(rep.getValue(this, Grouping.COMBINED), counts);
 			key = Integer.toString(hue);
 			if (!JFaceResources.getColorRegistry().hasValueFor(key)) {
 				JFaceResources.getColorRegistry().put(key, new RGB(hue, .25f, 1f));
 			}
 			Color aggregate = JFaceResources.getColorRegistry().get(key);
-			setColor(color, aggregate);
+
+			colors = new Color[2];
+			colors[Grouping.INDIVIDUAL.ordinal()] = color;
+			colors[Grouping.COMBINED.ordinal()] = aggregate;
+			representations.put(rep, colors);
 			return aggregate;
 		}
 		
@@ -368,15 +383,15 @@ public class CoverageInformationItem implements IModuleLocatable
 		return this.location != null;
 	}
 
-	public Set<LegendItem> getLegend() {
-		return getLegend(new TreeSet<LegendItem>());
+	public TreeSet<CoverageInformationItem> getLegend(final Representation rep) {
+		return collectActive(new TreeSet<CoverageInformationItem>(rep.getComparator(Grouping.INDIVIDUAL)));
 	}
 	
-	private Set<LegendItem> getLegend(final Set<LegendItem> legend) {
-		legend.add(new LegendItem(getCount(), color, getRegion(), getLocation()));
+	protected TreeSet<CoverageInformationItem> collectActive(final TreeSet<CoverageInformationItem> legend) {
+		legend.add(this);
 		for (CoverageInformationItem child : childs) {
 			if (child.isActive()) {
-				child.getLegend(legend);
+				child.collectActive(legend);
 			}
 		}
 		return legend;

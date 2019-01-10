@@ -27,6 +27,7 @@ package org.lamport.tla.toolbox.tool.tlc.output.data;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
@@ -40,8 +41,8 @@ import java.util.stream.Collectors;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.jface.resource.JFaceResources;
-import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.RGB;
+import org.lamport.tla.toolbox.tool.tlc.output.data.Representation.Grouping;
 
 import tla2sany.st.Location;
 
@@ -106,7 +107,7 @@ public class ModuleCoverageInformation {
 	
 	private final TreeMap<Integer, List<CoverageInformationItem>> offset2cii = new TreeMap<>();
 	
-	private final Set<LegendItem> rootLegend = new TreeSet<>();
+	private final Map<Representation, TreeSet<CoverageInformationItem>> rootLegends = new HashMap<>();
 
 	private final IFile file;
 
@@ -132,35 +133,51 @@ public class ModuleCoverageInformation {
 			item.setSiblings(loc2cci.get(item.getModuleLocation()));
 		}
 		
-		// Calculate the range of values.
-		final TreeSet<Long> ciiCounts = new TreeSet<>();
-		final TreeSet<Long> aiiCounts = new TreeSet<>();
-		for (final CoverageInformationItem item : subset) {
-			if (item instanceof ActionInformationItem) {
-				aiiCounts.add(((ActionInformationItem) item).getUnseen());
-			} else {
-				ciiCounts.add(item.getCount());
-				ciiCounts.add(item.getCountIncludingSiblings());
-			}
+		// Initialize legends for each representation.
+		for (Representation rep : Representation.values()) {
+			this.rootLegends.put(rep, new TreeSet<CoverageInformationItem>(rep.getComparator(Grouping.COMBINED)));
 		}
-
-		// Sum of all distinct states.
-		final long sum = subset.stream().filter(cii -> cii instanceof ActionInformationItem).map(ActionInformationItem.class::cast)
-				.mapToLong(ActionInformationItem::getUnseen).sum();
 		
-		// Color each item according to the previously calculated ranges.
-		for (final CoverageInformationItem item : subset) {
-			if (item instanceof ActionInformationItem) {
-				item.colorItem(aiiCounts);
+		// Calculate the range of values for the ActionInformationItems.
+		final List<ActionInformationItem> actionSubset = subset.stream()
+				.filter(cii -> cii instanceof ActionInformationItem).map(ActionInformationItem.class::cast)
+				.collect(Collectors.toList());
+		
+		// Sum of all distinct states.
+		final long sum = actionSubset.stream().mapToLong(ActionInformationItem::getUnseen).sum();
+
+		final TreeSet<Long> aiiCounts = new TreeSet<>();
+		actionSubset.forEach(a -> {
+			aiiCounts.add(a.getUnseen());
+			a.setSum(sum);
+		});
+		// With aiiCounts collected, update all actions.
+		actionSubset.forEach(a -> {
+			a.colorItem(aiiCounts);
+			rootLegends.get(Representation.STATES).add(a);
+			rootLegends.get(Representation.STATES_DISTINCT).add(a);
+		});
+		
+		final List<Representation> values = Arrays.asList(Representation.values()).stream()
+				.filter(rep -> rep != Representation.STATES && rep != Representation.STATES_DISTINCT)
+				.collect(Collectors.toList());
+
+		// Style the CIIs for each representation.
+		subset.removeAll(actionSubset);
+		for (Representation rep : values) {
+			final TreeSet<Long> ciiCounts = new TreeSet<>();
+			
+			for (final CoverageInformationItem item : subset) {
+				ciiCounts.add(rep.getValue(item, Grouping.INDIVIDUAL));
+				ciiCounts.add(rep.getValue(item, Grouping.COMBINED));
+			}
+			// Color each item according to the previously calculated ranges.
+			final Set<CoverageInformationItem> set = rootLegends.get(rep);
+			for (final CoverageInformationItem item : subset) {
+				// Calculate colors for CII.
+				item.colorItem(ciiCounts, rep);
 				
-				// While looping, update total sum.
-				((ActionInformationItem) item).setSum(sum);
-			} else {
-				// Calculate colors just for CII because the values of ACII are unrelated.
-				final Color c = item.colorItem(ciiCounts);
-				
-				// While looping, create a legend item.
-				rootLegend.add(new LegendItem(item.getCountIncludingSiblings(), c, item.getRegion()));
+				set.add(item);
 			}
 		}
 	}
@@ -230,7 +247,7 @@ public class ModuleCoverageInformation {
 		return hover.replaceAll("^\n", "").replaceAll("\n$", "");
 	}
 
-	public Set<LegendItem> getLegend() {
-		return rootLegend;
+	public TreeSet<CoverageInformationItem> getLegend(final Representation rep) {
+		return rootLegends.get(rep);
 	}
 }

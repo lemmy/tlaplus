@@ -80,7 +80,6 @@ public class ActionInformationItem extends CoverageInformationItem {
 	
 	private final Relation relation;
 	private final String name;
-	private long unseen = 0L;
 	private long sum;
 	private boolean isNotInFile = false;
 
@@ -97,16 +96,14 @@ public class ActionInformationItem extends CoverageInformationItem {
 	}
 
 	public ActionInformationItem(final String name, Location loc, final String modelName, long generated, long unseen) {
-		super(loc, generated, modelName, actionLayer);
+		super(loc, generated, unseen, modelName, actionLayer);
 		this.name = name;
-		this.unseen = unseen;
 		this.relation = Relation.NEXT;
 	}
 
 	ActionInformationItem(ActionInformationItem item) {
-		super(item.location, item.count, item.modelName, item.layer);
+		super(item.location, item.count, item.cost, item.modelName, item.layer);
 		this.name = item.name;
-		this.unseen = item.unseen;
 		this.relation = item.relation;
 	}
 
@@ -119,7 +116,7 @@ public class ActionInformationItem extends CoverageInformationItem {
 	}
 
 	public long getUnseen() {
-		return unseen;
+		return getCost();
 	}
 	
 	public CoverageInformationItem setIsNotInFile() {
@@ -143,49 +140,59 @@ public class ActionInformationItem extends CoverageInformationItem {
 	}
 	
 	@Override
-	public void style(TextPresentation textPresentation) {
+	public void style(TextPresentation textPresentation, final Representation rep) {
 		if (relation == Relation.PROP) {
 			return;
 		} else if (isNotInFile) {
 			// Skip styling this item but style its children.
 			for (CoverageInformationItem child : getChildren()) {
-				child.style(textPresentation);
+				child.style(textPresentation, rep);
 			}
 			return;
 		}
-		super.style(textPresentation);
+		super.style(textPresentation, rep);
 	}
 	
 	@Override
-	protected void style(final TextPresentation textPresentation, boolean merge) {
+	protected void style(final TextPresentation textPresentation, boolean merge, final Representation rep) {
 		if (relation == Relation.PROP) {
 			return;
 		} else if (isNotInFile) {
 			// Skip styling this item but style its children.
 			for (CoverageInformationItem child : getChildren()) {
-				child.style(textPresentation, merge);
+				child.style(textPresentation, merge, rep);
 			}
 			return;
 		}
-		super.style(textPresentation, merge);
+		super.style(textPresentation, merge, rep);
 	}
 
 	@Override
-	public void style(final TextPresentation textPresentation, final Color c) {
+	public void style(final TextPresentation textPresentation, final Color c, final Representation rep) {
 		// Do not unstyle AII when specific CostModel tree gets selected.
 		for (CoverageInformationItem child : getChildren()) {
-			child.style(textPresentation, c);
+			child.style(textPresentation, c, rep);
 		}
 	}
 
 	@Override
+	Color colorItem(TreeSet<Long> counts, final Representation ignored) {
+		return colorItem(counts);
+	}
+
 	Color colorItem(TreeSet<Long> counts) {
 		final int hue = ModuleCoverageInformation.getHue(getUnseen(), counts);
 		final String key = Integer.toString(hue);
 		if (!JFaceResources.getColorRegistry().hasValueFor(key)) {
 			JFaceResources.getColorRegistry().put(key, new RGB(hue, .25f, 1f));
 		}
-		setColor(JFaceResources.getColorRegistry().get(key), null);
+		
+		for (Representation rep : Representation.values()) {
+			// always the same representation.
+			representations.put(rep, new Color[] { JFaceResources.getColorRegistry().get(key),
+					JFaceResources.getColorRegistry().get(key) });
+		}
+		
 		return JFaceResources.getColorRegistry().get(key);
 	}
 
@@ -195,15 +202,15 @@ public class ActionInformationItem extends CoverageInformationItem {
 		} else if (relation == Relation.NEXT) {
 			if (getCount() == 0) {
 				return String.format("Action %s:\n- No states generated\n", name);
-			} else if (unseen == 0) {
+			} else if (getUnseen() == 0) {
 				return String.format("Action %s:\n- %,d state%s generated but none distinct\n", name, getCount(),
 						getCount() == 1 ? "" : "s");
 			} else {
-				final double ratio = (unseen * 1d / sum) * 100d;
-				final double overhead = (unseen * 1d / getCount()) * 100d;
+				final double ratio = (getUnseen() * 1d / sum) * 100d;
+				final double overhead = (getUnseen() * 1d / getCount()) * 100d;
 				return String.format(
 						"Action %s:\n- %,d state%s generated with %,d distinct (%.2f%%)\n- Contributes %.2f%% to total number of distinct states across all actions\n",
-						name, getCount(), getCount() == 1 ? "" : "s", unseen, overhead, ratio);
+						name, getCount(), getCount() == 1 ? "" : "s", getUnseen(), overhead, ratio);
 			}
 		} else if (relation == Relation.INIT) {
 			return String.format("Action %s (Init):\n- %,d state%s generated", name, getCount(),

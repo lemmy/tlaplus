@@ -27,13 +27,12 @@ package org.lamport.tla.toolbox.tool.tlc.ui.editor;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -53,6 +52,11 @@ import org.eclipse.jface.text.TextPresentation;
 import org.eclipse.jface.text.TextViewer;
 import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.jface.text.source.IVerticalRuler;
+import org.eclipse.jface.viewers.ArrayContentProvider;
+import org.eclipse.jface.viewers.ComboViewer;
+import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.LabelProvider;
+import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.MouseAdapter;
@@ -76,7 +80,8 @@ import org.lamport.tla.toolbox.editor.basic.TLAEditorReadOnly;
 import org.lamport.tla.toolbox.editor.basic.TLASourceViewerConfiguration;
 import org.lamport.tla.toolbox.tool.tlc.output.data.CoverageInformationItem;
 import org.lamport.tla.toolbox.tool.tlc.output.data.ModuleCoverageInformation;
-import org.lamport.tla.toolbox.tool.tlc.output.data.LegendItem;
+import org.lamport.tla.toolbox.tool.tlc.output.data.Representation;
+import org.lamport.tla.toolbox.tool.tlc.output.data.Representation.Grouping;
 import org.lamport.tla.toolbox.util.UIHelper;
 
 public class TLACoverageEditor extends TLAEditorReadOnly {
@@ -219,44 +224,68 @@ public class TLACoverageEditor extends TLAEditorReadOnly {
     }
 	
 	private static final DecimalFormat df = new DecimalFormat("0.0E0");
-
-	private static final int ALL = -1;
 	
-	private static final int TERMINATE = -42;
+	private static class Pair {
+		public final int offset;
+		public final Representation rep;
+
+		public Pair(int offset) {
+			this(offset, Representation.INV);
+		}
+
+		public Pair(int offset, Representation rep) {
+			this.offset = offset;
+			this.rep = rep;
+		}
+	}
+
+	private static final Pair ALL = new Pair(-1);
+	
+	private static final Pair TERMINATE = new Pair(-42);
 	
 	public class TLACoveragePainter implements ITextPresentationListener {
 		
+		private ComboViewer viewer;
+		
 		private final TLACoverageEditor editor;
 		
-		private final BlockingQueue<Integer> queue = new ArrayBlockingQueue<>(10);
+		private final BlockingQueue<Pair> queue = new ArrayBlockingQueue<>(10);
 		
-		private final Job annotator = new Job("Coverage Painter") {
+		// Each module editor has a painter (system) job which serializes the
+		// paint/annotation requests. Requests are generated either by opening the
+		// editor, via editor selection changes or legend changes. Requests have
+		// to be serialized because ModuleCoverageInformation and its nested data
+		// structures are not thread-safe. Additional we try to minimize the requests
+		// by skipping redundant requests triggered by rapid mouse clicks.
+		private final Job painter = new Job("Coverage Painter") {
 			@Override
 			protected IStatus run(IProgressMonitor monitor) {
 				while (true) {
-					final int offset = getOffset();
-					if (offset == TERMINATE || monitor.isCanceled()) {
+					final Pair p = getPair();
+					if (TERMINATE.offset == p.offset || monitor.isCanceled()) {
 						return Status.OK_STATUS;
 					} else {
-						monitor.beginTask(String.format("Painting coverage for %s", offset), 1);
+						monitor.beginTask(String.format("Painting coverage for %s", p.offset), 1);
 					}
 					
 					// Do not clear old style ranges before creating new ones as clear removes TLA+ syntax highlighting.
 					//textPresentation.clear(); 
 					
+					final Grouping grouping = ALL.offset == p.offset ? Grouping.COMBINED : Grouping.INDIVIDUAL;
+					
 					// Create new style ranges (and the legend)
-					Set<LegendItem> legend = new HashSet<>(0);
-					if (offset == ALL) {
-						coverage.getRoot().style(textPresentation);
-						legend = coverage.getLegend();
+					TreeSet<CoverageInformationItem> legend = new TreeSet<>();
+					if (grouping == Grouping.COMBINED) {
+						coverage.getRoot().style(textPresentation, p.rep);
+						legend = coverage.getLegend(p.rep);
 					} else {
-						final CoverageInformationItem node = coverage.getNode(offset);
+						final CoverageInformationItem node = coverage.getNode(p.offset);
 						if (node != null) {
 							// Style all unrelated parts gray.
-							coverage.getRoot().style(textPresentation, JFaceResources.getColorRegistry().get(ModuleCoverageInformation.GRAY));
+							coverage.getRoot().style(textPresentation, JFaceResources.getColorRegistry().get(ModuleCoverageInformation.GRAY), p.rep);
 							
-							node.style(textPresentation);
-							legend = node.getLegend();
+							node.style(textPresentation, p.rep);
+							legend = node.getLegend(p.rep);
 						}
 					}
 					
@@ -264,7 +293,7 @@ public class TLACoverageEditor extends TLAEditorReadOnly {
 						return Status.OK_STATUS;
 					}
 					
-					final List<LegendItem> fLegend = new ArrayList<>(legend);
+					final Collection<CoverageInformationItem> fLegend = collapseLegend(legend);
 					UIHelper.runUISync(new Runnable() {
 						@Override
 						public void run() {
@@ -277,7 +306,7 @@ public class TLACoverageEditor extends TLAEditorReadOnly {
 							viewer.getTextWidget().removeListener(SWT.MouseDown, listener);
 
 							viewer.changeTextPresentation(textPresentation, true);
-							updateLegend(fLegend);
+							updateLegend(fLegend, grouping);
 							
 							viewer.getTextWidget().addListener(SWT.MouseDown, listener);
 						}
@@ -287,7 +316,43 @@ public class TLACoverageEditor extends TLAEditorReadOnly {
 				}
 			}
 			
-			private int getOffset() {
+			private Collection<CoverageInformationItem> collapseLegend(final TreeSet<CoverageInformationItem> legend) {
+				final double numLabel = resizeListener.getWidth() / 47d; // 47 pixel per label seems to fit most text and still looks pleasant.
+				if (legend.size() <= (int) Math.ceil(numLabel)) {
+					// can fit all elements, nothing to do.
+					return legend;
+				}
+				
+				// TODO Select a subset of legend of size numLabels s.t. the distance between
+				// any two elements in subset is maximized. The code below approximates the
+				// problem by simply constructing the subset where the distance is the position
+				// in the set not the actual value. In other words, the set of distances of all
+				// adjacent elements in the legend will be non-uniform.
+				
+				// Cannot fit more than N labels into the legend. Thus, only take N elements
+				// out of legend (even distribution).
+				final int nth = (int) Math.ceil(legend.size() / numLabel);
+
+				// Add lowest/first CCI.
+				final List<CoverageInformationItem> result = new ArrayList<>((int)Math.ceil(numLabel));
+				result.add(legend.first());
+
+				// Pick nth - 2 CCIs in-between.
+				int i = 1;
+				final Iterator<CoverageInformationItem> iterator = legend.iterator();
+				while (iterator.hasNext()) {
+					final CoverageInformationItem cii = iterator.next();
+					if (i++ % nth == 0) {
+						result.add(cii);
+					}
+				}
+				
+				// Add highest/last CCI from legend.
+				result.add(legend.last());
+				return result;
+			}
+
+			private Pair getPair() {
 				try {
 					return queue.take();
 				} catch (InterruptedException notExpectedException) {
@@ -296,11 +361,12 @@ public class TLACoverageEditor extends TLAEditorReadOnly {
 				}
 			}
 
-			private void updateLegend(List<LegendItem> legend) {
+			private void updateLegend(Collection<CoverageInformationItem> legend, final Representation.Grouping grouping) {
 				final Composite parent = heatMapComposite.getParent();
 				if (legend.isEmpty()) {
 					heatMapComposite.setVisible(false);
 				} else {
+					final Representation currentRepresentation = getActiveRepresentation();
 					heatMapComposite.dispose();
 					
 					heatMapComposite = new Composite(parent, SWT.BORDER);
@@ -311,29 +377,30 @@ public class TLACoverageEditor extends TLAEditorReadOnly {
 					// map item next to each other.
 					heatMapComposite.setLayout(new FillLayout(SWT.HORIZONTAL));
 					
-					Label label = new Label(heatMapComposite, SWT.BORDER);
-					label.setText("Invocations:");
-					
-					// Cannot fit more than N labels into the legend. Thus, only take N elements
-					// out of legend (even distribution).
-					final int numLabel = resizeListener.getWidth() / 47; // 47 pixel per label seems to fit most text and still looks pleasant.
-					if (legend.size() > numLabel) {
-						final int nth = legend.size() / numLabel;
-						legend = IntStream.range(0, legend.size()).filter(n -> n % nth == 0).mapToObj(legend::get)
-								.collect(Collectors.toList());
-					}
-					
-					for (LegendItem cii : legend) {
-						label = new Label(heatMapComposite, SWT.BORDER);
+					// Create the actual SWT labels for the elements in legend. 
+					// TODO Rendering the text vertically would save horizontal screen estate but is
+					// unfortunately not easily possible with SWT.
+					for (CoverageInformationItem cii : legend) {
+						final Label label = new Label(heatMapComposite, SWT.BORDER);
 						label.setAlignment(SWT.CENTER);
-						if (cii.getValue() > 1000) {
-							// Format numbers > 1000 in scientific notation.
-							label.setText(df.format(cii.getValue()));
+						
+						// A label has a background color and a text indicating the actual value
+						// (cost/invocations/...).
+						label.setBackground(currentRepresentation.getColor(cii, grouping));
+
+						final long value = currentRepresentation.getValue(cii, grouping);
+						// Format numbers > 1000 in scientific notation.
+						if (value > 1000) {
+							label.setText(df.format(value));
 						} else {
-							label.setText(String.format("%,d", cii.getValue()));
+							label.setText(String.format("%,d", value));
 						}
-						label.setToolTipText(cii.getLocation());
-						label.setBackground(cii.getColor());
+						
+						// Indicate the location to where the mouse click takes the user.
+						label.setToolTipText(String.format(currentRepresentation.getToolTipText(), value, cii.getLocation()));
+						
+						// The mouse listener takes the user to the related
+						// region in the module.
 						label.addMouseListener(new MouseAdapter() {
 							@Override
 							public void mouseDown(final MouseEvent e) {
@@ -342,18 +409,50 @@ public class TLACoverageEditor extends TLAEditorReadOnly {
 							}
 						});
 					}
+
+					// Show a drop-down list (combo) to let the user select a different representation. 
+					viewer = new ComboViewer(heatMapComposite, SWT.DROP_DOWN | SWT.READ_ONLY | SWT.BORDER | SWT.WRAP);
+				    viewer.setContentProvider(ArrayContentProvider.getInstance());
+				    viewer.setLabelProvider(new LabelProvider() {
+				        @Override
+				        public String getText(Object element) {
+				            if (element instanceof Representation) {
+				            	Representation current = (Representation) element;
+				            	return current.toString();
+				            }
+				            return super.getText(element);
+				        }
+				    });
+				    viewer.setInput(Representation.values());
+				    viewer.setSelection(new StructuredSelection(currentRepresentation));
+				    viewer.addSelectionChangedListener(event -> {
+					    final IStructuredSelection selection = (IStructuredSelection) event.getSelection();
+					    final Representation rep = (Representation)selection.getFirstElement();
+						final int offset = JFaceTextUtil.getOffsetForCursorLocation(editor.getViewer());
+						queue.offer(new Pair(offset, rep));
+					});
 				}
 				parent.layout();
 			}
 		};
+
+		private Representation getActiveRepresentation() {
+			if (viewer != null) {
+				final IStructuredSelection structuredSelection = viewer.getStructuredSelection();
+				return (Representation) structuredSelection.getFirstElement();
+			}
+			return Representation.INV;
+		}
+		
 		private final Listener listener = new Listener() {
 			@Override
 			public void handleEvent(Event event) {
+				final Representation activeRepresentation = getActiveRepresentation();
 				final int offset = JFaceTextUtil.getOffsetForCursorLocation(editor.getViewer());
-				Integer peek = queue.peek();
-				if (peek == null || peek != offset) {
-					//System.out.println(String.format("Scheduling offset %s after %s", offset, peek));
-					queue.offer(offset);
+				final Pair peek = queue.peek();
+				if (peek == null || peek.offset != offset || peek.rep != activeRepresentation) {
+//					System.out.println(String.format("Scheduling offset %s, %s after %s", offset, activeRepresentation, peek));
+					queue.offer(new Pair(offset, activeRepresentation));
 				} else {
 					//System.out.println("Skipping redundant offset " + offset);
 				}
@@ -365,9 +464,9 @@ public class TLACoverageEditor extends TLAEditorReadOnly {
 		public TLACoveragePainter(TLACoverageEditor editor) {
 			this.editor = editor;
 			
-			this.annotator.setPriority(Job.LONG);
-			this.annotator.setRule(null);
-			this.annotator.setSystem(true);
+			this.painter.setPriority(Job.LONG);
+			this.painter.setRule(null);
+			this.painter.setSystem(true);
 		}
 
 		@Override
@@ -388,7 +487,7 @@ public class TLACoverageEditor extends TLAEditorReadOnly {
 
 					// Color the editor with coverage information initially.
 					queue.add(ALL);
-					annotator.schedule();
+					painter.schedule();
 				}
 				
 				@Override
