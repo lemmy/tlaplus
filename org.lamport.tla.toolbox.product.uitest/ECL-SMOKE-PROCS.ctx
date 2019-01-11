@@ -6,7 +6,7 @@ Element-Type: context
 Element-Version: 2.0
 Id: _DSUP8P5YEeilFekyyVb9lA
 Runtime-Version: 2.3.0.201806262310
-Save-Time: 12/18/18 12:43 PM
+Save-Time: 1/9/19 2:18 PM
 
 ------=_.ecl.context-718f04b4-ed39-33e3-af62-0995e4561998
 Content-Type: text/ecl
@@ -16,7 +16,8 @@ Entry-Name: .ecl.context
  proc "OpenTLACreateNew"
  {
 get-menu -path "File/Open Spec/Add New Spec..." | click
-get-window -class WizardDialog | get-editbox -after [get-label "Root-module file:"] | set-text [concat "${rnd.tmp.dir}" "\\" $TLA-File]
+//get-window -class WizardDialog | get-editbox -after [get-label "Root-module file:"] | set-text [concat "${rnd.tmp.dir}" "\\" $TLA-File]
+get-window -class WizardDialog | get-editbox -after [get-label "Root-module file:"] | set-text [concat "${rnd.tmp.dir}" [get-java-property "file.separator"] $TLA-File]
 //$TLA-LongName
     
 with [get-window -class WizardDialog] {
@@ -56,6 +57,8 @@ get-view "Spec Explorer" | get-tree | get-property itemCount | equals 0 | verify
 //Invalid Spec
 Proc "CreateInvalidSpec"
 {
+try -command {
+
 get-menu -path "File/Open Spec/Add New Spec..." | click
 get-window -class WizardDialog | get-editbox -after [get-label "New TLA+ Specification"] | get-property text 
     | equals "Creates a new TLA+ specification\n"
@@ -66,7 +69,10 @@ with [get-window -class WizardDialog] {
         | equals "Root file name should have a file-system path and extension .tla" | verify-true
     get-button Finish | get-property enablement | equals false | verify-true
 }
+} -finally
+{
 get-window -class WizardDialog | get-button Cancel | click
+}
 }
 
 //Create new spec
