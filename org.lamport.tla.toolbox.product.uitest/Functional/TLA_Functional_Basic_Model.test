@@ -6,7 +6,7 @@ Element-Version: 3.0
 External-Reference: 
 Id: _44K9cAJWEemDc-4PKyNT9w
 Runtime-Version: 2.3.0.201806262310
-Save-Time: 1/15/19 11:17 AM
+Save-Time: 1/17/19 3:54 PM
 Testcase-Type: ecl
 
 ------=_.content-0a7243a0-75d3-3d5f-9791-539de0e5b7ac
@@ -27,9 +27,9 @@ with [get-editor $TLA-File | get-text-viewer] {
     type-text "Next == x' = x * 1"
      key-type "M1+s"
     }
-    wait -ms 500
+    wait -ms 200
 
-    get-menu -path "TLC Model Checker/Run model" | click
+get-menu -path "TLC Model Checker/Run model" | click
 get-menu -path "TLC Model Checker/New Model..." | click
 get-window "New model..." | get-label "Please input the name of the model to create" | get-property caption 
     | equals "Please input the name of the model to create" | verify-true
@@ -39,23 +39,13 @@ get-editor "Model_1" | get-button "Runs TLC on the model." -index 1 | click
 
 wait-run    
 
-with [get-editor "Model_1"] {
-    get-label "Model Checking Results" | get-property caption | equals "Model Checking Results" | verify-true
-    get-section General | get-editbox -after [get-label "TLC mode:"] | get-property text 
-        | equals "Breadth-first search" | verify-true
-    get-section Statistics | get-table -after [get-label "Coverage at"] | get-item -path new | get-property caption 
-        | equals new | verify-true
-}
-with [get-editor "Model_1"] {
-    get-section "User Output" | click
-    get-section "Progress Output" | click
-}
-set-dialog-result File
-get-editor "Model_1" 
-    | get-button "Loads an existing output (e.g. from a standlone TLC run that corresponds to this model). Output has to contain tool markers. Run TLC with \"-tool\" command line parameter." 
-    | click
 
-
+get-editor "Model_1" | get-section General | get-link "No errors" | get-property caption | equals "No errors" 
+    | verify-true
+with [get-editor "Model_1" | get-tab-folder] {
+    get-tab-item "Model Overview" | click
+    get-tab-item "Advanced Options" | click
+    get-tab-item "Model Checking Results" | click}
 } -finally
 //Delete Spec
 {DeleteSpecNew}
