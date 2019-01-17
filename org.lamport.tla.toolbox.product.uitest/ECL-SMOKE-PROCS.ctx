@@ -6,7 +6,7 @@ Element-Type: context
 Element-Version: 2.0
 Id: _DSUP8P5YEeilFekyyVb9lA
 Runtime-Version: 2.3.0.201806262310
-Save-Time: 1/9/19 2:18 PM
+Save-Time: 1/17/19 10:50 AM
 
 ------=_.ecl.context-718f04b4-ed39-33e3-af62-0995e4561998
 Content-Type: text/ecl
@@ -15,44 +15,82 @@ Entry-Name: .ecl.context
 //Create new spec
  proc "OpenTLACreateNew"
  {
+	try -command
+	{
+	with [get-view "Spec Explorer" | get-tree]
+ 	{
+ 	collapse-all
+ 	get-items | foreach
+ 	{
+  	let [val item -input]
+  	{
+    format "project %s" [$item | get-property "caption" -raw] | log
+ 	get-view "Spec Explorer" | get-tree | select $item | get-menu -path Delete | click  
+  	get-window "Delete specification?" | get-button Yes | get-property caption | equals "&Yes" | verify-true
+	get-window "Delete specification?" | get-button Yes | click
+	}
+	}
+	}
+	}
+-finally
+{
 get-menu -path "File/Open Spec/Add New Spec..." | click
-//get-window -class WizardDialog | get-editbox -after [get-label "Root-module file:"] | set-text [concat "${rnd.tmp.dir}" "\\" $TLA-File]
 get-window -class WizardDialog | get-editbox -after [get-label "Root-module file:"] | set-text [concat "${rnd.tmp.dir}" [get-java-property "file.separator"] $TLA-File]
-//$TLA-LongName
     
-with [get-window -class WizardDialog] {
+with [get-window -class WizardDialog]
+ {
     get-label "New TLA+ Specification" | get-property caption | equals "New TLA+ Specification" | verify-true
-    with [get-button Finish] {
+    with [get-button Finish]
+ {
         get-property enablement | equals true | verify-true
         get-property caption | equals "&Finish" | verify-true
-    }
+ }
+ }
+ 	 get-window -class WizardDialog | get-button Finish | click
+  }
+  }
+
+
+proc "wait-run"
+{
+//verify that after you run the model that it waits until it completes
+try -times 50 -delay 2000 -command {
+    with [get-button "Runs TLC on the model." -index 1] {
+        get-property enablement | equals true | verify-true
+        get-property tooltip | equals "Runs TLC on the model." | verify-true
 }
-get-window -class WizardDialog | get-button Finish | click
 }
+}
+
+
 
 
 //Delete New Spec
 Proc "DeleteSpecNew"
 {
-get-view "Spec Explorer" | get-tree | select $TLA-TREE-NAME | get-menu -path Delete | click
-
-get-window "Delete specification?" | get-button Yes | get-property caption | equals "&Yes" | verify-true
+get-menu -path "File/Parse Spec" | click
+get-menu -path "File/Parse Module" | click
+ 
+with [get-view "Spec Explorer" | get-tree]
+ {
+ collapse-all
+ get-items | foreach {
+  let [val item -input] {
+      format "project %s" [$item | get-property "caption" -raw] | log
+ get-view "Spec Explorer" | get-tree | select $item | get-menu -path Delete | click  
+  get-window "Delete specification?" | get-button Yes | get-property caption | equals "&Yes" | verify-true
 get-window "Delete specification?" | get-button Yes | click
-get-view "Spec Explorer" | get-tree | get-property itemCount | equals 0 | verify-true
+
+}
+      
+    }
+  }
 }
 
 
 
-//Delete New Spec
-Proc "DeleteSpecNewLong"
-{
-get-view "Spec Explorer" | get-tree | select $TLA-TREE-NAME-LONG | get-menu -path Delete | click
 
-get-window "Delete specification?" | get-button Yes | get-property caption | equals "&Yes" | verify-true
-get-window "Delete specification?" | get-button Yes | click
-get-view "Spec Explorer" | get-tree | get-property itemCount | equals 0 | verify-true
 
-}
 
 //Invalid Spec
 Proc "CreateInvalidSpec"
@@ -79,8 +117,9 @@ get-window -class WizardDialog | get-button Cancel | click
  proc "OpenTLACreateNewLongName"
  {
 get-menu -path "File/Open Spec/Add New Spec..." | click
-get-window -class WizardDialog | get-editbox -after [get-label "Root-module file:"] | set-text [concat "${rnd.tmp.dir}" "\\" $TLA-File-Long]
-
+//get-window -class WizardDialog | get-editbox -after [get-label "Root-module file:"] | set-text [concat "${rnd.tmp.dir}" "\\" $TLA-File-Long]
+get-window -class WizardDialog | get-editbox -after [get-label "Root-module file:"] | set-text [concat "${rnd.tmp.dir}" [get-java-property "file.separator"] $TLA-File-Long]
+                                 //get-by-os 
 get-window -class WizardDialog | get-button Finish | get-property grayed | equals false | verify-true
 get-window -class WizardDialog | get-button Finish | click
 get-view "Spec Explorer" | get-tree | get-property itemCount | equals 1 | verify-true
@@ -94,7 +133,7 @@ get-menu -path "TLC Model Checker/New Model..." | click
 get-window "New model..." | get-label "Please input the name of the model to create" | get-property caption 
     | equals "Please input the name of the model to create" | verify-true
 get-window "New model..." | get-button OK | click
-wait -ms 1500
+wait -ms 1000
 }}
 
 

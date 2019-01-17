@@ -6,7 +6,7 @@ Element-Version: 3.0
 External-Reference: 
 Id: _1OLRMAlXEem_pLt0eVfQIQ
 Runtime-Version: 2.3.0.201806262310
-Save-Time: 1/9/19 12:52 PM
+Save-Time: 1/14/19 6:13 PM
 Testcase-Type: ecl
 
 ------=_.description-216f885c-d591-38ce-8ea2-e4f8cb4d6ffa
@@ -69,11 +69,9 @@ with [get-editor "Model_1" | get-section "How to run?"] {
     get-editbox -after [get-label "Number of worker threads:"] | set-text 2
     get-link "Run TLC" | click
 }
-get-window "TLC run for Model_1" | get-label "Running TLC model checker" | get-property caption 
-    | equals "Running TLC model checker" | verify-true
-    
-wait -ms 35000    
-    
+
+
+wait-run    
     
 get-editor "Model_1" | get-section General | get-link "1 Error" | get-property caption | equals "1 Error" | verify-true
 with [get-view "TLC Errors"] {

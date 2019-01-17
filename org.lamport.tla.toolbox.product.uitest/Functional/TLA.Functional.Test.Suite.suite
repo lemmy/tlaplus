@@ -5,7 +5,7 @@ Element-Type: testsuite
 Element-Version: 2.0
 Id: _XtCd4APNEemtrbArmQOOJA
 Runtime-Version: 2.3.0.201806262310
-Save-Time: 1/9/19 4:07 PM
+Save-Time: 1/11/19 1:36 PM
 
 ------=_testcase-items-62c497da-4241-31f4-811a-6b453a3ecff8
 Content-Type: text/testcase
@@ -34,5 +34,15 @@ _8o7w0APsEemwBd2liJ-qvA	// kind: 'test' name: 'TLA.Functional.Run.Details' path:
 _Lbbs8AMKEemtrbArmQOOJA	// kind: 'test' name: 'TLA.Functional.Spec.Properties' path: 'TLA_Functional_Spec_Properties.test'
 _6Vm88APkEemwBd2liJ-qvA	// kind: 'test' name: 'TLA.Functional.Spec.Properties.Valid' path: 'TLA_Functional_Spec_Properties_Valid.test'
 _g-dKoAPoEemwBd2liJ-qvA	// kind: 'test' name: 'TLA.Functional.Temporal.Formula' path: 'TLA.Functional.Temporal.Formula.test'
+_TZC_4BU2EemG79v6PBILBA	// kind: 'test' name: 'TLA.Functional.Action.Constraint' path: 'TLA_Functional_Action_Constraint.test'
+_ax464BUkEemG79v6PBILBA	// kind: 'test' name: 'TLA.Functional.Check.Model.OnError' path: 'TLA_Functional_Check_Model_OnError.test'
+_gOLvABUlEemG79v6PBILBA	// kind: 'test' name: 'TLA.Functional.Clear.Error.Temporal' path: 'TLA_Functional_Clear_Error_Temporal.test'
+_1MkFEBUzEemG79v6PBILBA	// kind: 'test' name: 'TLA.Functional.Definition.Override' path: 'TLA_Functional_Definition_Override.test'
+_Gvi30BUtEemG79v6PBILBA	// kind: 'test' name: 'TLA.Functional.Distributed.Mode.Options' path: 'TLA_Functional_Distributed_Mode_Options.test'
+_7RvKABUnEemG79v6PBILBA	// kind: 'test' name: 'TLA.Functional.Invariant .Formula' path: 'TLA_Functional_Invariant _Formula.test'
+_CTEKoBUbEemG79v6PBILBA	// kind: 'test' name: 'TLA.Functional.Links' path: 'TLA_Functional_Links.test'
+_EdNeQBUsEemG79v6PBILBA	// kind: 'test' name: 'TLA.Functional.Property.Formula' path: 'TLA_Functional_Property_Formula.test'
+_HJaIUBU4EemG79v6PBILBA	// kind: 'test' name: 'TLA.Functional.TLA.Options.Defaults' path: 'TLA_Functional_TLA_Options_Defaults.test'
+_s4DEYBXnEemrGZBXFuwIoA	// kind: 'test' name: 'TLA.Functional.Model.Results.Defaults' path: 'TLA_Functional_Model_Results_Defaults.test'
 
 ------=_testcase-items-62c497da-4241-31f4-811a-6b453a3ecff8--

@@ -6,7 +6,7 @@ Element-Version: 3.0
 External-Reference: 
 Id: _I-Xj0APqEemwBd2liJ-qvA
 Runtime-Version: 2.3.0.201806262310
-Save-Time: 1/9/19 1:59 PM
+Save-Time: 1/14/19 6:33 PM
 Testcase-Type: ecl
 
 ------=_.description-216f885c-d591-38ce-8ea2-e4f8cb4d6ffa
@@ -46,9 +46,10 @@ get-window "New model..." | get-label "Please input the name of the model to cre
     | equals "Please input the name of the model to create" | verify-true
 get-window "New model..." | get-button OK | click
 get-editor "Model_1" | get-button "Runs TLC on the model." -index 1 | click
-	wait -ms 4500
-get-window "TLC run for Model_1" | get-button Cancel | click
-	wait -ms 18500
+	wait -ms 1000
+//TODO
+get-editor "Model_1" | get-button "Stops the current TLC model checker run." -index 1 | click
+wait-run    
 	
 get-editor "Model_1" | get-label "Model Checking Results" | get-property caption | equals "Model Checking Results" 
     | verify-true
@@ -62,5 +63,4 @@ get-view Console | get-text-viewer | get-property text | equals "" | verify-true
 } -finally
 //Delete Spec
 {DeleteSpecNew}
-
 ------=_.content-0a7243a0-75d3-3d5f-9791-539de0e5b7ac--

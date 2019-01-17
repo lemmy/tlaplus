@@ -6,7 +6,7 @@ Element-Version: 3.0
 External-Reference: 
 Id: _Jm-wcBB2EemUS_ZdBJsvQg
 Runtime-Version: 2.3.0.201806262310
-Save-Time: 1/9/19 12:55 PM
+Save-Time: 1/14/19 3:40 PM
 Testcase-Type: ecl
 
 ------=_.description-216f885c-d591-38ce-8ea2-e4f8cb4d6ffa
@@ -79,7 +79,7 @@ with [get-editor "Model_1"] {
     get-button "Checks the model for errors but does not run TLC on it." -index 1 | click
 }
 
-wait -ms 5000
+wait -ms 1000
 
 get-editor "Model_1" | get-section "How to run?" | get-button "Recover from checkpoint" | get-property selected 
     | equals false | verify-true
@@ -88,37 +88,25 @@ with [get-editor "Model_1"] {
         get-tab-item "Advanced Options" | click
         get-tab-item "Model Checking Results" | click
     }
-    get-button "Runs TLC on the model." -index 1 | click
+    //get-button "Runs TLC on the model." -index 1 | click
+    get-editor "Model_1" | get-button "Checks the model for errors but does not run TLC on it." -index 1 | click
 }
 
-get-window "TLC run for Model_1" | get-label "Running TLC model checker" | get-property caption 
-    | equals "Running TLC model checker" | verify-true
-    
-    wait -ms 15000
-    
-    
-get-editor "Model_1" | get-section General | get-link "1 Error" | get-property caption | equals "1 Error" | verify-true
-get-view "TLC Errors" | get-text-viewer | get-property text | equals "Invariant x<9 is violated by the initial state:\n"
-    + "x = 11" | verify-true
+
+    wait -ms 1000
+
 with [get-editor "Model_1"] {
     get-tab-folder | get-tab-item "Model Overview" | click
     with [get-section "What to check?" | get-section Invariants] {
         get-table | select "x<9"
         get-button Remove | click
     }
-    get-button "Runs TLC on the model." -index 1 | click
+get-editor "Model_1" | get-button "Checks the model for errors but does not run TLC on it." -index 1 | click
+
 }
 
-get-window "TLC run for Model_1" | get-label "Running TLC model checker" | get-property caption 
-    | equals "Running TLC model checker" | verify-true
-    
-    wait -ms 1000
-get-window "TLC run for Model_1" | get-button Cancel | click
+wait -ms 1000
 
-wait -ms 10000
-
-get-editor "Model_1" | get-link "State space exploration incomplete" | get-property caption 
-    | equals "State space exploration incomplete" | verify-true
 get-editor "Model_1" | get-tab-folder | get-tab-item "Model Overview" | click
 
 } -finally
