@@ -146,6 +146,28 @@
 				<exclude name="**/*##*" />
 			</fileset>
 		</copy>
+		
+        <echo>Building bare jar</echo>
+        
+		<move file="${class.dir}/tlc2/tool/CompilerDirective.class" tofile="${class.dir}/tlc2/tool/CompilerDirective.class.off"/>
+		
+        <delete dir="${class.dir}-bare"/>
+        <mkdir dir="${class.dir}-bare" />
+        <javac includeantruntime="false" destdir="${class.dir}-bare" debug="true" verbose="false" source="1.8" target="1.8">
+                <classpath refid="project.classpath" />
+                <classpath>
+                        <pathelement location="${class.dir}" />
+                        <pathelement location="lib/javax.mail.jar" />
+                </classpath>
+                <src path="${src.dir}-bare"/>
+                <src path="${src.dir}"/>
+                <include name="tlc2/module/**" />
+                <include name="tlc2/tool/impl/**" />
+                <include name="tlc2/value/impl/**" />
+        </javac>
+        
+		<move file="${class.dir}/tlc2/tool/CompilerDirective.class.off" tofile="${class.dir}/tlc2/tool/CompilerDirective.class"/>
+		
 	</target>
 
 	<!-- Compiles AspectJ auxiliary code -->

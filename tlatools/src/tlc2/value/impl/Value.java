@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.io.Serializable;
 
 import tla2sany.semantic.SemanticNode;
-import tlc2.TLCGlobals;
+import tlc2.tool.CompilerDirective;
 import tlc2.tool.FingerprintException;
 import tlc2.tool.coverage.CostModel;
 import tlc2.util.FP64;
@@ -57,7 +57,8 @@ public abstract class Value implements ValueConstants, Serializable, IValue {
 	/**
 	 * @see See note on performance in CostModelCreator.
 	 */
-	protected static final boolean coverage = TLCGlobals.isCoverageEnabled();
+	  protected static final boolean coverage = !CompilerDirective.isVanilla;
+	  
   /**
    * For each kind of value, we introduce a subclass of Value.
    * All the subclasses are given in this value package.

@@ -32,6 +32,7 @@ import tlc2.TLCGlobals;
 import tlc2.output.EC;
 import tlc2.tool.Action;
 import tlc2.tool.BuiltInOPs;
+import tlc2.tool.CompilerDirective;
 import tlc2.tool.Defns;
 import tlc2.tool.TLCState;
 import tlc2.tool.ToolGlobals;
@@ -53,7 +54,7 @@ abstract class Spec implements ValueConstants, ToolGlobals, Serializable
 	/**
 	 * @see See note on performance in CostModelCreator.
 	 */
-	protected static final boolean coverage = TLCGlobals.isCoverageEnabled();
+	protected static final boolean coverage = !CompilerDirective.isVanilla;
 
 	protected static final int toolId = FrontEnd.getToolId();
 	

@@ -5,12 +5,13 @@ package tlc2.tool.impl;
 
 import tla2sany.semantic.SemanticNode;
 import tlc2.TLCGlobals;
+import tlc2.tool.CompilerDirective;
 import tlc2.tool.IActionItemList;
 import tlc2.tool.coverage.CostModel;
 import tlc2.util.Context;
 
 class ActionItemList implements IActionItemList {
-	private static final boolean coverage = TLCGlobals.isCoverageEnabled();
+	private static final boolean coverage = !CompilerDirective.isVanilla;
 	/**
    * We assume that this.pred is null iff the list is empty.
    */
