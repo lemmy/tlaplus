@@ -1,0 +1,21 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: TLA+ Tools Bare
+Bundle-SymbolicName: org.lamport.tlatools.bare
+Bundle-Version: 1.0.0.qualifier
+Bundle-Vendor: Markus Alexander Kuppe
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8
+Bundle-ClassPath: .
+Import-Package: org.osgi.framework,
+ tla2sany,
+ tla2sany.modanalyzer,
+ tla2sany.semantic,
+ tlc2,
+ tlc2.output,
+ tlc2.pprint,
+ tlc2.tool,
+ tlc2.tool.coverage,
+ tlc2.util,
+ tlc2.value,
+ util
+Bundle-Activator: tlc2.tool.impl.ToolImplActivator

@@ -134,6 +134,7 @@
 			<classpath refid="project.classpath" />
 			<classpath>
 				<pathelement location="lib/javax.mail.jar" />
+                 <pathelement location="lib/org.eclipse.concierge-5.1.0.SNAPSHOT-nodebug.jar" />
 			</classpath>
 		</javac>
 
@@ -158,6 +159,7 @@
                 <classpath>
                         <pathelement location="${class.dir}" />
                         <pathelement location="lib/javax.mail.jar" />
+ 	                    <pathelement location="lib/org.eclipse.concierge-5.1.0.SNAPSHOT-nodebug.jar" />
                 </classpath>
                 <src path="${src.dir}-bare"/>
                 <src path="${src.dir}"/>
@@ -167,6 +169,10 @@
         </javac>
         
 		<move file="${class.dir}/tlc2/tool/CompilerDirective.class.off" tofile="${class.dir}/tlc2/tool/CompilerDirective.class"/>
+		
+		<jar destfile="tla2tools-bare.jar" level="9" manifest="${src.dir}-bare/META-INF/MANIFEST.MF">
+			<fileset dir="${class.dir}-bare" includes="**/*"/>
+		</jar>
 		
 	</target>
 
