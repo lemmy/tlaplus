@@ -23,24 +23,24 @@
  * Contributors:
  *   Markus Alexander Kuppe - initial API and implementation
  ******************************************************************************/
+package tlc2.tool.impl;
 
-package tlc2.value;
+import tlc2.module.TLC;
+import tlc2.tool.EvalException;
+import tlc2.value.impl.StdModOpValue;
+import tlc2.value.impl.Value;
 
-import tla2sany.semantic.SemanticNode;
-import tlc2.util.Context;
-import tlc2.value.IFcnParams;
-import tlc2.value.IFcnRcdValue;
+public class TLCGetValue extends StdModOpValue {
 
-public interface IFcnLambdaValue {
+	public TLCGetValue() {
+		super("TLCGet");
+	}
 
-	SemanticNode getBody();
-
-	IFcnRcdValue getRcd();
-
-	IFcnParams getParams();
-
-	Context getCon();
-
-	boolean hasRcd();
-
+	/* (non-Javadoc)
+	 * @see tlc2.value.impl.Applicable#apply(tlc2.value.IValue[], int)
+	 */
+	@Override
+	public Value apply(Value[] args, int control) throws EvalException {
+		return TLC.TLCGet((Value) args[0]);
+	}
 }
