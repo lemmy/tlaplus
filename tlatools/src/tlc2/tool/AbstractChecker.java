@@ -46,7 +46,7 @@ public abstract class AbstractChecker
     protected final boolean checkLiveness;
     protected final String fromChkpt;
     public final String metadir;
-    public final ITool tool;
+    public volatile ITool tool;
     protected final IStateWriter allStateWriter;
     protected IWorker[] workers;
 	protected final ILiveCheck liveCheck;

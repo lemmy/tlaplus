@@ -14,6 +14,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceEvent;
+import org.osgi.framework.ServiceListener;
+import org.osgi.framework.ServiceReference;
+
 import tla2sany.semantic.ExprNode;
 import tla2sany.semantic.OpDeclNode;
 import tlc2.TLCGlobals;
@@ -42,7 +47,7 @@ import util.UniqueString;
 // unused constructors has been removed
 // the class now contains only the parts, which are different from the DFIDModelChecker
 // the name resolver and support for the external specification object has been added
-public class ModelChecker extends AbstractChecker
+public class ModelChecker extends AbstractChecker implements ServiceListener
 {
 
 	protected static final boolean coverage = TLCGlobals.isCoverageEnabled();
@@ -1113,6 +1118,20 @@ public class ModelChecker extends AbstractChecker
 
 	public List<File> getModuleFiles(FilenameToStream resolver) {
 		return this.tool.getModuleFiles(resolver);
+	}
+
+	@Override
+	public void serviceChanged(ServiceEvent serviceEvent) {
+		if (serviceEvent.getType() == ServiceEvent.REGISTERED) {
+			@SuppressWarnings("unchecked")
+			ServiceReference<ITool> serviceReference = (ServiceReference<ITool>) serviceEvent.getServiceReference();
+			BundleContext bundleContext = serviceReference.getBundle().getBundleContext();
+			ITool service = bundleContext.getService(serviceReference);
+			this.tool = service;
+			System.out.println(serviceEvent);
+		} else if (serviceEvent.getType() == ServiceEvent.UNREGISTERING) {
+			System.out.println(serviceEvent);
+		}
 	}
 }
 	

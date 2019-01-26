@@ -12,5 +12,6 @@
 	<classpathentry kind="lib" path="lib/javax.mail.jar"/>
 	<classpathentry kind="lib" path="lib/jpf.jar"/>
 	<classpathentry kind="lib" path="lib/jmh/jmh-core-1.21.jar"/>
+	<classpathentry kind="lib" path="lib/org.eclipse.concierge-5.1.0.SNAPSHOT-nodebug.jar"/>
 	<classpathentry kind="output" path="class"/>
 </classpath>
