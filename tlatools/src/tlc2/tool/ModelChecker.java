@@ -244,7 +244,7 @@ public class ModelChecker extends AbstractChecker implements ServiceListener
                             String.valueOf(this.theStateQueue.size()) });
                 	
                     report("checking liveness");
-                    success = liveCheck.finalCheck();
+                    success = liveCheck.finalCheck(tool);
                     report("liveness check complete");
                     if (!success)
                     {
@@ -670,7 +670,7 @@ public class ModelChecker extends AbstractChecker implements ServiceListener
             if (this.checkLiveness && (runtimeRatio < TLCGlobals.livenessRatio || forceLiveCheck))
             {
         		final long preLivenessChecking = System.currentTimeMillis();
-                if (!liveCheck.check(forceLiveCheck)) {
+                if (!liveCheck.check(tool, forceLiveCheck)) {
                 	return false;
                 }
                 forceLiveCheck = false;
@@ -771,7 +771,7 @@ public class ModelChecker extends AbstractChecker implements ServiceListener
 				// https://github.com/tlaplus/tlaplus/issues/22
             	this.tool.getInitStates(new IStateFunctor() {
 					public Object addElement(TLCState state) {
-						liveCheck.addInitState(state, state.fingerPrint());
+						liveCheck.addInitState(tool, state, state.fingerPrint());
 						return true;
 					}
 				});
@@ -1067,7 +1067,7 @@ public class ModelChecker extends AbstractChecker implements ServiceListener
 
 						// build behavior graph for liveness checking
 						if (checkLiveness) {
-							liveCheck.addInitState(curState, fp);
+							liveCheck.addInitState(tool, curState, fp);
 						}
 					}
 				}

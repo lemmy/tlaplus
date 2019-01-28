@@ -932,47 +932,47 @@ public class TLC
 							FPSetFactory.getFPSetInitialized(fpSetConfiguration, metadir, mainFile));
 					modelCheckerMXWrapper = new ModelCheckerMXWrapper((ModelChecker) TLCGlobals.mainChecker, this);
 
-                    // Create and start OSGi framework
-                    final FrameworkFactory frameworkFactory = ServiceLoader.load(FrameworkFactory.class).iterator().next();
-                    final Map<String, String> config = new HashMap<String, String>();
-                    config.put("org.eclipse.concierge.debug", Boolean.TRUE.toString());
-                    config.put("org.eclipse.concierge.log.quiet", Boolean.FALSE.toString());
-                    config.put("org.osgi.framework.system.packages.extra",
-                                    "tla2sany, tla2sany.drivers, tla2sany.parser, tla2sany.modanalyzer, tla2sany.semantic, tlc2, tlc2.output, tlc2.tool, tlc2.pprint, tlc2.tool.coverage, tlc2.util, util, tlc2.value");
-                    final Framework osgi = frameworkFactory.newFramework(config);
-                    osgi.start();
-                    
-                    //TODO Configure OSGi framework to run fresh/cleanup after each run.
-                    final Bundle[] bundles = osgi.getBundleContext().getBundles();
-                    for (Bundle bundle : bundles) {
-						System.out.println(bundle);
-						if (bundle.getSymbolicName().equals("org.lamport.tlatools.bare")) {
-							bundle.uninstall();
-						}
-					}
-                    
-                    // Register ModelChecker instance as an OSGi service listener which will be
-                    // notified when services come and go.
-                    BundleContext bundleContext = osgi.getBundleContext();
-                    bundleContext.addServiceListener((ModelChecker) TLCGlobals.mainChecker,
-                                    "(" + Constants.OBJECTCLASS + "=" + ITool.class.getName() + ")");
-                    
-                    // Register ITool instance as a service.
-                    bundleContext.registerService(ITool.class, tool, null);
-                    
-                    // Install the nested ...-bare.jar into the (nested) OSGi framework and start
-                    // it. Starting entails to resolve package dependencies (see
-                    // org.osgi.framework.system.packages.extra above) and running the bundle's
-                    // BundleActivator.
-                    //TODO Load nested jar from inside the regular tla2tools.jar.
-                    Bundle bare = bundleContext
-                                    .installBundle("file:///home/markus/src/TLA/tla/tlatools/tla2tools-bare.jar");
-                    bare.start();
-                    
-					// TODO Instead of waiting for fixed time, check if ITool service of nested jar
-					// is immediately picked up by ModelChecker (it should as OSGi is synchronous).
-                    // ModelChecker#tool being synchronized should take care of the rest.
-                    Thread.sleep(2000L);
+//                    // Create and start OSGi framework
+//                    final FrameworkFactory frameworkFactory = ServiceLoader.load(FrameworkFactory.class).iterator().next();
+//                    final Map<String, String> config = new HashMap<String, String>();
+//                    config.put("org.eclipse.concierge.debug", Boolean.TRUE.toString());
+//                    config.put("org.eclipse.concierge.log.quiet", Boolean.FALSE.toString());
+//                    config.put("org.osgi.framework.system.packages.extra",
+//                                    "tla2sany, tla2sany.drivers, tla2sany.parser, tla2sany.modanalyzer, tla2sany.semantic, tlc2, tlc2.output, tlc2.tool, tlc2.pprint, tlc2.tool.coverage, tlc2.util, util, tlc2.value");
+//                    final Framework osgi = frameworkFactory.newFramework(config);
+//                    osgi.start();
+//                    
+//                    //TODO Configure OSGi framework to run fresh/cleanup after each run.
+//                    final Bundle[] bundles = osgi.getBundleContext().getBundles();
+//                    for (Bundle bundle : bundles) {
+//						System.out.println(bundle);
+//						if (bundle.getSymbolicName().equals("org.lamport.tlatools.bare")) {
+//							bundle.uninstall();
+//						}
+//					}
+//                    
+//                    // Register ModelChecker instance as an OSGi service listener which will be
+//                    // notified when services come and go.
+//                    BundleContext bundleContext = osgi.getBundleContext();
+//                    bundleContext.addServiceListener((ModelChecker) TLCGlobals.mainChecker,
+//                                    "(" + Constants.OBJECTCLASS + "=" + ITool.class.getName() + ")");
+//                    
+//                    // Register ITool instance as a service.
+//                    bundleContext.registerService(ITool.class, tool, null);
+//                    
+//                    // Install the nested ...-bare.jar into the (nested) OSGi framework and start
+//                    // it. Starting entails to resolve package dependencies (see
+//                    // org.osgi.framework.system.packages.extra above) and running the bundle's
+//                    // BundleActivator.
+//                    //TODO Load nested jar from inside the regular tla2tools.jar.
+//                    Bundle bare = bundleContext
+//                                    .installBundle("file:///home/markus/src/TLA/tla/tlatools/tla2tools-bare.jar");
+//                    bare.start();
+//                    
+//					// TODO Instead of waiting for fixed time, check if ITool service of nested jar
+//					// is immediately picked up by ModelChecker (it should as OSGi is synchronous).
+//                    // ModelChecker#tool being synchronized should take care of the rest.
+//                    Thread.sleep(2000L);
                     
 					TLCGlobals.mainChecker.modelCheck();
                 } else

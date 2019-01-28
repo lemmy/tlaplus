@@ -329,6 +329,7 @@
 					<pathelement location="lib/objenesis-2.1.jar" />
 					<pathelement location="lib/easymock-3.3.1.jar" />
 					<pathelement location="lib/javax.mail.jar" />
+                    <pathelement location="lib/org.eclipse.concierge-5.1.0.SNAPSHOT-nodebug.jar" />
 					<pathelement path="${class.dir}" />
 					<pathelement path="${test.class.dir}" />
 				</classpath>
