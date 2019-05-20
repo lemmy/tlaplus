@@ -2,6 +2,7 @@ package org.lamport.tla.toolbox.tool.tlc.ui.util;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.viewers.ISelection;
@@ -39,15 +40,26 @@ import tla2sany.st.Location;
  * {@link org.lamport.tla.toolbox.tool.tlc.output.data.CoverageInformationItem}
  * implement that interface.
  * 
- * TODO this also support listening for keyboard events too, now. We should refactor this renaming sensibly.
+ * TODO this also support listening for keyboard events too, now. We should refactor this, renaming sensibly to reflect both that
+ * 			and what we really mean by "Action".
  * 
  * @author Daniel Ricketts
  */
 public class ActionClickListener implements MouseListener, KeyListener {
+	/**
+	 * @see #setNonDefaultObservables(int)
+	 */
+	public static final int OBSERVE_DEFAULT = 0;
+	public static final int OBSERVE_ARROW_KEY = 1 << 1;
+	public static final int OBSERVE_SINGLE_CLICK = 1 << 2;
+	
 	
 	private final Viewer viewer;
 	private final Set<Class<? extends ITextEditor>> blacklist;
 	private final IWorkbenchPart m_partToRefocus;
+	
+	private final AtomicBoolean m_observeArrowKeyEvents;
+	private final AtomicBoolean m_observeSingleClickEvents;
 
 	public ActionClickListener(final Viewer viewer) {
 		this(viewer, new HashSet<Class<? extends ITextEditor>>());
@@ -67,6 +79,18 @@ public class ActionClickListener implements MouseListener, KeyListener {
 		viewer = variableViewer;
 		blacklist = editorBlacklist;
 		m_partToRefocus = workbenchPart;
+		m_observeArrowKeyEvents = new AtomicBoolean(false);
+		m_observeSingleClickEvents = new AtomicBoolean(false);
+	}
+	
+	/**
+	 * @param observablesMask either OBSERVE_DEFAULT (turning off any changes in
+	 *                        default behavior or a bitwise-OR'd combination of the
+	 *                        OBSERVE_* constants
+	 */
+	public void setNonDefaultObservables(final int observablesMask) {
+		m_observeArrowKeyEvents.set((observablesMask & OBSERVE_ARROW_KEY) == OBSERVE_ARROW_KEY);
+		m_observeSingleClickEvents.set((observablesMask & OBSERVE_SINGLE_CLICK) == OBSERVE_SINGLE_CLICK);
 	}
 
 	/* (non-Javadoc)
@@ -84,7 +108,11 @@ public class ActionClickListener implements MouseListener, KeyListener {
 	/* (non-Javadoc)
 	 * @see org.eclipse.swt.events.MouseListener#mouseUp(org.eclipse.swt.events.MouseEvent)
 	 */
-	public void mouseUp(final MouseEvent event) {}
+	public void mouseUp(final MouseEvent event) {
+		if (m_observeSingleClickEvents.get()) {
+			goToAction(viewer.getSelection(), (event.stateMask & SWT.CTRL) != 0);
+		}
+	}
 
 	/* (non-Javadoc)
 	 * @see org.eclipse.swt.events.KeyListener#keyPressed(org.eclipse.swt.events.KeyEvent)
@@ -101,7 +129,8 @@ public class ActionClickListener implements MouseListener, KeyListener {
 			goToAction(viewer.getSelection(), (event.stateMask & SWT.CTRL) != 0);
 		} else if ((code == SWT.KEYPAD_DIVIDE) && ((event.stateMask & SWT.ALT) != 0) && (viewer instanceof TreeViewer)) {
 			((TreeViewer) viewer).collapseAll();
-		} else if (((code == SWT.ARROW_UP) || (code == SWT.ARROW_DOWN)) && (viewer instanceof TreeViewer)) {
+		} else if (m_observeArrowKeyEvents.get() && ((code == SWT.ARROW_UP) || (code == SWT.ARROW_DOWN))
+				&& (viewer instanceof TreeViewer)) {
 			goToAction(viewer.getSelection(), false);
 		}
 	}
