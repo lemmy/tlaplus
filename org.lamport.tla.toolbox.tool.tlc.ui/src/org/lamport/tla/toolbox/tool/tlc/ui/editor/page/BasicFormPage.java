@@ -3,8 +3,14 @@ package org.lamport.tla.toolbox.tool.tlc.ui.editor.page;
 import java.util.Hashtable;
 import java.util.List;
 
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.resources.WorkspaceJob;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.ListenerList;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.action.ToolBarManager;
@@ -343,10 +349,7 @@ public abstract class BasicFormPage extends FormPage implements IModelConfigurat
      * Subclasses should override this method and fill the data in to the widgets
      * @throws CoreException thrown on any error during loading 
      */
-    protected void loadData() throws CoreException
-    {
-
-    }
+	protected void loadData() throws CoreException { }
 
     /**
      * Method finalizing the page initialization
@@ -361,6 +364,33 @@ public abstract class BasicFormPage extends FormPage implements IModelConfigurat
         }
 
         initialized = true;
+    }
+
+    /**
+     * Invoke this to save the model.
+     */
+    protected void saveModel() {
+    	final Job job = new WorkspaceJob("Saving updated model...") {
+			public IStatus runInWorkspace(final IProgressMonitor monitor) throws CoreException {
+				getModel().save(monitor);
+				return Status.OK_STATUS;
+			}
+		};
+		job.setRule(ResourcesPlugin.getWorkspace().getRoot());
+		job.setUser(true);
+		job.schedule();
+    }
+    
+    /**
+     * This updates the approprirate model attribute and saves the model.
+     * 
+     * @param newValue the new value representing currently open close-able tabs.
+     * @see IModelConfigurationConstants#EDITOR_OPEN_TABS
+     */
+    protected void updateOpenTabsState(final int newValue) {
+        getModel().setOpenTabsValue(newValue);
+
+        saveModel();
     }
 
     /**

@@ -1,10 +1,15 @@
 package org.lamport.tla.toolbox.tool.tlc.ui.editor;
 
 import java.io.ByteArrayInputStream;
+import java.io.Closeable;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
@@ -49,6 +54,7 @@ import org.eclipse.ui.IPartService;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.forms.IMessageManager;
 import org.eclipse.ui.forms.editor.FormEditor;
+import org.eclipse.ui.forms.editor.FormPage;
 import org.eclipse.ui.forms.editor.IFormPage;
 import org.eclipse.ui.part.FileEditorInput;
 import org.eclipse.ui.texteditor.ITextEditor;
@@ -56,6 +62,7 @@ import org.lamport.tla.toolbox.Activator;
 import org.lamport.tla.toolbox.spec.Spec;
 import org.lamport.tla.toolbox.spec.parser.IParseConstants;
 import org.lamport.tla.toolbox.tool.tlc.TLCActivator;
+import org.lamport.tla.toolbox.tool.tlc.launch.IModelConfigurationConstants;
 import org.lamport.tla.toolbox.tool.tlc.launch.IModelConfigurationDefaults;
 import org.lamport.tla.toolbox.tool.tlc.launch.TLCModelLaunchDelegate;
 import org.lamport.tla.toolbox.tool.tlc.model.Model;
@@ -64,10 +71,11 @@ import org.lamport.tla.toolbox.tool.tlc.model.TLCModelFactory;
 import org.lamport.tla.toolbox.tool.tlc.output.data.TLCModelLaunchDataProvider;
 import org.lamport.tla.toolbox.tool.tlc.output.source.TLCOutputSourceRegistry;
 import org.lamport.tla.toolbox.tool.tlc.ui.TLCUIActivator;
-import org.lamport.tla.toolbox.tool.tlc.ui.editor.page.AdvancedModelPage;
 import org.lamport.tla.toolbox.tool.tlc.ui.editor.page.BasicFormPage;
 import org.lamport.tla.toolbox.tool.tlc.ui.editor.page.ErrorMessage;
 import org.lamport.tla.toolbox.tool.tlc.ui.editor.page.MainModelPage;
+import org.lamport.tla.toolbox.tool.tlc.ui.editor.page.advanced.AdvancedModelPage;
+import org.lamport.tla.toolbox.tool.tlc.ui.editor.page.advanced.AdvancedTLCOptionsPage;
 import org.lamport.tla.toolbox.tool.tlc.ui.editor.page.results.ResultPage;
 import org.lamport.tla.toolbox.tool.tlc.ui.preference.ITLCPreferenceConstants;
 import org.lamport.tla.toolbox.tool.tlc.ui.util.ModelEditorPartListener;
@@ -88,16 +96,16 @@ import tla2sany.semantic.ModuleNode;
  * Editor for the model
  * @author Simon Zambrovski
  */
-public class ModelEditor extends FormEditor
-{
-	private static final SimpleDateFormat sdf = new SimpleDateFormat("MMM dd,yyyy HH:mm:ss");
-
+public class ModelEditor extends FormEditor {
 	/**
      * Editor ID
      */
     public static final String ID = "org.lamport.tla.toolbox.tool.tlc.ui.editor.ModelEditor";
 
-    /*
+	private static final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("MMM dd,yyyy HH:mm:ss");
+
+
+	/*
      * working copy of the model
      */
     // helper to resolve semantic matches of words
@@ -246,6 +254,25 @@ public class ModelEditor extends FormEditor
 
         }
     };
+    
+	/**
+	 * This IPageChangedListener is responsible to mark the current page in the
+	 * navigation location history (stack). It is here in addition to a
+	 * FocusListener in BasicFormPage which additionally track the in-page
+	 * selection. However, if the user does not click into the page effectively
+	 * changing the selection, the FocusListener isn't triggered.
+	 */
+	private final IPageChangedListener pageChangedListener = new IPageChangedListener() {
+		/* (non-Javadoc)
+		 * @see org.eclipse.jface.dialogs.IPageChangedListener#pageChanged(org.eclipse.jface.dialogs.PageChangedEvent)
+		 */
+		public void pageChanged(final PageChangedEvent event) {
+			final INavigationHistory navigationHistory = getSite().getPage()
+					.getNavigationHistory();
+			navigationHistory.markLocation((IEditorPart) event
+					.getSelectedPage());
+		}
+	};
 
     // data binding manager
     private DataBindingManager dataBindingManager = new DataBindingManager();
@@ -256,6 +283,8 @@ public class ModelEditor extends FormEditor
      * See the class documentation for more details.
      */
     private CTabFolder2Listener listener = new CloseModuleTabListener();
+    
+    private final Map<Integer, Closeable> m_indexCloseableMap;
 
     // array of pages to add
     private BasicFormPage[] pagesToAdd;
@@ -265,17 +294,16 @@ public class ModelEditor extends FormEditor
     /**
      * Simple editor constructor
      */
-    public ModelEditor()
-    {
-        helper = new SemanticHelper();
-        pagesToAdd = new BasicFormPage[] { new MainModelPage(this), new AdvancedModelPage(this), new ResultPage(this) };
-    }
+	public ModelEditor() {
+		helper = new SemanticHelper();
+		m_indexCloseableMap = new HashMap<>();
+	}
 
     /**
      * Initialize the editor
      */
-    public void init(IEditorSite site, IEditorInput input) throws PartInitException
-    {
+    @Override
+	public void init(IEditorSite site, IEditorInput input) throws PartInitException {
         // TLCUIActivator.getDefault().logDebug("entering ModelEditor#init(IEditorSite site, IEditorInput input)");
         super.init(site, input);
 
@@ -283,15 +311,41 @@ public class ModelEditor extends FormEditor
 		final FileEditorInput finput = getFileEditorInput();
 
 		// the file might not exist anymore (e.g. manually removed by the user) 
-		if (finput == null || !finput.exists()) {
+		if ((finput == null) || !finput.exists()) {
 			throw new PartInitException("Editor input does not exist: " + finput.getName());
 		}
 		
         model = TLCModelFactory.getBy(finput.getFile());
         
+        int openTabsValue = 0;
+        try {
+			openTabsValue = model.getLaunchConfiguration()
+					.getAttribute(IModelConfigurationConstants.EDITOR_OPEN_TABS, 0);
+        } catch (CoreException e) { }
+        
+        if (openTabsValue == IModelConfigurationConstants.EDITOR_OPEN_TAB_NONE) {
+            pagesToAdd = new BasicFormPage[] { new MainModelPage(this), new ResultPage(this) };
+        } else {
+        	ArrayList<BasicFormPage> pages = new ArrayList<>();
+        	
+        	pages.add(new MainModelPage(this));
+			if ((openTabsValue
+					& IModelConfigurationConstants.EDITOR_OPEN_TAB_ADVANCED_MODEL) == IModelConfigurationConstants.EDITOR_OPEN_TAB_ADVANCED_MODEL) {
+				pages.add(new AdvancedModelPage(this));
+        	}
+			if ((openTabsValue
+					& IModelConfigurationConstants.EDITOR_OPEN_TAB_ADVANCED_TLC) == IModelConfigurationConstants.EDITOR_OPEN_TAB_ADVANCED_TLC) {
+				pages.add(new AdvancedTLCOptionsPage(this));
+        	}
+        	pages.add(new ResultPage(this));
+
+            pagesToAdd = pages.toArray(new BasicFormPage[pages.size()]);
+        }
+        
+        
         // setContentDescription(path.toString());
         if (model.isSnapshot()) {
-        	final String date = sdf.format(model.getSnapshotTimeStamp());
+        	final String date = SIMPLE_DATE_FORMAT.format(model.getSnapshotTimeStamp());
             this.setPartName(model.getSnapshotFor().getName() + " (" + date + ")");
         } else {
         	this.setPartName(model.getName());
@@ -326,29 +380,26 @@ public class ModelEditor extends FormEditor
 		
 		model.add(modelStateListener);
 	}
-
-	/**
-	 * This IPageChangedListener is responsible to mark the current page in the
-	 * navigation location history (stack). It is here in addition to a
-	 * FocusListener in BasicFormPage which additionally track the in-page
-	 * selection. However, if the user does not click into the page effectively
-	 * changing the selection, the FocusListener isn't triggered.
+    
+    /**
+	 * @param index the tab index
+	 * @return null if the index is greater than or equal to the number of tabs,
+	 *         else the id of the {@link FormPage} which is at that index
 	 */
-	private final IPageChangedListener pageChangedListener = new IPageChangedListener() {
-		/* (non-Javadoc)
-		 * @see org.eclipse.jface.dialogs.IPageChangedListener#pageChanged(org.eclipse.jface.dialogs.PageChangedEvent)
-		 */
-		public void pageChanged(final PageChangedEvent event) {
-			final INavigationHistory navigationHistory = getSite().getPage()
-					.getNavigationHistory();
-			navigationHistory.markLocation((IEditorPart) event
-					.getSelectedPage());
-		}
-	};
+    public String getIdForEditorAtIndex(final int index) {
+    	final FormPage editor = (FormPage)getEditor(index);
+    	
+    	if (editor != null) {
+    		return editor.getId();
+    	}
+    	
+    	return null;
+    }
 
 	/**
 	 * @see org.eclipse.ui.forms.editor.FormEditor#dispose()
 	 */
+    @Override
 	public void dispose() {
 		removePageChangedListener(pageChangedListener);
         // TLCUIActivator.getDefault().logDebug("entering ModelEditor#dispose()");
@@ -363,7 +414,6 @@ public class ModelEditor extends FormEditor
         // TLCUIActivator.getDefault().logDebug("leaving ModelEditor#dispose()");
     }
 	
-
 	public boolean isDisposed() {
 		return model == null;
 	}
@@ -531,17 +581,11 @@ public class ModelEditor extends FormEditor
         // TLCUIActivator.getDefault().logDebug("entering ModelEditor#addPages()");
         try
         {
-
             // This code moves the tabs to the top of the page.
             // This makes them more obvious to the user.
-            if (getContainer() instanceof CTabFolder)
-            {
-                ((CTabFolder) getContainer()).setTabPosition(SWT.TOP);
-                ((CTabFolder) getContainer()).addCTabFolder2Listener(listener);
-            } else
-            {
-                TLCUIActivator.getDefault().logDebug("The model editor container is not a CTabFolder. This is a bug.");
-            }
+        	final CTabFolder tabFolder = (CTabFolder)getContainer();
+        	tabFolder.setTabPosition(SWT.TOP);
+        	tabFolder.addCTabFolder2Listener(listener);
 
             for (int i = 0; i < pagesToAdd.length; i++)
             {
@@ -554,9 +598,19 @@ public class ModelEditor extends FormEditor
                 // the dirty listeners will be activated
                 if (pagesToAdd[i].getPartControl() == null)
                 {
-                    pagesToAdd[i].createPartControl(getContainer());
+                    pagesToAdd[i].createPartControl(tabFolder);
                     setControl(i, pagesToAdd[i].getPartControl());
-                    pagesToAdd[i].getPartControl().setMenu(getContainer().getMenu());
+                    pagesToAdd[i].getPartControl().setMenu(tabFolder.getMenu());
+                }
+                
+                final CTabItem item = tabFolder.getItem(i);
+                // we have to do this to allow our superclass' getEditor(int) to work correctly since we don't
+                //		add the page via addPage(IEditorPart,IEditorInput)
+                item.setData(pagesToAdd[i]);
+                if (pagesToAdd[i] instanceof Closeable) {
+        			item.setShowClose(true);
+        			
+        			m_indexCloseableMap.put(new Integer(i), (Closeable)pagesToAdd[i]);
                 }
             }
 
@@ -961,15 +1015,6 @@ public class ModelEditor extends FormEditor
             IMarker[] modelProblemMarkers = model.getMarkers();
             DataBindingManager dm = getDataBindingManager();
 
-			// The loop is going to update the page's messages for potentially
-			// each marker (nested loop). Thus, turn auto update off during the
-			// loop for all pages (we don't yet know which marker gets displayed
-			// on which page).
-            for (int i = 0; i < this.pagesToAdd.length; i++) {
-				IMessageManager mm = this.pagesToAdd[i].getManagedForm().getMessageManager();
-            	mm.setAutoUpdate(false);
-            }
-            
             for (int j = 0; j < getPageCount(); j++)
             {
                 /*
@@ -983,7 +1028,13 @@ public class ModelEditor extends FormEditor
                     // get the current page
                     BasicFormPage page = (BasicFormPage) pages.get(j);
                     Assert.isNotNull(page.getManagedForm(), "Page not initialized, this is a bug.");
-
+                    
+        			// The loop is going to update the page's messages for potentially
+        			// each marker (nested loop). Thus, turn auto update off during the
+        			// loop for all pages (we don't yet know which marker gets displayed
+        			// on which page).
+    				page.getManagedForm().getMessageManager().setAutoUpdate(false);
+                    
                     for (int i = 0; i < modelProblemMarkers.length; i++)
                     {
                         String attributeName = modelProblemMarkers[i].getAttribute(
@@ -1008,23 +1059,32 @@ public class ModelEditor extends FormEditor
                         {
                             final String message = modelProblemMarkers[i].getAttribute(IMarker.MESSAGE,
                                     IModelConfigurationDefaults.EMPTY_STRING);
-							final int pageId = modelProblemMarkers[i]
+							int pageId = modelProblemMarkers[i]
 									.getAttribute(ModelHelper.TLC_MODEL_ERROR_MARKER_ATTRIBUTE_PAGE, -1);
                             // no attribute, this is a global error, not bound to a particular attribute
                             // install it on the first page
                             // if it is a global TLC error, then we call addGlobalTLCErrorMessage()
                             // to add a hyperlink to the TLC Error view
-							if (pageId != -1 && bubbleType == IMessageProvider.WARNING
+							if ((pageId != -1) && (bubbleType == IMessageProvider.WARNING)
 									&& !IModelConfigurationDefaults.EMPTY_STRING.equals(message)) {
 								// Used by the ResultPage to display an error on
 								// incomplete state space exploration.
-								this.pagesToAdd[pageId].addGlobalTLCErrorMessage(ResultPage.RESULT_PAGE_PROBLEM, message);
+								if (pageId >= pagesToAdd.length) {
+									pageId = pagesToAdd.length - 1;
+								}
+								pagesToAdd[pageId].addGlobalTLCErrorMessage(ResultPage.RESULT_PAGE_PROBLEM, message);
 							} else if (bubbleType == IMessageProvider.WARNING) {
-								this.pagesToAdd[0].addGlobalTLCErrorMessage("modelProblem_" + i);
-								this.pagesToAdd[1].addGlobalTLCErrorMessage("modelProblem_" + i);
+								final PageIterator iterator = new PageIterator();		
+								while (iterator.hasNext()) {
+									final BasicFormPage bfp = iterator.next();
+									
+									if (!bfp.getId().equals(ResultPage.ID)) {
+										bfp.addGlobalTLCErrorMessage("modelProblem_" + i);
+									}
+								}
 							} else {
 								// else install as with other messages
-								IMessageManager mm = this.pagesToAdd[0].getManagedForm().getMessageManager();
+								IMessageManager mm = pagesToAdd[0].getManagedForm().getMessageManager();
 								mm.addMessage("modelProblem_" + i, message, null, bubbleType);
 							}
                         } else
@@ -1073,10 +1133,11 @@ public class ModelEditor extends FormEditor
             }
             
             // Once all markers have been processed, re-enable auto update again.
-            for (int i = 0; i < this.pagesToAdd.length; i++) {
-				final IMessageManager mm = this.pagesToAdd[i].getManagedForm().getMessageManager();
-            	mm.setAutoUpdate(true);
-            }
+			final PageIterator iterator = new PageIterator();
+			while (iterator.hasNext()) {
+				final IMessageManager mm = iterator.next().getManagedForm().getMessageManager();
+				mm.setAutoUpdate(true);
+			}
             
             if (switchToErrorPage && errorPageIndex != -1 && currentPageIndex != errorPageIndex)
             {
@@ -1176,9 +1237,9 @@ public class ModelEditor extends FormEditor
 	 * Expands the given sections on the model editor pages. 
 	 */
 	public void expandSections(final String[] sections) {
-		for (int i = 0; i < pagesToAdd.length; i++) {
-			final BasicFormPage basicFormPage = pagesToAdd[i];
-			basicFormPage.expandSections(sections);
+		final PageIterator iterator = new PageIterator();		
+		while (iterator.hasNext()) {
+			iterator.next().expandSections(sections);
 		}
 	}
 	
@@ -1188,8 +1249,9 @@ public class ModelEditor extends FormEditor
 	}
 
 	public BasicFormPage getFormPage(final String id) {
-		for (int i = 0; i < pagesToAdd.length; i++) {
-			final BasicFormPage basicFormPage = pagesToAdd[i];
+		final PageIterator iterator = new PageIterator();		
+		while (iterator.hasNext()) {
+			final BasicFormPage basicFormPage = iterator.next();
 			if (basicFormPage.getId().equals(id)) {
 				return basicFormPage;
 			}
@@ -1202,7 +1264,7 @@ public class ModelEditor extends FormEditor
     {
         if (newPage.getPartControl() == null)
         {
-            newPage.createPartControl(this.getContainer());
+            newPage.createPartControl(getContainer());
             setControl(index, newPage.getPartControl());
             newPage.getPartControl().setMenu(getContainer().getMenu());
         }
@@ -1218,13 +1280,11 @@ public class ModelEditor extends FormEditor
      * @param type the message type
      * @param control the control to associate the message with
      */
-    public void addErrorMessage(Object key, String messageText, String pageId, int type, Control control)
-    {
-        if (control != null)
-        {
-            for (int i = 0; i < pagesToAdd.length; i++)
-            {
-                pagesToAdd[i].getManagedForm().getMessageManager().addMessage(key, messageText, pageId, type, control);
+	public void addErrorMessage(Object key, String messageText, String pageId, int type, Control control) {
+		if (control != null) {
+			final PageIterator iterator = new PageIterator();		
+			while (iterator.hasNext()) {
+                iterator.next().getManagedForm().getMessageManager().addMessage(key, messageText, pageId, type, control);
             }
         }
     }
@@ -1264,13 +1324,11 @@ public class ModelEditor extends FormEditor
      * @param key the unique message key
      * @param control the control to associate the message with
      */
-    public void removeErrorMessage(Object key, Control control)
-    {
-        if (control != null)
-        {
-            for (int i = 0; i < pagesToAdd.length; i++)
-            {
-                pagesToAdd[i].getManagedForm().getMessageManager().removeMessage(key, control);
+	public void removeErrorMessage(Object key, Control control) {
+		if (control != null) {
+			final PageIterator iterator = new PageIterator();		
+			while (iterator.hasNext()) {
+                iterator.next().getManagedForm().getMessageManager().removeMessage(key, control);
             }
         }
     }
@@ -1308,24 +1366,29 @@ public class ModelEditor extends FormEditor
          * 
          * 2.) Set the page to be closeable.
          */
-        if (input instanceof FileEditorInput
-                && ((FileEditorInput) input).getFile().getFileExtension().equals(ResourceHelper.TLA_EXTENSION))
-        {
+		if (input instanceof FileEditorInput
+				&& ((FileEditorInput) input).getFile().getFileExtension().equals(ResourceHelper.TLA_EXTENSION)) {
             setPageText(index, input.getName());
-            /*
-             * When I implemented this method, getContainer()
-             * returned a CTabFolder. If this somehow stops
-             * being the case, then I do not know how to set
-             * the tla file pages to be closeable.
-             */
-            if (getContainer() instanceof CTabFolder)
-            {
-                ((CTabFolder) getContainer()).getItem(index).setShowClose(true);
 
-            }
+			((CTabFolder) getContainer()).getItem(index).setShowClose(true);
             // setPageImage(pageIndex, image);
 		} else if (input instanceof FileEditorInput && "pdf".equals(((FileEditorInput) input).getFile().getFileExtension())) {
 			setPageText(index, "State Graph");
+		} else if (editor instanceof Closeable) {
+			final CTabFolder tabFolder = (CTabFolder)getContainer();
+			
+			tabFolder.getItem(index).setShowClose(true);
+
+			final int tabCount = tabFolder.getItemCount();
+			for (int i = tabCount - 2; i >= index; i--) {
+				final Closeable c = m_indexCloseableMap.remove(new Integer(i));
+				
+				if (c != null) {
+					m_indexCloseableMap.put(new Integer(i + 1), c);
+				}
+			}
+
+			m_indexCloseableMap.put(new Integer(index), (Closeable)editor);
 		}
     }
 
@@ -1341,21 +1404,94 @@ public class ModelEditor extends FormEditor
      * @author Daniel Ricketts
      *
      */
-    private class CloseModuleTabListener extends CTabFolder2Adapter
-    {
+	private class CloseModuleTabListener extends CTabFolder2Adapter {
+		/**
+		 * {@inheritDoc}
+		 */
+		@Override
+    	public void close(CTabFolderEvent event) {
+			Assert.isTrue(event.item instanceof CTabItem,
+					"Something other than a CTabItem was closed in a CTabFolder.");
+			
+			final CTabItem item = (CTabItem) event.item;
+			final CTabFolder tabFolder = item.getParent();
+			final int index = tabFolder.indexOf(item);
 
-        public void close(CTabFolderEvent event)
-        {
-            Assert
-                    .isTrue(event.item instanceof CTabItem,
-                            "Something other than a CTabItem was closed in a CTabFolder.");
-            CTabItem item = (CTabItem) event.item;
+			// block the CTabFolder from directly removing the tab
+			event.doit = false;
 
-            // block the CTabFolder from directly removing the tab
-            event.doit = false;
+        	// oh glorious, crappy, SWT - honestly meritous of a class action lawsuit for the untold thousands of
+        	//	man-years wasted writing and dealing with you..
+        	// event.item is already disposed by the time we get notified so we can't use its data holder which is
+			//	what is being used to hold the editor part by our super-superclass... kwality
+			final Closeable c = m_indexCloseableMap.remove(new Integer(index));
+			if (c != null) {
+				final int tabCount = tabFolder.getItemCount();
+				for (int i = index; i <= tabCount; i++) {
+					final Closeable remaining = m_indexCloseableMap.remove(new Integer(i));
+					
+					if (remaining != null) {
+						m_indexCloseableMap.put(new Integer(i - 1), remaining);
+					}
+				}
 
-            // remove the page properly
-            removePage(item.getParent().indexOf(item));
-        }
+				try {
+					c.close();
+				} catch (Exception e) { }
+			}
+			
+			// remove the page properly
+			removePage(index);
+		}
     }
+	
+	
+	/**
+	 * We were, for some reason, only looping over the initially added page array at many places in this class; this
+	 *	way of doing things became insufficient when we started having optionally open pages.
+	 */
+	private class PageIterator implements Iterator<BasicFormPage> {
+
+		private final List<Object> m_pages;
+		private int m_counter;
+		
+		private BasicFormPage m_nextPage;
+		
+		PageIterator() {
+			m_pages = new ArrayList<>(pages);
+			m_counter = 0;
+			
+			m_nextPage = findNextPage();
+		}
+		
+		private BasicFormPage findNextPage() {
+			BasicFormPage page = null;
+			
+			while ((page == null) && (m_counter < m_pages.size())) {
+				final Object o = m_pages.get(m_counter);
+				
+				if (o instanceof BasicFormPage) {
+					page = (BasicFormPage)o;
+				}
+				
+				m_counter++;
+			}
+			
+			return page;
+		}
+		
+		@Override
+		public boolean hasNext() {
+			return (m_nextPage != null);
+		}
+
+		@Override
+		public BasicFormPage next() {
+			final BasicFormPage next = m_nextPage;
+			
+			m_nextPage = findNextPage();
+
+			return next;
+		}
+	}
 }

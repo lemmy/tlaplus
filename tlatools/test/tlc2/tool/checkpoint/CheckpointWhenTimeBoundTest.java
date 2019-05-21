@@ -23,43 +23,51 @@
  * Contributors:
  *   Markus Alexander Kuppe - initial API and implementation
  ******************************************************************************/
-package org.lamport.tla.toolbox.tool.tlc.output.data;
+package tlc2.tool.checkpoint;
 
-import java.util.Date;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import org.eclipse.core.runtime.Assert;
-import org.eclipse.jface.resource.ImageDescriptor;
-import org.lamport.tla.toolbox.tool.tlc.ui.TLCUIActivator;
-import org.lamport.tla.toolbox.tool.tlc.ui.editor.ModelEditor;
-import org.lamport.tla.toolbox.tool.tlc.ui.editor.page.MainModelPage;
-import org.lamport.tla.toolbox.tool.tlc.ui.util.TLCUINotification;
+import org.junit.Test;
 
-public class CoverageUINotification extends TLCUINotification {
+import tlc2.TLC;
+import tlc2.output.EC;
+import tlc2.tool.liveness.ModelCheckerTestCase;
 
-	private static final ImageDescriptor id = TLCUIActivator.getImageDescriptor("/icons/elcl16/quickfix_obj.png");
-	
-	private final ModelEditor editor;
+public class CheckpointWhenTimeBoundTest extends ModelCheckerTestCase {
 
-	public CoverageUINotification(final ModelEditor editor) {
-		super("Performance Hint",
-				"TLC has been running for some\n"
-				+ "time with coverage and cost\n"
-				+ "statistics enabled. Please be advised\n"
-				+ "that coverage and cost statistics\n"
-				+ "negatively impact performance.\n"
-				+ "For this reason, please consider\n"
-				+ "turning statistics off on\n"
-				+ "the advanced TLC options page and\n"
-				+ "re-run model checking without it.",
-				new Date());
-		this.editor = editor;
-		Assert.isNotNull(editor);
-		
-		setKindImage(id.createImage());
+	public CheckpointWhenTimeBoundTest() {
+		super("InfiniteStateSpace", "checkpoint");
 	}
 
 	@Override
-	public void open() {
-		editor.setActivePage(editor.findPage(MainModelPage.ID).getIndex());
+	public void setUp() {
+		System.setProperty(TLC.class.getName() + ".stopAfter", "5"); // five seconds
+		super.setUp();
+	}
+
+	@Test
+	public void testSpec() {
+		// ModelChecker has finished and generated the expected amount of states. 
+		assertTrue(recorder.recorded(EC.TLC_FINISHED));
+		assertFalse(recorder.recorded(EC.GENERAL));
+		
+		assertFalse(recorder.recorded(EC.TLC_STATE_PRINT1));
+		assertFalse(recorder.recorded(EC.TLC_STATE_PRINT2));
+		
+		// Check that a checkpoint has been taken.
+		assertTrue(recorder.recorded(EC.TLC_CHECKPOINT_START));
+		assertTrue(recorder.recorded(EC.TLC_CHECKPOINT_END));
+		
+		assertZeroUncovered();
+	}
+
+	@Override
+	protected int doCheckpoint() {
+		// Request checkpoints but make it highly unlike for the test to ever create a
+		// checkpoint because the checkpoint interval was exceeded. We want to test
+		// TLC's functionality to take a checkpoint when time-bound model-checking is on
+		// and/or a violation has been found.
+		return (Integer.MAX_VALUE / 60000);
 	}
 }

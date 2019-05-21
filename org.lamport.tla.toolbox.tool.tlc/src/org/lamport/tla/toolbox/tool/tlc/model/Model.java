@@ -1113,6 +1113,23 @@ public class Model implements IModelConfigurationConstants, IAdaptable {
 			TLCActivator.logError(shouldNotHappen.getMessage(), shouldNotHappen);
 		}
 	}
+	
+	public void setOpenTabsValue(final int value) {
+        try {
+        	getWorkingCopy().setAttribute(IModelConfigurationConstants.EDITOR_OPEN_TABS, value);
+		} catch (CoreException shouldNotHappen) {
+			TLCActivator.logError(shouldNotHappen.getMessage(), shouldNotHappen);
+		}
+	}
+	
+	public int getOpenTabsValue() {
+        try {
+			return getWorkingCopy().getAttribute(IModelConfigurationConstants.EDITOR_OPEN_TABS,
+					IModelConfigurationConstants.EDITOR_OPEN_TAB_NONE);
+		} catch (CoreException shouldNotHappen) {
+			return -1;
+		}
+	}
 
 	public IFile getFile() {
 		return getLaunchConfiguration().getFile();
@@ -1142,7 +1159,7 @@ public class Model implements IModelConfigurationConstants, IAdaptable {
 				TLCActivator.logError(shouldNotHappen.getMessage(), shouldNotHappen);
 			}
 		}
-		TLCActivator.logDebug("Trying to save a clean Model.");
+//		TLCActivator.logDebug("Trying to save a clean Model.");
 		
 		// Fluent
 		return this;
