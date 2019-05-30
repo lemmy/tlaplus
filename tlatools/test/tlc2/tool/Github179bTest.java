@@ -23,42 +23,35 @@
  * Contributors:
  *   Markus Alexander Kuppe - initial API and implementation
  ******************************************************************************/
-package org.lamport.tla.toolbox.tool.tlc.output.data;
+package tlc2.tool;
 
-import java.util.Date;
+import static org.junit.Assert.assertTrue;
 
-import org.eclipse.core.runtime.Assert;
-import org.eclipse.jface.resource.ImageDescriptor;
-import org.lamport.tla.toolbox.tool.tlc.ui.TLCUIActivator;
-import org.lamport.tla.toolbox.tool.tlc.ui.editor.ModelEditor;
-import org.lamport.tla.toolbox.tool.tlc.ui.util.TLCUINotification;
+import org.junit.Test;
 
-public class CoverageUINotification extends TLCUINotification {
+import tlc2.output.EC;
+import tlc2.tool.liveness.ModelCheckerTestCase;
 
-	private static final ImageDescriptor id = TLCUIActivator.getImageDescriptor("/icons/elcl16/quickfix_obj.png");
-	
-	private final ModelEditor editor;
+public class Github179bTest extends ModelCheckerTestCase {
 
-	public CoverageUINotification(final ModelEditor editor) {
-		super("Performance Hint",
-				"TLC has been running for some\n"
-				+ "time with coverage and cost\n"
-				+ "statistics enabled. Please be advised\n"
-				+ "that coverage and cost statistics\n"
-				+ "negatively impact performance.\n"
-				+ "For this reason, please consider\n"
-				+ "turning statistics off on\n"
-				+ "the advanced TLC options page and\n"
-				+ "re-run model checking without it.",
-				new Date());
-		this.editor = editor;
-		Assert.isNotNull(editor);
-		
-		setKindImage(id.createImage());
+	public Github179bTest() {
+		super("Github179b");
 	}
 
-	@Override
-	public void open() {
-		editor.addOrShowAdvancedTLCOptionsPage();
+	@Test
+	public void testSpec() {
+		assertTrue(recorder.recorded(EC.TLC_FINISHED));
+
+		assertTrue(recorder.recordedWithStringValues(EC.TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE,
+				"public static tlc2.value.impl.Value tlc2.module.TLC.Print(tlc2.value.impl.Value,tlc2.value.impl.Value)",
+				"Attempted to check equality of integer 1 with non-integer:\n" + 
+				"{1}"));
+		assertTrue(recorder.recordedWithStringValues(EC.TLC_NESTED_EXPRESSION,
+				"0. Line 13, column 1 to line 13, column 30 in Github179b\n" + 
+				"1. Line 13, column 1 to line 13, column 23 in Github179b\n" + 
+				"2. Line 9, column 27 to line 9, column 79 in Github179b\n" + 
+				"3. Line 9, column 40 to line 9, column 79 in Github179b\n" + 
+				"4. Line 9, column 43 to line 9, column 52 in Github179b\n" + 
+				"\n"));
 	}
 }

@@ -146,14 +146,16 @@ public class ModuleCoverageInformation {
 		// Sum of all distinct states.
 		final long sum = actionSubset.stream().mapToLong(ActionInformationItem::getUnseen).sum();
 
-		final TreeSet<Long> aiiCounts = new TreeSet<>();
+		final TreeSet<Long> distinctStateCounts = new TreeSet<>();
+		final TreeSet<Long> stateCounts = new TreeSet<>();
 		actionSubset.forEach(a -> {
-			aiiCounts.add(a.getUnseen());
+			distinctStateCounts.add(a.getUnseen());
+			stateCounts.add(a.getCount());
 			a.setSum(sum);
 		});
 		// With aiiCounts collected, update all actions.
 		actionSubset.forEach(a -> {
-			a.colorItem(aiiCounts);
+			a.colorItem(distinctStateCounts, stateCounts);
 			rootLegends.get(Representation.STATES).add(a);
 			rootLegends.get(Representation.STATES_DISTINCT).add(a);
 		});
@@ -182,6 +184,12 @@ public class ModuleCoverageInformation {
 		}
 	}
 	
+	// false if a module has no actions (e.g. standard modules).
+	public boolean hasStates() {
+		return this.allItems.stream().filter(i -> i.isInFile(this.file) && i instanceof ActionInformationItem)
+				.count() > 0L;
+	}
+
 	public CoverageInformationItem getRoot() {
 		if (this.root == null) {
 			// Create the tree out of the flat list of items (the tree might span multiple

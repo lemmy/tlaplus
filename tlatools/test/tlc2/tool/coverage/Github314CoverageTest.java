@@ -23,42 +23,31 @@
  * Contributors:
  *   Markus Alexander Kuppe - initial API and implementation
  ******************************************************************************/
-package org.lamport.tla.toolbox.tool.tlc.output.data;
+package tlc2.tool.coverage;
 
-import java.util.Date;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import org.eclipse.core.runtime.Assert;
-import org.eclipse.jface.resource.ImageDescriptor;
-import org.lamport.tla.toolbox.tool.tlc.ui.TLCUIActivator;
-import org.lamport.tla.toolbox.tool.tlc.ui.editor.ModelEditor;
-import org.lamport.tla.toolbox.tool.tlc.ui.util.TLCUINotification;
+import org.junit.Test;
 
-public class CoverageUINotification extends TLCUINotification {
+import tlc2.output.EC;
 
-	private static final ImageDescriptor id = TLCUIActivator.getImageDescriptor("/icons/elcl16/quickfix_obj.png");
-	
-	private final ModelEditor editor;
+public class Github314CoverageTest extends AbstractCoverageTest {
 
-	public CoverageUINotification(final ModelEditor editor) {
-		super("Performance Hint",
-				"TLC has been running for some\n"
-				+ "time with coverage and cost\n"
-				+ "statistics enabled. Please be advised\n"
-				+ "that coverage and cost statistics\n"
-				+ "negatively impact performance.\n"
-				+ "For this reason, please consider\n"
-				+ "turning statistics off on\n"
-				+ "the advanced TLC options page and\n"
-				+ "re-run model checking without it.",
-				new Date());
-		this.editor = editor;
-		Assert.isNotNull(editor);
-		
-		setKindImage(id.createImage());
-	}
+    public Github314CoverageTest () {
+        super("Github314");
+    }
 
-	@Override
-	public void open() {
-		editor.addOrShowAdvancedTLCOptionsPage();
-	}
+    @Test
+    public void testSpec () {
+		// ModelChecker has finished and generated the expected amount of states
+		assertTrue(recorder.recorded(EC.TLC_FINISHED));
+		assertTrue(recorder.recordedWithStringValue(EC.TLC_SEARCH_DEPTH, "3"));
+		assertTrue(recorder.recordedWithStringValues(EC.TLC_STATS, "3", "3", "0"));
+
+		// No 'general' errors recorded
+		assertFalse(recorder.recorded(EC.GENERAL));
+
+		assertFalse(recorder.recorded(EC.TLC_COVERAGE_MISMATCH));
+    }
 }
