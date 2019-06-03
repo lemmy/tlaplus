@@ -35,6 +35,8 @@ import org.eclipse.swt.events.KeyAdapter;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
+import org.eclipse.swt.graphics.Font;
+import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -150,6 +152,7 @@ public class MainModelPage extends BasicFormPage implements IConfigurationConsta
 	private Combo tlcProfileCombo;
 	private AtomicInteger lastSelectedTLCProfileIndex;
 	private Label tlcResourceSummaryLabel;
+	private Hyperlink tlcTuneHyperlink;
 	// We cache this since want to reference it frequently on heap slider drag
 	private AtomicBoolean currentProfileIsAdHoc;
 
@@ -1001,6 +1004,23 @@ public class MainModelPage extends BasicFormPage implements IConfigurationConsta
 
 		dm.bindAttribute(MODEL_COMMENTS, commentsSource, commentsPart);
 
+		
+
+		Composite advancedLinkLine = new Composite(body, SWT.NONE);
+		twd = new TableWrapData();
+		twd.colspan = 2;
+		twd.grabHorizontal = true;
+		twd.align = TableWrapData.RIGHT;
+		advancedLinkLine.setLayoutData(twd);
+		advancedLinkLine.setBackground(body.getDisplay().getSystemColor(SWT.COLOR_WHITE));
+		gl = new GridLayout(1, false);
+		gl.marginWidth = 0;
+		gl.horizontalSpacing = 0;
+		advancedLinkLine.setLayout(gl);
+		Hyperlink hyper = toolkit.createHyperlink(advancedLinkLine, "Advanced model options", SWT.NONE);
+		hyper.addHyperlinkListener(advancedModelOptionsOpener);
+
+		
 		/*
 		 * Because the two Composite objects `left' and `right' are added to the object
 		 * `body' in this order, `left' is displayed to the left of `right'.
@@ -1194,18 +1214,21 @@ public class MainModelPage extends BasicFormPage implements IConfigurationConsta
 		managedForm.addPart(constantsPart);
 		constantTable = constantsPart.getTableViewer();
 		dm.bindAttribute(MODEL_PARAMETER_CONSTANTS, constantTable, constantsPart);
+		
 
-		Composite advancedLinkLine = new Composite((Composite) constantsPart.getSection().getClient(), SWT.NONE);
-		gd = new GridData();
-		gd.horizontalSpan = 2;
-		gd.horizontalAlignment = SWT.END;
-		advancedLinkLine.setLayoutData(gd);
+		advancedLinkLine = new Composite(body, SWT.NONE);
+		twd = new TableWrapData();
+		twd.colspan = 2;
+		twd.grabHorizontal = true;
+		twd.align = TableWrapData.RIGHT;
+		advancedLinkLine.setLayoutData(twd);
+		advancedLinkLine.setBackground(body.getDisplay().getSystemColor(SWT.COLOR_WHITE));
 		gl = new GridLayout(1, false);
 		gl.marginWidth = 0;
 		gl.horizontalSpacing = 0;
 		advancedLinkLine.setLayout(gl);
-		Hyperlink hyper = toolkit.createHyperlink(advancedLinkLine, "Advanced model options", SWT.NONE);
-		hyper.addHyperlinkListener(advancedModelOptionsOpener);
+		hyper = toolkit.createHyperlink(advancedLinkLine, "Advanced TLC execution options", SWT.NONE);
+		hyper.addHyperlinkListener(advancedTLCOptionsOpener);
 
 		// ------------------------------------------
 		// run tab
@@ -1220,19 +1243,8 @@ public class MainModelPage extends BasicFormPage implements IConfigurationConsta
 		final Composite howToRunArea = (Composite) section.getClient();
 		gl = new GridLayout(2, false);
 		gl.marginWidth = 0;
+		gl.verticalSpacing = 2;
 		howToRunArea.setLayout(gl);
-
-		advancedLinkLine = new Composite(howToRunArea, SWT.NONE);
-		gd = new GridData();
-		gd.horizontalSpan = 2;
-		gd.horizontalAlignment = SWT.END;
-		advancedLinkLine.setLayoutData(gd);
-		gl = new GridLayout(1, false);
-		gl.marginWidth = 0;
-		gl.horizontalSpacing = 0;
-		advancedLinkLine.setLayout(gl);
-		hyper = toolkit.createHyperlink(advancedLinkLine, "Advanced TLC execution options", SWT.NONE);
-		hyper.addHyperlinkListener(advancedTLCOptionsOpener);
 
 		final ValidateableSectionPart howToRunPart = new ValidateableSectionPart(section, this, SEC_HOW_TO_RUN);
 		managedForm.addPart(howToRunPart);
@@ -1310,6 +1322,24 @@ public class MainModelPage extends BasicFormPage implements IConfigurationConsta
 		gd.grabExcessHorizontalSpace = true;
 		gd.horizontalAlignment = SWT.CENTER;
 		tlcResourceSummaryLabel.setLayoutData(gd);
+
+		advancedLinkLine = new Composite(howToRunArea, SWT.NONE);
+		gd = new GridData();
+		gd.horizontalSpan = 2;
+		gd.grabExcessHorizontalSpace = true;
+		gd.horizontalAlignment = SWT.CENTER;
+		advancedLinkLine.setLayoutData(gd);
+		gl = new GridLayout(1, false);
+		gl.marginWidth = 0;
+		gl.horizontalSpacing = 0;
+		advancedLinkLine.setLayout(gl);
+		tlcTuneHyperlink = toolkit.createHyperlink(advancedLinkLine, "Tune these parameters", SWT.NONE);
+		tlcTuneHyperlink.addHyperlinkListener(advancedTLCOptionsOpener);
+		final Font baseFont = JFaceResources.getFont(JFaceResources.DIALOG_FONT);
+		final FontData[] baseFD = baseFont.getFontData();
+		final FontData smaller = new FontData(baseFD[0].getName(), baseFD[0].getHeight() - 2, baseFD[0].getStyle());
+		tlcTuneHyperlink.setFont(new Font(body.getDisplay(), smaller));
+
 
 		/*
 		 * Distribution. Help button added by LL on 17 Jan 2013
@@ -1620,6 +1650,7 @@ public class MainModelPage extends BasicFormPage implements IConfigurationConsta
 		}
 
 		tlcResourceSummaryLabel.setText(sb.toString());
+		tlcTuneHyperlink.setVisible(sb.toString().length() > 0);
 	}
 
 	private String generateMemoryDisplayText() {
