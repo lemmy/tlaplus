@@ -1,5 +1,8 @@
 package tlc2.output;
 
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Interface containing the error code constants 
@@ -138,6 +141,7 @@ public interface EC
      * an "a" into an "an".  This doesn't work on the Toolbox's console.  Hence, LL added
      * the following message type on 21 May 2012. */
     public static final int TLC_MODULE_ARGUMENT_ERROR_AN = 2266;
+    public static final int TLC_MODULE_ONE_ARGUMENT_ERROR = 2283;
     public static final int TLC_ARGUMENT_MISMATCH = 2170;
     public static final int TLC_PARSING_FAILED2 = 2171;
     public static final int TLC_PARSING_FAILED = 3002;
@@ -394,5 +398,13 @@ public interface EC
 				return 255;
 			}
 	    }
+
+		private static final Set<Integer> knownExitValues = Stream.of(SUCCESS, FAILURE_LIVENESS_EVAL, FAILURE_SPEC_EVAL,
+				FAILURE_SAFETY_EVAL, VIOLATION_SAFETY, VIOLATION_LIVENESS, VIOLATION_DEADLOCK, VIOLATION_ASSUMPTION,
+				VIOLATION_ASSERT, ERROR_CONFIG_PARSE, ERROR_SPEC_PARSE).collect(Collectors.toSet());
+		
+		public static boolean exitStatusToCrash(final int exitStatus) {
+			return !knownExitValues.contains(exitStatus);
+		}
     }
 }

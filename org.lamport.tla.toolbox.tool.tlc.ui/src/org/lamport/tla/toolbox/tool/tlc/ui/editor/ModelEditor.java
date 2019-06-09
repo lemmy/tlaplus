@@ -669,9 +669,9 @@ public class ModelEditor extends FormEditor {
 		}
 
 		// Load a previously generated pdf file.
-		final IFile file = model.getFolder().getFile(model.getName() + ".pdf");
-		if (file.exists()) {
-			addPage(findEditor, new FileEditorInput(file));
+		final IFile pdfFile = model.getFolder().getFile(model.getName() + ".pdf");
+		if (pdfFile.exists()) {
+			saferAddPage(stateGraphDotDump, findEditor, pdfFile, useEmbeddedViewer);
 			return;
 		}
 
@@ -689,23 +689,11 @@ public class ModelEditor extends FormEditor {
 					final byte[] load = GraphViz.load(new FileInputStream(stateGraphDotDump.getLocation().toFile()),
 							"pdf", 0, 0);
 					// Write byte[] into IFile file
-					file.create(new ByteArrayInputStream(load), IResource.NONE, null);
+					pdfFile.create(new ByteArrayInputStream(load), IResource.NONE, null);
 					UIHelper.runUISync(new Runnable() {
 						@Override
 						public void run() {
-							try {
-								addPage(findEditor, new FileEditorInput(file));
-							} catch (PartInitException e) {
-								final Shell shell = Display.getDefault().getActiveShell();
-								MessageDialog.openError(shell == null ? new Shell() : shell,
-										"Opening state graph visualization failed.",
-										"Opening state graph visualization failed: " + e.getMessage());
-							} catch (OutOfMemoryError e) {
-								final Shell shell = Display.getDefault().getActiveShell();
-								MessageDialog.openError(shell == null ? new Shell() : shell, "Opening state graph visualization ran out of memory.",
-										"Opening state graph visualization ran out of memory. The state graph is likely too large. "
-										+ "Try using a standalone PDF viewer if the Toolbox is currently set to use the built-in one.");
-							}
+							ModelEditor.this.saferAddPage(stateGraphDotDump, findEditor, pdfFile, useEmbeddedViewer);
 						}
 					});
 				} catch (CoreException e) {
@@ -724,6 +712,44 @@ public class ModelEditor extends FormEditor {
 		j.setUser(true);
 		j.setPriority(Job.LONG);
 		j.schedule();
+	}
+
+	// Attempt to handle (primarily) OutOfMemory errors when opening large pdf files. 
+	private void saferAddPage(final IFile stateGraphDotDump, final IEditorPart findEditor, final IFile file, final boolean usesEmbeddedViewer) {
+		try {
+			addPage(findEditor, new FileEditorInput(file));
+		} catch (PartInitException e) {
+			final Shell shell = Display.getDefault().getActiveShell();
+			MessageDialog.openError(shell == null ? new Shell() : shell,
+					"Opening state graph visualization failed.",
+					"Opening state graph visualization failed: " + e.getMessage());
+		} catch (OutOfMemoryError oom) {
+			// Try to reclaim memory to be able to keep code below from running into more OOMs.
+			System.gc();
+			
+			// Rename dot and pdf files with too large input to keep them from causing
+			// troubles in the future (just renaming pdf means the Toolbox will generate a
+			// new pdf from the .dot input on the next invocation).
+			try {
+				stateGraphDotDump.move(stateGraphDotDump.getFullPath().addFileExtension("large"), true, new NullProgressMonitor());
+				file.move(file.getFullPath().addFileExtension("large"), true, new NullProgressMonitor());
+			} catch (CoreException e) {
+				TLCUIActivator.getDefault().logWarning(e.getMessage());
+			}
+			
+			// Instruct user about what happened and what to do.
+			final Shell shell = Display.getDefault().getActiveShell();
+			 String label = "Opening state graph visualization ran out of memory. The state graph is likely too large. ";
+			if (usesEmbeddedViewer) {
+				label += "\n\nTry switching from the built-in to a standalone PDF viewer by unchecking "
+						+ "\"Use built-in PDF viewer\" on the Toolbox's \"PDF Viewer\" preference page.\n\n";
+			}
+			label += String.format("To prevent future problems, the file %s has been renamed to %s.",
+					file.getLocation().toOSString(), file.getLocation().addFileExtension("large").toOSString());
+			label += "\n\nPlease restart the Toolbox in case it now behaves strangely.";
+			MessageDialog.openError(shell == null ? new Shell() : shell,
+					"Opening state graph visualization ran out of memory.", label);
+		}
 	}
 
 	// Shorten message to 1024 chars in case GraphViz attached the complete dot
@@ -1410,6 +1436,7 @@ public class ModelEditor extends FormEditor {
     public void addPage(int index, IEditorPart editor, IEditorInput input) throws PartInitException
     {
         super.addPage(index, editor, input);
+        //TODO This method screams to be refactored and simplified, but sadly life is short.
         /*
          * Do stuff if the input is a tla file.
          * 
@@ -1418,7 +1445,14 @@ public class ModelEditor extends FormEditor {
          * 
          * 2.) Set the page to be closeable.
          */
-		if (input instanceof FileEditorInput
+        if (editor instanceof TLACoverageEditor) {
+			// ... just add another special case to this supposed-to-be generic method. We
+			// want the tab for the TLACoverageEditor to show not just the file name and an
+			// icon indicating the editor type.
+        	this.setPageText(index, editor.getTitle());
+        	this.setPageImage(index, editor.getTitleImage());
+			((CTabFolder) getContainer()).getItem(index).setShowClose(true);
+        } else if (input instanceof FileEditorInput
 				&& ((FileEditorInput) input).getFile().getFileExtension().equals(ResourceHelper.TLA_EXTENSION)) {
             setPageText(index, input.getName());
 
