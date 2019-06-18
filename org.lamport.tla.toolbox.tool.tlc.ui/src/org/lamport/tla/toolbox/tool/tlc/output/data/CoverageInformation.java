@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.CoreException;
@@ -39,6 +40,8 @@ import org.eclipse.jface.text.IRegion;
 import org.eclipse.ui.editors.text.FileDocumentProvider;
 import org.eclipse.ui.part.FileEditorInput;
 import org.lamport.tla.toolbox.util.AdapterFactory;
+
+import tlc2.tool.coverage.ActionWrapper.Relation;
 
 public class CoverageInformation implements Iterable<CoverageInformationItem> {
 	
@@ -94,6 +97,27 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 		return this.items.toArray();
 	}
 	
+
+	/**
+	 * CIIs for zero-covered/disabled spec actions (init and next-state relation).
+	 */
+	public List<ActionInformationItem> getDisabledSpecActions() {
+		return items.stream()
+				.filter(item -> ((item instanceof ActionInformationItem)
+						&& ((ActionInformationItem) item).getRelation() != Relation.PROP
+						&& (((ActionInformationItem) item).getCount() == 0)))
+				.map(item -> (ActionInformationItem) item)
+				.collect(Collectors.toList());
+	}
+	
+	public boolean hasDisabledSpecActions() {
+		return items.stream()
+				.filter(item -> ((item instanceof ActionInformationItem)
+						&& ((ActionInformationItem) item).getRelation() != Relation.PROP
+						&& (((ActionInformationItem) item).getCount() == 0)))
+				.findAny().isPresent();
+	}
+
 	/**
 	 * @return true if coverage information pre-dates TLC's new/hierarchical format introduced by the CostModel.
 	 */

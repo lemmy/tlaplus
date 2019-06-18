@@ -7,8 +7,7 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
-import org.lamport.tla.toolbox.tool.tlc.output.data.CoverageInformationItem;
-import org.lamport.tla.toolbox.tool.tlc.ui.TLCUIActivator;
+import org.lamport.tla.toolbox.tool.tlc.output.data.ActionInformationItem;
 import org.lamport.tla.toolbox.tool.tlc.ui.util.AbstractTableLabelProvider;
 
 /**
@@ -18,12 +17,11 @@ import org.lamport.tla.toolbox.tool.tlc.ui.util.AbstractTableLabelProvider;
  */
 class CoverageLabelProvider extends AbstractTableLabelProvider {
     static final int COL_MODULE = 0;
-    static final int COL_LOCATION = 1;
-    static final int COL_COUNT = 2;
+    static final int COL_ACTION = 1;
 
     static final String TOOLTIP = "Click on a row to go to action.";
     
-	private static final String[] COLUMN_TITLES = new String[] { "Module", "Location", "Count" };
+	private static final String[] COLUMN_TITLES = new String[] { "Module", "Action" };
     private static final int[] COLUMN_WIDTHS;
 	private static final double[] COLUMN_WIDTH_PERCENTAGES;
     private static final int MIN_WIDTH;
@@ -31,15 +29,14 @@ class CoverageLabelProvider extends AbstractTableLabelProvider {
     static {
     	final double scale = 1.0;	// future functionality: UIHelper.getDisplayScaleFactor();
     	
-    	COLUMN_WIDTHS = new int[3];
+    	COLUMN_WIDTHS = new int[2];
     	COLUMN_WIDTHS[0] = (int)(40.0 * scale);
     	COLUMN_WIDTHS[1] = (int)(100.0 * scale);
-    	COLUMN_WIDTHS[2] = (int)(40.0 * scale);
     	
-    	MIN_WIDTH = COLUMN_WIDTHS[0] + COLUMN_WIDTHS[1] + COLUMN_WIDTHS[2];
+    	MIN_WIDTH = COLUMN_WIDTHS[0] + COLUMN_WIDTHS[1];
 		
 		COLUMN_WIDTH_PERCENTAGES = new double[3];
-		for (int i = 0; i < 3; i++) {
+		for (int i = 0; i < COLUMN_WIDTHS.length; i++) {
 			COLUMN_WIDTH_PERCENTAGES[i] = ((double)COLUMN_WIDTHS[i] / (double)MIN_WIDTH);
 		}
     }
@@ -80,16 +77,14 @@ class CoverageLabelProvider extends AbstractTableLabelProvider {
 	 * @see org.eclipse.jface.viewers.ITableLabelProvider#getColumnText(java.lang.Object, int)
 	 */
 	public String getColumnText(final Object element, final int columnIndex) {
-		if (element instanceof CoverageInformationItem) {
-			final CoverageInformationItem item = (CoverageInformationItem) element;
+		if (element instanceof ActionInformationItem) {
+			final ActionInformationItem item = (ActionInformationItem) element;
 			
 			switch (columnIndex) {
 				case COL_MODULE:
 					return item.getModule();
-				case COL_LOCATION:
-					return item.getLocation();
-				case COL_COUNT:
-					return String.valueOf(item.getCount());
+				case COL_ACTION:
+					return String.format("%s (%s)", item.getName(), item.getLocation());
 			}
 		}
 		return null;
@@ -100,10 +95,6 @@ class CoverageLabelProvider extends AbstractTableLabelProvider {
 	}
 
 	public Color getBackground(final Object element, final int columnIndex) {
-		if ((element instanceof CoverageInformationItem) && (((CoverageInformationItem) element).getCount() == 0)) {
-			return TLCUIActivator.getColor(SWT.COLOR_YELLOW);
-		}
-		
 		return null;
 	}
 }
