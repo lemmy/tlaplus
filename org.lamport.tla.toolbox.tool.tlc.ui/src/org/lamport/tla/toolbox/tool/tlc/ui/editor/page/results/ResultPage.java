@@ -54,10 +54,12 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.FileDialog;
+import org.eclipse.swt.widgets.Item;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Layout;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Table;
+import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.PartInitException;
@@ -272,7 +274,6 @@ public class ResultPage extends BasicFormPage implements ITLCModelLaunchDataPres
                 		getModel().setAttribute(LAUNCH_FP_INDEX, dataProvider.getFPIndex());
                 		getModelEditor().saveModel();
                 	}
-                	break;
                 case LAST_CHECKPOINT_TIME:
                 	setCheckpoint(dataProvider.getLastCheckpointTimeStamp());
                    	break;
@@ -295,7 +296,16 @@ public class ResultPage extends BasicFormPage implements ITLCModelLaunchDataPres
                 	}
                     break;
                 case COVERAGE_TIME:
-                    ResultPage.this.coverageTimestampText.setText(dataProvider.getCoverageTimestamp());
+					final String coverageTimestamp = dataProvider.getCoverageTimestamp();
+					if ("".equals(coverageTimestamp)) {
+						// Reset
+						ResultPage.this.coverageTimestampText.setText("");
+					} else {
+						// Print statistics timestamp relative to TLC startup.
+						final Date date = TLCModelLaunchDataProvider.parseDate(coverageTimestamp);
+						final String interval = TLCModelLaunchDataProvider.formatInterval(getStartTimestamp(), date.getTime());
+						ResultPage.this.coverageTimestampText.setText(interval);
+					}
                     break;
                 case COVERAGE:
                 	final CoverageInformation coverageInfo = dataProvider.getCoverageInfo();
@@ -1202,7 +1212,7 @@ public class ResultPage extends BasicFormPage implements ITLCModelLaunchDataPres
         gd.verticalIndent = 0;
         headerLine.setLayoutData(gd);
         
-        final Label title = toolkit.createLabel(headerLine, "Disabled actions at");
+        final Label title = toolkit.createLabel(headerLine, "Actions at");
         gd = new GridData();
         gd.horizontalIndent = 0;
         gd.verticalIndent = 6;
@@ -1213,7 +1223,7 @@ public class ResultPage extends BasicFormPage implements ITLCModelLaunchDataPres
 
         this.coverageTimestampText = toolkit.createText(headerLine, "", SWT.FLAT);
         this.coverageTimestampText.setEditable(false);
-        this.coverageTimestampText.setMessage("No information collected. Has coverage been enabled?");
+        this.coverageTimestampText.setMessage("No information collected yet. Has coverage been enabled?");
         gd = new GridData();
         gd.horizontalIndent = 6;
         gd.verticalIndent = 0;
@@ -1261,13 +1271,30 @@ public class ResultPage extends BasicFormPage implements ITLCModelLaunchDataPres
                 if ((inputElement != null) && (inputElement instanceof List)) {
                     return ((List<?>) inputElement).toArray(new Object[((List<?>) inputElement).size()]);
                 } else if (inputElement instanceof CoverageInformation) {
-                	return ((CoverageInformation) inputElement).getDisabledSpecActions().toArray();
+                	return ((CoverageInformation) inputElement).getSpecActions().toArray();
                 }
                 return null;
             }
         });
 
         coverage.setLabelProvider(clp);
+        
+        coverage.setComparator(new CoverageViewerComparator());
+        for (TableColumn column : coverage.getTable().getColumns()) {
+            column.addListener(SWT.Selection, e -> {
+                final Item sortColumn = coverage.getTable().getSortColumn();
+                int direction = coverage.getTable().getSortDirection();
+
+                if (column.equals(sortColumn)) {
+                    direction = direction == SWT.UP ? SWT.DOWN : SWT.UP;
+                } else {
+                	coverage.getTable().setSortColumn(column);
+                    direction = SWT.UP;
+                }
+                coverage.getTable().setSortDirection(direction);
+                coverage.refresh();
+            });
+        }
         
         getSite().setSelectionProvider(coverage);
         

@@ -507,7 +507,7 @@ public class AdvancedTLCOptionsPage extends BasicFormPage implements Closeable {
         gd.horizontalAlignment = SWT.BEGINNING;
         m_checkpointRecoverCheckbox.setLayoutData(gd);
         
-        final Button b = HelpButton.helpButton(checkpointComposite, "model/tlc-options-page.html#checkpoint") ;
+        Button b = HelpButton.helpButton(checkpointComposite, "model/tlc-options-page.html#checkpoint") ;
         gd = new GridData();
         gd.horizontalAlignment = SWT.END;
         gd.grabExcessHorizontalSpace = true;
@@ -561,19 +561,30 @@ public class AdvancedTLCOptionsPage extends BasicFormPage implements Closeable {
         new Label(featuresBody, SWT.NONE); // use up last cell.
 
         // Collect Coverage
-		final String collectCoverageHelp = "Coverage helps identify problems with the specification such as actions which are "
-				+ "never enabled (Action enablement). Cost statistics allow to diagnose expensive expressions (to evaluate) and state space "
-				+ "explosion (On). Coverage negatively impacts model checking performance and should thus be off while "
+        
+		final String collectCoverageHelp = "Profiling helps identify problems with the specification such as actions which are "
+				+ "never enabled (Action enablement). Invocation and cost statistics allow to diagnose expensive expressions (to evaluate) and state space "
+				+ "explosion (On). Profiling negatively impacts model checking performance and should thus be off while "
 				+ "checking large models.";
 		final Label collectCoverageLabel = toolkit.createLabel(featuresBody,
-				"Collect coverage:");
+				"Profiling:");
         gd = new GridData();
         gd.verticalIndent = 9;
         gd.grabExcessHorizontalSpace = true;
         collectCoverageLabel.setLayoutData(gd);
         collectCoverageLabel.setToolTipText(collectCoverageHelp);
 
-        m_collectCoverageCombo = new ComboViewer(new Combo(featuresBody, SWT.NONE));
+        Composite coverageComposite = new Composite(featuresBody, SWT.NONE) ;
+        gl = new GridLayout(2, false);
+        gl.marginWidth = 0;
+        gl.marginHeight = 0;
+        coverageComposite.setLayout(gl);
+
+        gd = new GridData();
+        gd.horizontalAlignment = SWT.FILL;
+        coverageComposite.setLayoutData(gd);
+
+        m_collectCoverageCombo = new ComboViewer(new Combo(coverageComposite, SWT.NONE));
         gd = new GridData();
         gd.verticalIndent = 9;
         gd.grabExcessHorizontalSpace = true;
@@ -599,6 +610,15 @@ public class AdvancedTLCOptionsPage extends BasicFormPage implements Closeable {
 			}
         });
         m_collectCoverageCombo.setInput(Model.Coverage.values());
+        
+        
+        b = HelpButton.helpButton(coverageComposite, "model/tlc-options-page.html#profiling") ;
+        gd = new GridData();
+        gd.horizontalAlignment = SWT.END;
+        gd.verticalAlignment = SWT.BOTTOM;
+        gd.grabExcessHorizontalSpace = true;
+        b.setLayoutData(gd);
+
         
         // Visualize State Graph with GraphViz (dot)
 		final String visualizeStateGraphHelp = "Draw the state graph after completion of model checking provided the "

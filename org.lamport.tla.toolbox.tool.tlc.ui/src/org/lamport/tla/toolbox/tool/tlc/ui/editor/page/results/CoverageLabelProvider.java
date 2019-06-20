@@ -1,5 +1,7 @@
 package org.lamport.tla.toolbox.tool.tlc.ui.editor.page.results;
 
+import java.util.Comparator;
+
 import org.eclipse.jface.layout.TableColumnLayout;
 import org.eclipse.jface.viewers.ColumnWeightData;
 import org.eclipse.swt.SWT;
@@ -8,38 +10,81 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
 import org.lamport.tla.toolbox.tool.tlc.output.data.ActionInformationItem;
+import org.lamport.tla.toolbox.tool.tlc.ui.TLCUIActivator;
 import org.lamport.tla.toolbox.tool.tlc.ui.util.AbstractTableLabelProvider;
+
+import tlc2.output.MP;
 
 /**
  * This is the <code>LabelProvider</code> for the coverage statistics table found on the Results page.
  * 
  * @see org.lamport.tla.toolbox.tool.tlc.ui.editor.page.results.ResultPage
  */
+@SuppressWarnings("unchecked")
 class CoverageLabelProvider extends AbstractTableLabelProvider {
-    static final int COL_MODULE = 0;
+    static final String COVERAGE_COMPARATOR = "COVERAGE_COMPARATOR";
+    
+	static final int COL_MODULE = 0;
     static final int COL_ACTION = 1;
+    static final int COL_STATES = 2;
+    static final int COL_DISTSTATES = 3;
 
     static final String TOOLTIP = "Click on a row to go to action.";
     
-	private static final String[] COLUMN_TITLES = new String[] { "Module", "Action" };
+	private static final String[] COLUMN_TITLES = new String[] { "Module", "Action", "States Found", "Distinct States"  };
     private static final int[] COLUMN_WIDTHS;
+    private static final Comparator<ActionInformationItem>[] COLUMN_COMP;
 	private static final double[] COLUMN_WIDTH_PERCENTAGES;
     private static final int MIN_WIDTH;
     
     static {
     	final double scale = 1.0;	// future functionality: UIHelper.getDisplayScaleFactor();
     	
-    	COLUMN_WIDTHS = new int[2];
-    	COLUMN_WIDTHS[0] = (int)(40.0 * scale);
-    	COLUMN_WIDTHS[1] = (int)(100.0 * scale);
+    	int i = 0;
+    	COLUMN_WIDTHS = new int[COLUMN_TITLES.length];
+    	COLUMN_WIDTHS[i++] = (int)(30.0 * scale);
+    	COLUMN_WIDTHS[i++] = (int)(30.0 * scale);
+    	COLUMN_WIDTHS[i++] = (int)(30.0 * scale);
+    	COLUMN_WIDTHS[i++] = (int)(30.0 * scale);
     	
-    	MIN_WIDTH = COLUMN_WIDTHS[0] + COLUMN_WIDTHS[1];
+    	int sum = 0;
+    	for (i = 0; i < COLUMN_WIDTHS.length; i++) {
+    		sum += COLUMN_WIDTHS[i];
+    	}
+    	MIN_WIDTH = sum;
 		
-		COLUMN_WIDTH_PERCENTAGES = new double[3];
-		for (int i = 0; i < COLUMN_WIDTHS.length; i++) {
+		COLUMN_WIDTH_PERCENTAGES = new double[COLUMN_WIDTHS.length];
+		for (i = 0; i < COLUMN_WIDTHS.length; i++) {
 			COLUMN_WIDTH_PERCENTAGES[i] = ((double)COLUMN_WIDTHS[i] / (double)MIN_WIDTH);
 		}
-    }
+
+		i = 0;
+		COLUMN_COMP = new Comparator[COLUMN_TITLES.length];
+		COLUMN_COMP[i++] = new Comparator<ActionInformationItem>() {
+			@Override
+			public int compare(ActionInformationItem o1, ActionInformationItem o2) {
+				return o1.getModule().compareTo(o2.getModule());
+			}
+		}; 
+		COLUMN_COMP[i++] = new Comparator<ActionInformationItem>() {
+			@Override
+			public int compare(ActionInformationItem o1, ActionInformationItem o2) {
+				return o1.getName().compareTo(o2.getName());
+			}
+		}; 
+		COLUMN_COMP[i++] = new Comparator<ActionInformationItem>() {
+			@Override
+			public int compare(ActionInformationItem o1, ActionInformationItem o2) {
+				return Long.compare(o1.getCount(), o2.getCount());
+			}
+		}; 
+		COLUMN_COMP[i++] = new Comparator<ActionInformationItem>() {
+			@Override
+			public int compare(ActionInformationItem o1, ActionInformationItem o2) {
+				return Long.compare(o1.getUnseen(), o2.getUnseen());
+			}
+		}; 
+   }
 
     
     CoverageLabelProvider() {
@@ -55,6 +100,7 @@ class CoverageLabelProvider extends AbstractTableLabelProvider {
 			column.setWidth(COLUMN_WIDTHS[i]);
 			column.setText(COLUMN_TITLES[i]);
 			column.setToolTipText(TOOLTIP);
+			column.setData(COVERAGE_COMPARATOR, COLUMN_COMP[i]);
 
 			final int weight = (int)(100.0 * COLUMN_WIDTH_PERCENTAGES[i]);
 			layout.setColumnData(column, new ColumnWeightData(weight, COLUMN_WIDTHS[i], true));
@@ -84,7 +130,11 @@ class CoverageLabelProvider extends AbstractTableLabelProvider {
 				case COL_MODULE:
 					return item.getModule();
 				case COL_ACTION:
-					return String.format("%s (%s)", item.getName(), item.getLocation());
+					return item.getName();
+				case COL_STATES:
+					return MP.format(item.getCount());
+				case COL_DISTSTATES:
+					return MP.format(item.getUnseen());
 			}
 		}
 		return null;
@@ -95,6 +145,12 @@ class CoverageLabelProvider extends AbstractTableLabelProvider {
 	}
 
 	public Color getBackground(final Object element, final int columnIndex) {
+		if (element instanceof ActionInformationItem) {
+			final ActionInformationItem aii = (ActionInformationItem) element;
+			if (aii.getCount() == 0 && aii.getUnseen() == 0) {
+				return TLCUIActivator.getColor(SWT.COLOR_YELLOW);
+			}
+		}
 		return null;
 	}
 }

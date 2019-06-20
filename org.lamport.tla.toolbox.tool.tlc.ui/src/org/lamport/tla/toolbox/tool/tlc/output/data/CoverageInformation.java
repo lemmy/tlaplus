@@ -27,7 +27,6 @@ package org.lamport.tla.toolbox.tool.tlc.output.data;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -43,7 +42,7 @@ import org.lamport.tla.toolbox.util.AdapterFactory;
 
 import tlc2.tool.coverage.ActionWrapper.Relation;
 
-public class CoverageInformation implements Iterable<CoverageInformationItem> {
+public class CoverageInformation {
 	
 	private final List<CoverageInformationItem> items = new ArrayList<>();
 
@@ -81,41 +80,45 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 			notExpectedToHappen.printStackTrace();
 		}
 		
-		this.items.add(item);
-	}
-	
-	@Override
-	public Iterator<CoverageInformationItem> iterator() {
-		return this.items.iterator();
+		synchronized (items) {
+			this.items.add(item);
+		}
 	}
 
 	public boolean isEmpty() {
 		return this.items.isEmpty();
 	}
 
-	public Object[] toArray() {
-		return this.items.toArray();
-	}
-	
-
 	/**
 	 * CIIs for zero-covered/disabled spec actions (init and next-state relation).
 	 */
 	public List<ActionInformationItem> getDisabledSpecActions() {
-		return items.stream()
-				.filter(item -> ((item instanceof ActionInformationItem)
-						&& ((ActionInformationItem) item).getRelation() != Relation.PROP
-						&& (((ActionInformationItem) item).getCount() == 0)))
-				.map(item -> (ActionInformationItem) item)
-				.collect(Collectors.toList());
+		synchronized (items) {
+			return items.stream()
+					.filter(item -> ((item instanceof ActionInformationItem)
+							&& ((ActionInformationItem) item).getRelation() != Relation.PROP
+							&& (((ActionInformationItem) item).getCount() == 0)))
+					.map(item -> (ActionInformationItem) item).collect(Collectors.toList());
+		}
 	}
 	
 	public boolean hasDisabledSpecActions() {
-		return items.stream()
-				.filter(item -> ((item instanceof ActionInformationItem)
-						&& ((ActionInformationItem) item).getRelation() != Relation.PROP
-						&& (((ActionInformationItem) item).getCount() == 0)))
-				.findAny().isPresent();
+		synchronized (items) {
+			return items.stream()
+					.filter(item -> ((item instanceof ActionInformationItem)
+							&& ((ActionInformationItem) item).getRelation() != Relation.PROP
+							&& (((ActionInformationItem) item).getCount() == 0)))
+					.findAny().isPresent();
+		}
+	}
+
+	public List<ActionInformationItem> getSpecActions() {
+		synchronized (items) {
+			return items.stream()
+					.filter(item -> ((item instanceof ActionInformationItem)
+							&& ((ActionInformationItem) item).getRelation() != Relation.PROP))
+					.map(item -> (ActionInformationItem) item).collect(Collectors.toList());
+		}
 	}
 
 	/**
@@ -123,11 +126,15 @@ public class CoverageInformation implements Iterable<CoverageInformationItem> {
 	 */
 	public boolean isLegacy() {
 		// true if there are no ActionInformationItems.
-		return !items.stream().filter(i -> i instanceof ActionInformationItem).findAny().isPresent();
+		synchronized (items) {
+			return !items.stream().filter(i -> i instanceof ActionInformationItem).findAny().isPresent();
+		}
 	}
 
 	public boolean has(final IFile iFile) {
-		return items.stream().filter(i -> i.isInFile(iFile)).findAny().isPresent();
+		synchronized (items) {
+			return items.stream().filter(i -> i.isInFile(iFile)).findAny().isPresent();
+		}
 	}
 
 	public ModuleCoverageInformation projectionFor(final IFile iFile) {
