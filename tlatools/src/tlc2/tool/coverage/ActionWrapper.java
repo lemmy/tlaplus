@@ -58,10 +58,36 @@ public final class ActionWrapper extends CostModelNode {
 	}
 
 	private String printLocation() {
-		if (this.action.isDeclared()) {
-			return String.format("<%s %s>", this.action.getName(), this.action.getDeclaration());
-		} else {
+		if (!this.action.isDeclared()) {
+			// Safeguard for legacy cases if any.
 			return this.action.toString();
+		}
+		// Determine if the mapping from the action's name/identifier/declaration to the
+		// action's definition is 1:1 or 1:N.
+		//
+		// Act == /\ x  = 23
+		//        /\ x' = 42
+		// vs
+		// Act == \/ /\ x  = 23
+		//           /\ x' = 42
+		//        \/ /\ x  = 123
+		//           /\ x' = 4711
+		// or
+		// Act == (x  = 23 /\ x' = 42) \/ (x  = 123 /\ x' = 4711)
+		//
+		// For a 1:1 mapping this prints just the location of Act. For a 1:N mapping it
+		// prints the location of Act _and_ the location (in shortened form) of the actual
+		// disjunct.
+		final Location declaration = this.action.getDeclaration();
+		final Location definition = this.action.getOpDef().getBody().getLocation();
+		final Location actual = this.action.pred.getLocation();
+		if (definition.equals(actual)) {
+			// 1:1
+			return String.format("<%s %s>", this.action.getName(), declaration);
+		} else {
+			// 1:N
+			return String.format("<%s %s (%s %s %s %s)>", this.action.getName(), declaration, actual.beginLine(),
+					actual.beginColumn(), actual.endLine(), actual.endColumn());
 		}
 	}
 
@@ -110,9 +136,10 @@ public final class ActionWrapper extends CostModelNode {
 			assert getEvalCount() == 0L && this.secondary.getCount() == 0L;
 			MP.printMessage(EC.TLC_COVERAGE_PROPERTY, new String[] { printLocation() });
 		} else if (relation == Relation.INIT) {
-			assert this.secondary.getCount() == 0L;
-			MP.printMessage(EC.TLC_COVERAGE_INIT,
-					new String[] { printLocation(), String.valueOf(getEvalCount()) });
+			// TODO Eventually coverage for init and next should consistently report states
+			// found and distinct states into the same counters.
+			MP.printMessage(EC.TLC_COVERAGE_INIT, new String[] { printLocation(), String.valueOf(getEvalCount()),
+					String.valueOf(getEvalCount() + this.secondary.getCount()) });
 		} else {
 			MP.printMessage(EC.TLC_COVERAGE_NEXT, new String[] { printLocation(),
 					String.valueOf(this.secondary.getCount()), String.valueOf(getEvalCount()) });

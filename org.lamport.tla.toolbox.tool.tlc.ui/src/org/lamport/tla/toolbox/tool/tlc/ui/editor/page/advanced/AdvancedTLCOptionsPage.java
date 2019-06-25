@@ -10,6 +10,7 @@ import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.SubMonitor;
 import org.eclipse.jface.dialogs.IMessageProvider;
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.source.SourceViewer;
@@ -74,6 +75,7 @@ public class AdvancedTLCOptionsPage extends BasicFormPage implements Closeable {
     private static final String TITLE = "TLC Options";
     
     
+    private Button saveDefaultConfigurationButton;
     private Spinner workers;
     private Scale maxHeapSize;
     private Label maxHeapSizeFraction;
@@ -234,9 +236,20 @@ public class AdvancedTLCOptionsPage extends BasicFormPage implements Closeable {
         
         // label workers
         toolkit.createLabel(configBody, "Number of worker threads:");
+        
+        final Composite workersLine = new Composite(configBody, SWT.NONE);
+        gd = new GridData();
+        gd.horizontalIndent = 40;
+        gd.horizontalAlignment = SWT.FILL;
+        gd.grabExcessHorizontalSpace = true;
+        workersLine.setLayoutData(gd);
+        gl = new GridLayout(2, false);
+        gl.marginHeight = 0;
+        gl.marginWidth = 0;
+        workersLine.setLayout(gl);
 
         // field workers
-        workers = new Spinner(configBody, SWT.NONE);
+        workers = new Spinner(workersLine, SWT.NONE);
         workers.addFocusListener(focusListener);
         workers.addListener(SWT.Verify, (e) -> {
 			if (!programmaticallySettingWorkerParameters.get()) {
@@ -244,7 +257,6 @@ public class AdvancedTLCOptionsPage extends BasicFormPage implements Closeable {
 			}
         });
         gd = new GridData();
-        gd.horizontalIndent = 40;
         gd.widthHint = 40;
         workers.setLayoutData(gd);
         
@@ -255,6 +267,23 @@ public class AdvancedTLCOptionsPage extends BasicFormPage implements Closeable {
         workers.setEnabled(false);
 
         dm.bindAttribute(LAUNCH_NUMBER_OF_WORKERS, workers, configPart);
+        
+        saveDefaultConfigurationButton = new Button(workersLine, SWT.PUSH);
+        saveDefaultConfigurationButton.setText("Save as default");
+        gd = new GridData();
+        gd.horizontalAlignment = SWT.END;
+        gd.grabExcessHorizontalSpace = true;
+        saveDefaultConfigurationButton.setLayoutData(gd);
+        saveDefaultConfigurationButton.addSelectionListener(new SelectionAdapter() {
+        	@Override
+        	public void widgetSelected(final SelectionEvent se) {
+                final IPreferenceStore prefStore = TLCUIActivator.getDefault().getPreferenceStore();
+        		
+                prefStore.setValue(ITLCPreferenceConstants.I_TLC_DEFAULT_WORKERS_COUNT, workers.getSelection());
+                prefStore.setValue(ITLCPreferenceConstants.I_TLC_MAXIMUM_HEAP_SIZE_DEFAULT, maxHeapSize.getSelection());
+                prefStore.setValue(ITLCPreferenceConstants.I_TLC_FPBITS_DEFAULT, m_fingerprintBits.getSelection());
+        	}
+        });
         
         /*
          * MapHeap Scale
@@ -276,8 +305,8 @@ public class AdvancedTLCOptionsPage extends BasicFormPage implements Closeable {
         maxHeapScale.setLayoutData(gd);
 
         // field max heap size
-        int defaultMaxHeapSize = TLCUIActivator.getDefault().getPreferenceStore().getInt(
-                ITLCPreferenceConstants.I_TLC_MAXIMUM_HEAP_SIZE_DEFAULT);
+        final IPreferenceStore prefStore = TLCUIActivator.getDefault().getPreferenceStore();
+        final int defaultMaxHeapSize = prefStore.getInt(ITLCPreferenceConstants.I_TLC_MAXIMUM_HEAP_SIZE_DEFAULT);
         maxHeapSize = new Scale(maxHeapScale, SWT.NONE);
         maxHeapSize.addFocusListener(focusListener);
         maxHeapSize.addListener(SWT.Selection, (e) -> {
@@ -310,14 +339,18 @@ public class AdvancedTLCOptionsPage extends BasicFormPage implements Closeable {
         maxHeapSize.setEnabled(false);
         
         // fpbits label
-        toolkit.createLabel(configBody, "Log base 2 of number of disk storage files:");
+        Label l = toolkit.createLabel(configBody, "Log base 2 of number of disk storage files:");
+        gd = new GridData();
+        gd.verticalIndent = 6;
+        l.setLayoutData(gd);
 
         // fpbits spinner
         m_fingerprintBits = new Spinner(configBody, SWT.NONE);
         m_fingerprintBits.setData(FormToolkit.KEY_DRAW_BORDER, FormToolkit.TEXT_BORDER);
         m_fingerprintBits.addFocusListener(focusListener);
         gd = new GridData();
-        gd.verticalIndent = 20;
+        gd.verticalIndent = 6;
+        gd.horizontalIndent = 37;
         gd.horizontalAlignment = SWT.FILL;
         gd.grabExcessHorizontalSpace = true;
         m_fingerprintBits.setLayoutData(gd);
@@ -325,8 +358,7 @@ public class AdvancedTLCOptionsPage extends BasicFormPage implements Closeable {
         m_fingerprintBits.setMinimum(MultiFPSet.MIN_FPBITS);
         m_fingerprintBits.setMaximum(MultiFPSet.MAX_FPBITS);
 
-        final int defaultFPBits = TLCUIActivator.getDefault().getPreferenceStore().getInt(
-        		ITLCPreferenceConstants.I_TLC_FPBITS_DEFAULT);
+        final int defaultFPBits = prefStore.getInt(ITLCPreferenceConstants.I_TLC_FPBITS_DEFAULT);
         m_fingerprintBits.setSelection(defaultFPBits);
 
 
@@ -732,8 +764,7 @@ public class AdvancedTLCOptionsPage extends BasicFormPage implements Closeable {
         m_maxSetSize.setMinimum(1);
         m_maxSetSize.setMaximum(Integer.MAX_VALUE);
 
-        final int defaultMaxSetSize = TLCUIActivator.getDefault().getPreferenceStore().getInt(
-        		ITLCPreferenceConstants.I_TLC_MAXSETSIZE_DEFAULT);
+        final int defaultMaxSetSize = prefStore.getInt(ITLCPreferenceConstants.I_TLC_MAXSETSIZE_DEFAULT);
         m_maxSetSize.setSelection(defaultMaxSetSize);
     
 		// Extra/Additional VM arguments and system properties
@@ -867,14 +898,14 @@ public class AdvancedTLCOptionsPage extends BasicFormPage implements Closeable {
         m_fingerprintSeedIndex.setSelection(fpIndex);
         m_fingerprintSeedIndex.setEnabled(!randomly);
 
+        final IPreferenceStore prefStore = TLCUIActivator.getDefault().getPreferenceStore();
+        
         // fpBits
-        final int defaultFPBits = TLCUIActivator.getDefault().getPreferenceStore().getInt(
-                ITLCPreferenceConstants.I_TLC_FPBITS_DEFAULT);
+        final int defaultFPBits = prefStore.getInt(ITLCPreferenceConstants.I_TLC_FPBITS_DEFAULT);
         m_fingerprintBits.setSelection(model.getAttribute(LAUNCH_FPBITS, defaultFPBits));
 
         // maxSetSize
-        final int defaultMaxSetSize = TLCUIActivator.getDefault().getPreferenceStore().getInt(
-                ITLCPreferenceConstants.I_TLC_MAXSETSIZE_DEFAULT);
+        final int defaultMaxSetSize = prefStore.getInt(ITLCPreferenceConstants.I_TLC_MAXSETSIZE_DEFAULT);
         m_maxSetSize.setSelection(model.getAttribute(LAUNCH_MAXSETSIZE, defaultMaxSetSize));
         
         // visualize state graph
@@ -1250,6 +1281,7 @@ public class AdvancedTLCOptionsPage extends BasicFormPage implements Closeable {
     
 	public void setWorkerAndMemoryEnable(final boolean enableWorker, final boolean enableMaxHeap) {
     	workers.getDisplay().asyncExec(() -> {
+    		saveDefaultConfigurationButton.setEnabled(enableWorker);
     		workers.setEnabled(enableWorker);
     		maxHeapSize.setEnabled(enableMaxHeap);
     	});
