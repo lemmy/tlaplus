@@ -9,10 +9,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 import org.eclipse.core.runtime.Assert;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.ToolBarManager;
@@ -88,8 +88,8 @@ import org.lamport.tla.toolbox.tool.tlc.traceexplorer.TraceExplorerComposite;
 import org.lamport.tla.toolbox.tool.tlc.ui.TLCUIActivator;
 import org.lamport.tla.toolbox.tool.tlc.ui.editor.TLACoverageEditor;
 import org.lamport.tla.toolbox.tool.tlc.ui.preference.ITLCPreferenceConstants;
-import org.lamport.tla.toolbox.tool.tlc.ui.util.ActionClickListener;
-import org.lamport.tla.toolbox.tool.tlc.ui.util.ActionClickListener.LoaderTLCState;
+import org.lamport.tla.toolbox.tool.tlc.ui.util.RecordToSourceCoupler;
+import org.lamport.tla.toolbox.tool.tlc.ui.util.RecordToSourceCoupler.LoaderTLCState;
 import org.lamport.tla.toolbox.tool.tlc.ui.util.ExpandableSpaceReclaimer;
 import org.lamport.tla.toolbox.tool.tlc.ui.util.FormHelper;
 import org.lamport.tla.toolbox.tool.tlc.ui.util.TLCUIHelper;
@@ -121,6 +121,11 @@ public class TLCErrorView extends ViewPart
 	private static final String MID_WEIGHTS_KEY = "MID_WEIGHTS_KEY";
   
 	private static final String SYNCED_TRAVERSAL_KEY = "SYNCED_TRAVERSAL_KEY";
+	
+	private static final String DEFAULT_TOOL_TIP
+		= "Click on a row to see in viewer below.\nDouble-click to go to corresponding action in spec \u2014 "
+			+ "while holding\n   down " + (Platform.getOS().equals(Platform.OS_MACOSX) ? "\u2318" : "CTRL")
+			+ " to go to the original PlusCal code, if present.";
 
     /**
      * This is the pattern of an error message resulting from evaluating the constant
@@ -128,7 +133,6 @@ public class TLCErrorView extends ViewPart
      */
     private static final Pattern CONSTANT_EXPRESSION_ERROR_PATTERN = Pattern.compile("Evaluating assumption PrintT\\("
             + TLCModelLaunchDataProvider.CONSTANT_EXPRESSION_OUTPUT_PATTERN.toString() + "\\)", Pattern.DOTALL);
-
 
     private static final IDocument EMPTY_DOCUMENT()
     {
@@ -140,6 +144,7 @@ public class TLCErrorView extends ViewPart
         return new Document("Select line in Error Trace to show its value here.");
     }
     
+    
     private int numberOfStatesToShow;
 
     private FormToolkit toolkit;
@@ -147,7 +152,7 @@ public class TLCErrorView extends ViewPart
 
     private SourceViewer errorViewer;
     private TreeViewer variableViewer;
-    private ActionClickListener stackTraceActionListener;
+    private RecordToSourceCoupler stackTraceActionListener;
     private SyncStackTraversal syncStackTraversalAction;
     private SourceViewer valueViewer;
     private Model model;
@@ -240,7 +245,7 @@ public class TLCErrorView extends ViewPart
             	trace = new TLCError();
             }
 
-            IDocument document = errorViewer.getDocument();
+            final IDocument document = errorViewer.getDocument();
             try
             {
                 document.replace(0, document.getLength(), buffer.toString());
@@ -522,7 +527,8 @@ public class TLCErrorView extends ViewPart
         
         final Set<Class<? extends ITextEditor>> blacklist = new HashSet<>();
         blacklist.add(TLACoverageEditor.class);
-		stackTraceActionListener = new ActionClickListener(variableViewer, blacklist, this);
+		stackTraceActionListener = new RecordToSourceCoupler(variableViewer, blacklist, this,
+				RecordToSourceCoupler.FocusRetentionPolicy.ARROW_KEY_TRAVERSAL);
 		variableViewer.getTree().addMouseListener(stackTraceActionListener);
         variableViewer.getTree().addKeyListener(stackTraceActionListener);
         variableViewer.getTree().addDisposeListener((event) -> {
@@ -979,7 +985,7 @@ public class TLCErrorView extends ViewPart
 				if (error.isTraceRestricted() && viewerIndex == 0) {
 					// If only a subset of the trace is shown, show a dummy item
 					// at the top which can be double-clicked to load more.
-					viewer.replace(parent, viewerIndex, new ActionClickListener.LoaderTLCState(viewer,
+					viewer.replace(parent, viewerIndex, new RecordToSourceCoupler.LoaderTLCState(viewer,
 							Math.min(numberOfStatesToShow, error.getNumberOfRestrictedTraceStates()), error));
 					return;
 				}
@@ -1167,7 +1173,7 @@ public class TLCErrorView extends ViewPart
                     }
                     return state.getLabel();
                 case VALUE:
-                	if (state instanceof ActionClickListener.LoaderTLCState) {
+                	if (state instanceof RecordToSourceCoupler.LoaderTLCState) {
                     	return "";
                     } else {
                     	return "State (num = " + state.getStateNumber() + ")";
@@ -1320,7 +1326,7 @@ public class TLCErrorView extends ViewPart
 				if (((TLCVariable) element).isTraceExplorerVar()) {
 					returnBoldVersion = true;
 				}
-			} else if (element instanceof ActionClickListener.LoaderTLCState) {
+			} else if (element instanceof RecordToSourceCoupler.LoaderTLCState) {
 				returnBoldVersion = true;
 			}
 
@@ -1351,7 +1357,7 @@ public class TLCErrorView extends ViewPart
 			if (element instanceof LoaderTLCState) {
 				return "Double-click to load more states.\nIf the number of states is large, this might take a few seconds.";
 			}
-			return "Click on a row to see in viewer below, double-click to go to corresponding action in spec.";
+			return DEFAULT_TOOL_TIP;
 		}
 
 		/* (non-Javadoc)
@@ -1471,8 +1477,8 @@ public class TLCErrorView extends ViewPart
 		@Override
 		public void run() {
 			final int value = isChecked()
-					? (ActionClickListener.OBSERVE_ARROW_KEY | ActionClickListener.OBSERVE_SINGLE_CLICK)
-					: ActionClickListener.OBSERVE_DEFAULT;
+					? (RecordToSourceCoupler.OBSERVE_ARROW_KEY | RecordToSourceCoupler.OBSERVE_SINGLE_CLICK)
+					: RecordToSourceCoupler.OBSERVE_DEFAULT;
 
 			stackTraceActionListener.setNonDefaultObservables(value);
 		}

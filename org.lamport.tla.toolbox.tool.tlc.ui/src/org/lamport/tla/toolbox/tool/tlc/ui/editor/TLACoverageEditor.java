@@ -84,6 +84,7 @@ import org.lamport.tla.toolbox.editor.basic.TLAEditor;
 import org.lamport.tla.toolbox.editor.basic.TLAEditorActivator;
 import org.lamport.tla.toolbox.editor.basic.TLAEditorReadOnly;
 import org.lamport.tla.toolbox.editor.basic.TLASourceViewerConfiguration;
+import org.lamport.tla.toolbox.editor.basic.util.EditorUtil;
 import org.lamport.tla.toolbox.tool.tlc.TLCActivator;
 import org.lamport.tla.toolbox.tool.tlc.output.data.CoverageInformationItem;
 import org.lamport.tla.toolbox.tool.tlc.output.data.ModuleCoverageInformation;
@@ -422,6 +423,17 @@ public class TLACoverageEditor extends TLAEditorReadOnly {
 				} else {
 					final Representation currentRepresentation = getActiveRepresentation();
 					heatMapComposite.dispose();
+
+					// Assume a spec with a Next action such as Next == (x' \in S) \/ (x' \in T)
+					// In other words, consider a spec where an action has sub-actions (disjuncts).
+					// If this is reported as COMBINED, the legend is bogus bc the value for Next
+					// appears twice (for the first and second disjunct) but the value is both
+					// times the combined one.
+					Representation.Grouping grpng = grouping;
+					if (currentRepresentation == Representation.STATES
+							|| currentRepresentation == Representation.STATES_DISTINCT) {
+						grpng = Grouping.INDIVIDUAL;
+					}
 					
 					heatMapComposite = new Composite(parent, SWT.BORDER);
 					final GridData layoutData = new GridData(SWT.FILL, SWT.TOP, true, false);
@@ -440,9 +452,9 @@ public class TLACoverageEditor extends TLAEditorReadOnly {
 						
 						// A label has a background color and a text indicating the actual value
 						// (cost/invocations/...).
-						label.setBackground(currentRepresentation.getColor(cii, grouping));
+						label.setBackground(currentRepresentation.getColor(cii, grpng));
 
-						final long value = currentRepresentation.getValue(cii, grouping);
+						final long value = currentRepresentation.getValue(cii, grpng);
 						// Format numbers > 1000 in scientific notation.
 						if (value > 1000) {
 							label.setText(df.format(value));
@@ -505,11 +517,25 @@ public class TLACoverageEditor extends TLAEditorReadOnly {
 		
 		private final Listener listener = new Listener() {
 			@Override
-			public void handleEvent(Event event) {
+			public void handleEvent(final Event event) {
 				final Representation activeRepresentation = getActiveRepresentation();
 				final int offset = JFaceTextUtil.getOffsetForCursorLocation(editor.getViewer());
 				final Pair peek = queue.peek();
-				if (peek == null || peek.offset != offset || peek.rep != activeRepresentation) {
+				final boolean isControlClick = ((event.stateMask & SWT.MOD1) != 0);
+				
+				if (isControlClick) {
+					editor.getViewer().getTextWidget().notifyListeners(SWT.MouseUp, null);
+					event.doit = false;
+					
+					final String moduleName = getModuleName() + ".tla";
+					final TLAEditor editor = EditorUtil.openTLAEditor(moduleName);
+					
+					if (editor != null) {
+						editor.selectAndReveal(offset, 0);
+					} else {
+						TLCUIActivator.getDefault().logError("Unable to open editor for name: " + moduleName);
+					}
+				} else if ((peek == null) || (peek.offset != offset) || (peek.rep != activeRepresentation)) {
 //					System.out.println(String.format("Scheduling offset %s, %s after %s", offset, activeRepresentation, peek));
 					queue.offer(new Pair(offset, activeRepresentation));
 				} else {

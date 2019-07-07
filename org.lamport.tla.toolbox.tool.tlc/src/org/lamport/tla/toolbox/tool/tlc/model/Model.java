@@ -49,6 +49,7 @@ import org.apache.commons.io.filefilter.NotFileFilter;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IMarker;
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IResourceRuleFactory;
 import org.eclipse.core.resources.IWorkspace;
@@ -68,6 +69,7 @@ import org.eclipse.debug.core.DebugException;
 import org.eclipse.debug.core.DebugPlugin;
 import org.eclipse.debug.core.ILaunch;
 import org.eclipse.debug.core.ILaunchConfiguration;
+import org.eclipse.debug.core.ILaunchConfigurationType;
 import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
 import org.eclipse.debug.core.ILaunchManager;
 import org.eclipse.jface.text.BadLocationException;
@@ -79,8 +81,10 @@ import org.eclipse.ui.part.FileEditorInput;
 import org.lamport.tla.toolbox.spec.Spec;
 import org.lamport.tla.toolbox.tool.ToolboxHandle;
 import org.lamport.tla.toolbox.tool.tlc.TLCActivator;
+import org.lamport.tla.toolbox.tool.tlc.launch.IConfigurationConstants;
 import org.lamport.tla.toolbox.tool.tlc.launch.IConfigurationDefaults;
 import org.lamport.tla.toolbox.tool.tlc.launch.IModelConfigurationConstants;
+import org.lamport.tla.toolbox.tool.tlc.launch.TLCModelLaunchDelegate;
 import org.lamport.tla.toolbox.tool.tlc.model.Model.StateChangeListener.ChangeEvent;
 import org.lamport.tla.toolbox.tool.tlc.model.Model.StateChangeListener.ChangeEvent.State;
 import org.lamport.tla.toolbox.tool.tlc.traceexplorer.SimpleTLCState;
@@ -131,11 +135,15 @@ public class Model implements IModelConfigurationConstants, IAdaptable {
 	}
 
 	/**
-	 * @param fullQualifiedModelName The full-qualified (includes the Spec name and separator too) name of the Model.
+	 * @param modelName The full-qualified (includes the Spec name and separator too) name of the Model.
 	 * @return A Model, iff a Model by the given name exists and <code>null</code> otherwise.
 	 */
 	public static Model getByName(final String modelName) {
 		return TLCModelFactory.getByName(modelName);
+	}
+	
+	public static String fullyQualifiedNameFromSpecNameAndModelName(final String specName, final String modelName) {
+		return specName + SPEC_MODEL_DELIM + modelName;
 	}
 	       
 	/**
@@ -251,16 +259,55 @@ public class Model implements IModelConfigurationConstants, IAdaptable {
 		return this.spec;
 	}
 
-	public Model copy(String newModelName) {
-		newModelName = sanitizeName(newModelName);
+	public Model copy(final String newModelName) {
+		final String sanitizedNewName = sanitizeName(newModelName);
 		try {
-			final ILaunchConfigurationWorkingCopy copy = this.launchConfig
-					.copy(getSpec().getName() + SPEC_MODEL_DELIM + newModelName);
-            copy.setAttribute(ModelHelper.MODEL_NAME, newModelName);
+			final String fullyQualified = fullyQualifiedNameFromSpecNameAndModelName(spec.getName(), sanitizedNewName);
+			final ILaunchConfigurationWorkingCopy copy = this.launchConfig.copy(fullyQualified);
+	        copy.setAttribute(IConfigurationConstants.SPEC_NAME, spec.getName());
+            copy.setAttribute(IConfigurationConstants.MODEL_NAME, sanitizedNewName);
             return copy.doSave().getAdapter(Model.class);
 		} catch (CoreException e) {
 			TLCActivator.logError("Error cloning model.", e);
 			return null;
+		}
+	}
+	
+	public Model copyIntoForeignSpec(final Spec foreignSpec, final String newModelName) {
+		final IProject foreignProject = foreignSpec.getProject();
+		final ILaunchManager launchManager = DebugPlugin.getDefault().getLaunchManager();
+		final ILaunchConfigurationType launchConfigurationType
+				= launchManager.getLaunchConfigurationType(TLCModelLaunchDelegate.LAUNCH_CONFIGURATION_TYPE);
+		final String sanitizedNewName = sanitizeName(newModelName);
+		final String wholeName = fullyQualifiedNameFromSpecNameAndModelName(foreignSpec.getName(), sanitizedNewName);
+		
+		try {
+			final ILaunchConfigurationWorkingCopy copy = launchConfigurationType.newInstance(foreignProject, wholeName);
+			copyAttributesFromForeignModelToWorkingCopy(this, copy);
+	        copy.setAttribute(IConfigurationConstants.SPEC_NAME, foreignSpec.getName());
+            copy.setAttribute(IConfigurationConstants.MODEL_NAME, sanitizedNewName);
+            return copy.doSave().getAdapter(Model.class);
+		} catch (CoreException e) {
+			TLCActivator.logError("Error cloning foreign model.", e);
+			return null;
+		}
+	}
+	
+	// There is actually a method ILaunchConfigurationWorkingCopy.copyAttributes however the launch configuration
+	//		need be a prototype; so we do this by hand.
+	private void copyAttributesFromForeignModelToWorkingCopy(final Model foreignModel,
+			final ILaunchConfigurationWorkingCopy copy) throws CoreException {
+		final ILaunchConfiguration foreignILC = foreignModel.getLaunchConfiguration();
+		final Map<String, Object> workingCopyAttributes = copy.getAttributes();
+		final Map<String, Object> foreignAttributes = foreignILC.getAttributes();
+
+		for (final Map.Entry<String, Object> me : foreignAttributes.entrySet()) {
+			copy.setAttribute(me.getKey(), me.getValue());
+			workingCopyAttributes.remove(me.getKey());
+		}
+		
+		for (final String key : workingCopyAttributes.keySet()) {
+			copy.removeAttribute(key);
 		}
 	}
 
@@ -302,8 +349,8 @@ public class Model implements IModelConfigurationConstants, IAdaptable {
 	private void renameLaunch(final Spec newSpec, String newModelName) {
 		try {
 			// create the model with the new name
-			final ILaunchConfigurationWorkingCopy copy = this.launchConfig
-					.copy(newSpec.getName() + SPEC_MODEL_DELIM + newModelName);
+			final String fullyQualifiedName = fullyQualifiedNameFromSpecNameAndModelName(newSpec.getName(), newModelName);
+			final ILaunchConfigurationWorkingCopy copy = this.launchConfig.copy(fullyQualifiedName);
 			copy.setAttribute(SPEC_NAME, newSpec.getName());
 			copy.setAttribute(ModelHelper.MODEL_NAME, newModelName);
 			copy.setContainer(newSpec.getProject());
@@ -1071,12 +1118,23 @@ public class Model implements IModelConfigurationConstants, IAdaptable {
         return new Vector<SimpleTLCState>();
     }
     
-    /* (non-Javadoc)
-     * @see java.lang.Object#toString()
+    /**
+     * This currently invokes {@link #getFullyQualifiedName()}
+     * 
+     * {@inheritDoc}
      */
     public String toString() {
-    	// The model's full-qualified name
-    	return getSpec().getName() + SPEC_MODEL_DELIM + getName();
+    	return getFullyQualifiedName();
+    }
+
+    /**
+     * It's more sensible to have this explicitly named method, than rely on having the arcane knowledge that
+     * 	<code>toString()</code> returns this value.
+     * 
+     * @return the fully qualified name of the model, which includes the spec name.
+     */
+    public String getFullyQualifiedName() {
+    	return fullyQualifiedNameFromSpecNameAndModelName(getSpec().getName(), getName());
     }
 
 	public List<String> getTraceExplorerExpressions() {

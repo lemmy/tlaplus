@@ -108,8 +108,7 @@
          <commandParameter
                id="toolbox.tool.tlc.commands.model.clone.param.modelName"
                name="Model to be cloned"
-               optional="true">
-         </commandParameter>
+               optional="true"/>
       </command>
       <!-- The difference between this command and the "...delegate" above is, 
       	   that handlers associated to this command are *always* created. This 
@@ -124,15 +123,18 @@
          <commandParameter
                id="toolbox.tool.tlc.commands.model.clone.param.modelName"
                name="Model to be cloned"
-               optional="true">
-         </commandParameter>
+               optional="true"/>
       </command>
+      <command
+            categoryId="toolbox.tool.tlc.commands.category"
+            description="Starts the process of cloning a foreign model."
+            id="toolbox.tool.tlc.commands.model.cloneforeign"
+            name="Clone a foreign model"/>
       <command
             categoryId="toolbox.tool.tlc.commands.category"
             description="Runs the model checker."
             id="toolbox.tool.tlc.commands.model.run"
-            name="Run model checking">
-      </command>
+            name="Run model checking"/>
       <command
             categoryId="toolbox.tool.tlc.commands.category"
             description="Stops the model checker execution."
@@ -222,8 +224,7 @@
             </menu>
             <menu
                   id="toolbox.tool.tlc.modellaunch.clone"
-                  label="Clone Model"
-                  mnemonic="O">
+                  label="Clone Model">
                <dynamic
                      class="org.lamport.tla.toolbox.tool.tlc.ui.modelexplorer.CloneModelContributionItem"
                      id="toolbox.tool.tlc.model.clone.dynamic">
@@ -654,6 +655,10 @@ Console Facory
                </iterate>
             </with>
          </activeWhen>
+      </handler>
+      <handler
+            class="org.lamport.tla.toolbox.tool.tlc.handlers.CloneForeignModelHandler"
+            commandId="toolbox.tool.tlc.commands.model.cloneforeign">
       </handler>
       <handler
             class="org.lamport.tla.toolbox.tool.tlc.handlers.CloneModelHandlerDelegate"
