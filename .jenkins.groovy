@@ -93,39 +93,44 @@ node ('master') {
           rm -rf TLAToolbox-?.?.?-linux.gtk.x86_64.zip
 		rm -rf toolbox/
 
-		## copy last successful build (this predecessor) and extract it
-		cp /home/jenkins/jobs/M-HEAD-master-Toolbox.product.standalone/builds/lastSuccessfulBuild/archive/org.lamport.tla.toolbox.product.product/target/products/TLAToolbox-?.?.?-linux.gtk.x86_64.zip .
+		## copy currently released Toolbox and extract it (We want to make sure that we can update from it to this build)
+		wget http://dl.tlapl.us/tlatoolbox/products/TLAToolbox-1.6.0-linux.gtk.x86_64.zip
 		unzip -qq TLAToolbox*.zip
 
 		cd toolbox/
 		
-		## Update previous to this version
+		## Update current Toolbox release to this version
 		./toolbox -nosplash -application org.eclipse.equinox.p2.director \
-		-repository file:///home/jenkins/workspace/M-HEAD-master-Toolbox.product.standalone/org.lamport.tla.toolbox.product.product/target/repository \
+		-repository file://${WORKSPACE}/org.lamport.tla.toolbox.product.product/target/repository \
 		-uninstallIU org.lamport.tla.toolbox.product.product \
 		-installIU org.lamport.tla.toolbox.product.product \
 		-profileProperties org.eclipse.update.install.features=true
 
 		## Use Toolbox's p2 director to install the test feature into the previuos toolbox release to verify the update above worked and didn't trash anything.
 		./toolbox -nosplash -application org.eclipse.equinox.p2.director \
-		-repository file:///home/jenkins/workspace/M-HEAD-master-Toolbox.product.standalone/org.lamport.tla.toolbox.p2repository/target/repository/ \
+		-repository file://${WORKSPACE}/org.lamport.tla.toolbox.p2repository/target/repository/ \
 		-installIU org.lamport.tla.toolbox.feature.uitest.feature.group
 
 		## Run the SWTBot smoke tests to check product zips
-		#./toolbox -nosplash -application org.eclipse.swtbot.eclipse.junit.headless.swtbottestapplication \
-		#-testApplication org.lamport.tla.toolbox.application \
-		#-product org.lamport.tla.toolbox.product.standalone.product \
-		#-nouithread \
-		#-testPluginName org.lamport.tla.toolbox.tool.tlc.ui.uitest \
-		#formatter=org.apache.tools.ant.taskdefs.optional.junit.PlainJUnitResultFormatter \
-		#formatter=org.apache.tools.ant.taskdefs.optional.junit.XMLJUnitResultFormatter,org.lamport.tla.toolbox.tool.tlc.ui.uitest.SmokeTests.xml \
-		#-className org.lamport.tla.toolbox.SmokeTests \
-		#-data workspace$(date +%s) \
-		#-clean
+		./toolbox -nosplash -application org.eclipse.swtbot.eclipse.junit.headless.swtbottestapplication \
+		-testApplication org.lamport.tla.toolbox.application \
+		-product org.lamport.tla.toolbox.product.standalone.product \
+		-nouithread \
+		-testPluginName org.lamport.tla.toolbox.tool.tlc.ui.uitest \
+		formatter=org.apache.tools.ant.taskdefs.optional.junit.PlainJUnitResultFormatter \
+		formatter=org.apache.tools.ant.taskdefs.optional.junit.XMLJUnitResultFormatter,org.lamport.tla.toolbox.tool.tlc.ui.uitest.SmokeTests.xml \
+		-className org.lamport.tla.toolbox.SmokeTests \
+		-data workspace$(date +%s) \
+		-clean
 
 		cp *.xml ${WORKSPACE}/
        '''
       }
+   }
+
+   stage ('RecordTestP2UpdateManager') {
+       // Collect junit output for p2 smoke tests
+       junit 'toolbox/org.lamport.tla.toolbox.tool.tlc.ui.uitest.SmokeTests.xml'
    }
    
    stage('CreateRPMFile') {
@@ -181,10 +186,10 @@ node ('master') {
            cd ${WORKSPACE}/general/docs/changelogs
 
            ## Append sha1 sum to changelog (last line of changelog has the table header).
-           sha1sum ${WORKSPACE}/tlatools/dist/tla2tools.jar | sed -r 's/  /|/g' >> ch1_6_1.md
-           sha1sum ${WORKSPACE}/org.lamport.tla.toolbox.product.product/target/products/TLAToolbox-1.6.1-win32.win32.x86_64.zip | sed -r 's/  /|/g' >> ch1_6_1.md
-           sha1sum ${WORKSPACE}/org.lamport.tla.toolbox.product.product/target/products/TLAToolbox-1.6.1-macosx.cocoa.x86_64.zip | sed -r 's/  /|/g' >> ch1_6_1.md     
-           sha1sum ${WORKSPACE}/org.lamport.tla.toolbox.product.product/target/products/TLAToolbox-1.6.1-linux.gtk.x86_64.zip | sed -r 's/  /|/g' >> ch1_6_1.md
+           echo "$(sha1sum ${WORKSPACE}/tlatools/dist/tla2tools.jar | cut -f 1 -d " ")|tla2tools.jar"  >> ch1_6_1.md
+           echo "$(sha1sum ${WORKSPACE}/org.lamport.tla.toolbox.product.product/target/products/TLAToolbox-1.6.1-win32.win32.x86_64.zip | cut -f 1 -d " ")|TLAToolbox-1.6.1-win32.win32.x86_64.zip" >> ch1_6_1.md
+           echo "$(sha1sum ${WORKSPACE}/org.lamport.tla.toolbox.product.product/target/products/TLAToolbox-1.6.1-macosx.cocoa.x86_64.zip | cut -f 1 -d " ")|TLAToolbox-1.6.1-macosx.cocoa.x86_64.zip" >> ch1_6_1.md     
+           echo "$(sha1sum ${WORKSPACE}/org.lamport.tla.toolbox.product.product/target/products/TLAToolbox-1.6.1-linux.gtk.x86_64.zip | cut -f 1 -d " ")|TLAToolbox-1.6.1-linux.gtk.x86_64.zip" >> ch1_6_1.md
            
            ## Two above as one-liner without intermediate file.
            $(jq -n --argjson changelog "$(cat ch1_6_1.md | jq  --raw-input --slurp .)" -f gh-1_6_1.jq > gh-1_6_1.json)
