@@ -102,6 +102,7 @@ import org.lamport.tla.toolbox.tool.tlc.ui.editor.page.ErrorMessage;
 import org.lamport.tla.toolbox.tool.tlc.ui.editor.page.MainModelPage;
 import org.lamport.tla.toolbox.tool.tlc.ui.editor.page.advanced.AdvancedTLCOptionsPage;
 import org.lamport.tla.toolbox.tool.tlc.ui.editor.part.ValidateableSectionPart;
+import org.lamport.tla.toolbox.tool.tlc.ui.editor.preference.IModelEditorPreferenceConstants;
 import org.lamport.tla.toolbox.tool.tlc.ui.preference.ITLCPreferenceConstants;
 import org.lamport.tla.toolbox.tool.tlc.ui.util.RecordToSourceCoupler;
 import org.lamport.tla.toolbox.tool.tlc.ui.util.DirtyMarkingListener;
@@ -137,7 +138,7 @@ public class ResultPage extends BasicFormPage implements ITLCModelLaunchDataPres
 
 	private static final Color ERROR_PANE_BACKGROUND = new Color(PlatformUI.getWorkbench().getDisplay(), 255, 241, 237);
 	private static final SimpleDateFormat DATE_FORMATTER = new SimpleDateFormat("HH:mm:ss '('MMM d')'");
-	private static final String ZERO_COVERAGE_WARNING = "Disabled actions for one or more modules.";
+	private static final String ZERO_COVERAGE_WARNING = "Disabled sub-actions for one or more modules.";
 	
 	
     /**
@@ -304,7 +305,9 @@ public class ResultPage extends BasicFormPage implements ITLCModelLaunchDataPres
 						// Print statistics timestamp relative to TLC startup.
 						final Date date = TLCModelLaunchDataProvider.parseDate(coverageTimestamp);
 						final String interval = TLCModelLaunchDataProvider.formatInterval(getStartTimestamp(), date.getTime());
-						ResultPage.this.coverageTimestampText.setText(interval);
+						ResultPage.this.coverageTimestampText.setText(String.format("(at %s)", interval));
+						ResultPage.this.coverageTimestampText
+								.setToolTipText("Time indicates the execution time at which the numbers were recorded");
 					}
                     break;
                 case COVERAGE:
@@ -848,7 +851,7 @@ public class ResultPage extends BasicFormPage implements ITLCModelLaunchDataPres
         // -------------------------------------------------------------------
         // Calculator section
 		final IPreferenceStore ips = TLCUIActivator.getDefault().getPreferenceStore();
-		final boolean eceInItsOwnTab = ips.getBoolean(ITLCPreferenceConstants.I_TLC_SHOW_ECE_AS_TAB);
+		final boolean eceInItsOwnTab = ips.getBoolean(IModelEditorPreferenceConstants.I_MODEL_EDITOR_SHOW_ECE_AS_TAB);
 
 		m_calculatorSection = new Composite(body, SWT.NONE);
         gd = new GridData();
@@ -1212,7 +1215,7 @@ public class ResultPage extends BasicFormPage implements ITLCModelLaunchDataPres
         gd.verticalIndent = 0;
         headerLine.setLayoutData(gd);
         
-        final Label title = toolkit.createLabel(headerLine, "Actions at");
+        final Label title = toolkit.createLabel(headerLine, "Sub-actions of next-state"); // "next-state" term used on MainModelPage too
         gd = new GridData();
         gd.horizontalIndent = 0;
         gd.verticalIndent = 6;
@@ -1223,7 +1226,7 @@ public class ResultPage extends BasicFormPage implements ITLCModelLaunchDataPres
 
         this.coverageTimestampText = toolkit.createText(headerLine, "", SWT.FLAT);
         this.coverageTimestampText.setEditable(false);
-        this.coverageTimestampText.setMessage("No information collected yet. Has coverage been enabled?");
+        this.coverageTimestampText.setMessage("(No numbers recorded yet. Has profiling been enabled on TLC options?)");
         gd = new GridData();
         gd.horizontalIndent = 6;
         gd.verticalIndent = 0;

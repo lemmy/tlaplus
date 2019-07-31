@@ -33,15 +33,18 @@ import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
+import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.TreeViewerColumn;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerCell;
+import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.ControlAdapter;
 import org.eclipse.swt.events.ControlEvent;
+import org.eclipse.swt.events.MouseAdapter;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.SelectionAdapter;
@@ -57,6 +60,7 @@ import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.ScrollBar;
 import org.eclipse.swt.widgets.Scrollable;
+import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.ToolBar;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
@@ -86,12 +90,13 @@ import org.lamport.tla.toolbox.tool.tlc.output.data.TLCVariableValue;
 import org.lamport.tla.toolbox.tool.tlc.output.source.TLCOutputSourceRegistry;
 import org.lamport.tla.toolbox.tool.tlc.traceexplorer.TraceExplorerComposite;
 import org.lamport.tla.toolbox.tool.tlc.ui.TLCUIActivator;
+import org.lamport.tla.toolbox.tool.tlc.ui.dialog.ErrorViewTraceFilterDialog;
 import org.lamport.tla.toolbox.tool.tlc.ui.editor.TLACoverageEditor;
 import org.lamport.tla.toolbox.tool.tlc.ui.preference.ITLCPreferenceConstants;
-import org.lamport.tla.toolbox.tool.tlc.ui.util.RecordToSourceCoupler;
-import org.lamport.tla.toolbox.tool.tlc.ui.util.RecordToSourceCoupler.LoaderTLCState;
 import org.lamport.tla.toolbox.tool.tlc.ui.util.ExpandableSpaceReclaimer;
 import org.lamport.tla.toolbox.tool.tlc.ui.util.FormHelper;
+import org.lamport.tla.toolbox.tool.tlc.ui.util.RecordToSourceCoupler;
+import org.lamport.tla.toolbox.tool.tlc.ui.util.RecordToSourceCoupler.LoaderTLCState;
 import org.lamport.tla.toolbox.tool.tlc.ui.util.TLCUIHelper;
 import org.lamport.tla.toolbox.tool.tlc.util.ModelHelper;
 import org.lamport.tla.toolbox.util.FontPreferenceChangeListener;
@@ -158,6 +163,10 @@ public class TLCErrorView extends ViewPart
     private Model model;
     private TraceExplorerComposite traceExplorerComposite;
     
+    private TLCError unfilteredInput;
+    private FilterErrorTrace filterErrorTraceAction;
+    private Set<TLCVariable> currentErrorTraceFilterSet;
+    
     @SuppressWarnings("unused")  // help onto for a nicer object graph
 	private ExpandableSpaceReclaimer spaceReclaimer;
 
@@ -183,6 +192,8 @@ public class TLCErrorView extends ViewPart
 		};
 		errorTraceFontChangeListener.propertyChange(null);
         JFaceResources.getFontRegistry().addListener(errorTraceFontChangeListener);
+        
+        currentErrorTraceFilterSet = new HashSet<>();
 	}
     
     /**
@@ -191,7 +202,7 @@ public class TLCErrorView extends ViewPart
     public void clear()
     {
         errorViewer.setDocument(EMPTY_DOCUMENT());
-        setTraceInput(new TLCError());
+        setTraceInput(new TLCError(), true);
         traceExplorerComposite.getTableViewer().setInput(new Vector<Formula>());
         valueViewer.setInput(EMPTY_DOCUMENT());
     }
@@ -265,7 +276,7 @@ public class TLCErrorView extends ViewPart
             // update the trace information
             if (isNewTrace)
             {
-                this.setTraceInput(trace);
+                this.setTraceInput(trace, true);
             }
             if (model.isSnapshot()) {
             	final String date = sdf.format(model.getSnapshotTimeStamp());
@@ -535,6 +546,29 @@ public class TLCErrorView extends ViewPart
 			final IDialogSettings ids = Activator.getDefault().getDialogSettings();
 			ids.put(SYNCED_TRAVERSAL_KEY, syncStackTraversalAction.isChecked());
         });
+        variableViewer.getTree().addMouseListener(new MouseAdapter() {
+        	@Override
+        	public void mouseUp(final MouseEvent event) {
+        		if ((event.stateMask & SWT.ALT) != 0) {
+        			final ISelection is = variableViewer.getSelection();
+        			if ((is != null) && !is.isEmpty() && (is instanceof StructuredSelection)) {
+        				final Object selection = ((StructuredSelection)variableViewer.getSelection()).getFirstElement();
+        				
+        				if (selection instanceof TLCVariable) {
+        					if (filterErrorTraceAction.isChecked()) {
+        						currentErrorTraceFilterSet.add((TLCVariable)selection);
+        					} else {
+        						currentErrorTraceFilterSet.clear();
+        						currentErrorTraceFilterSet.add((TLCVariable)selection);
+								filterErrorTraceAction.setChecked(true);
+        					}
+        					
+        					performVariableViewPopulation(true);
+        				}
+        			}
+        		}
+        	}
+        });
         
         // Make it possible to expand and collapse the error trace with the push of a button.
 		final ToolBarManager toolBarManager = new ToolBarManager(SWT.FLAT);
@@ -561,6 +595,8 @@ public class TLCErrorView extends ViewPart
 		};
 		parent.getDisplay().addFilter(SWT.KeyDown, action);
 		parent.getDisplay().addFilter(SWT.KeyUp, action);
+		filterErrorTraceAction = new FilterErrorTrace();
+		toolBarManager.add(filterErrorTraceAction);
 		toolBarManager.add(action);
 		syncStackTraversalAction = new SyncStackTraversal();
 		toolBarManager.add(syncStackTraversalAction);
@@ -1414,8 +1450,11 @@ public class TLCErrorView extends ViewPart
      * 
      * @param states
      */
-    void setTraceInput(TLCError error)
-    {
+	void setTraceInput(final TLCError error, final boolean isNew) {
+		if (isNew) {
+			unfilteredInput = error;
+		}
+		
 		// If itemCount is large (>10.000 items), the underlying OS window
 		// toolkit can be slow. As a possible fix, look into
 		// http://www.eclipse.org/nattable/. For background, read
@@ -1456,6 +1495,25 @@ public class TLCErrorView extends ViewPart
 		return variableViewer;
 	}
 	
+	private void performVariableViewPopulation(final boolean filter) {
+		if (!filter || (currentErrorTraceFilterSet.size() == 0)) {
+			setTraceInput(unfilteredInput, false);
+		} else {
+			// It would be much nicer (from both a time and space perspective) were there a veto-ing
+			//		ability provided by TableViewer - like "vetoRow(Object element)". Alas, there is not and
+			//		so we do this clone and filter of the input data.
+			final TLCError filtered = unfilteredInput.clone();
+			
+			for (final TLCState filteredState : filtered.getStates(TLCError.Length.ALL)) {
+				final List<TLCVariable> variables = filteredState.getVariablesAsList();
+				
+				variables.removeAll(currentErrorTraceFilterSet);
+			}
+			
+			setTraceInput(filtered, false);
+		}
+	}
+	
 	
 	private class SyncStackTraversal extends Action {
 		SyncStackTraversal() {
@@ -1483,6 +1541,67 @@ public class TLCErrorView extends ViewPart
 			stackTraceActionListener.setNonDefaultObservables(value);
 		}
 	}
+	
+	
+	private class FilterErrorTrace extends Action {
+		private static final String DEFAULT_TOOL_TIP_TEXT
+					= "Click to select variables and expressions to omit from the trace display; "
+									+ "ALT-click on an individual item below to omit it immediately.";
+		private static final String SELECTED_TOOL_TIP_TEXT = "Click to display all variables and expressions.";
+		
+		FilterErrorTrace() {
+			super("Filter the displayed variables and expressions..", AS_CHECK_BOX);
+			
+			final ImageDescriptor id = TLCUIActivator.getImageDescriptor("icons/elcl16/trace_filter.png");
+			setImageDescriptor(id);
+			
+			setToolTipText(DEFAULT_TOOL_TIP_TEXT);
+		}
+		
+	    /**
+	     * {@inheritDoc}
+	     */
+		@Override
+		public void setChecked(final boolean flag) {
+			super.setChecked(flag);
+			
+			setToolTipText(SELECTED_TOOL_TIP_TEXT);
+		}
+		
+	    /**
+	     * {@inheritDoc}
+	     */
+		@Override
+		public void run() {
+			if (isChecked()) {
+				setToolTipText(SELECTED_TOOL_TIP_TEXT);
+			} else {
+				setToolTipText(DEFAULT_TOOL_TIP_TEXT);
+			}
+			
+			final TLCError trace = (TLCError) variableViewer.getInput();
+			final List<TLCState> states = trace.getStates();
+			
+			if (states.size() == 0) {
+				return;
+			}
+			
+			if (isChecked()) {
+				final Shell s = PlatformUI.getWorkbench().getDisplay().getActiveShell();
+				final TLCState state = states.get(0);
+				final ErrorViewTraceFilterDialog dialog = new ErrorViewTraceFilterDialog(s, state.getVariablesAsList());
+
+				dialog.setSelection(currentErrorTraceFilterSet);
+				if (dialog.open() == Window.OK) { // (Currently can only ever be Windows.OK)
+					currentErrorTraceFilterSet = dialog.getSelection();
+					
+					performVariableViewPopulation(true);
+				}
+			} else {
+				performVariableViewPopulation(false);
+			}
+		}
+	}	
 	
 	
 	private static abstract class ShiftClickAction extends Action implements Listener {
