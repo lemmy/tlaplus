@@ -1,9 +1,32 @@
+/*******************************************************************************
+ * Copyright (c) 2019 Microsoft Research. All rights reserved. 
+ *
+ * The MIT License (MIT)
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy 
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software. 
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * Contributors:
+ *   Loki de Qualer - initial API and implementation
+ *   Markus Alexander Kuppe - Rewrite of ErrorViewTraceFilterDialog 
+ ******************************************************************************/
 package org.lamport.tla.toolbox.tool.tlc.ui.dialog;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.eclipse.jface.dialogs.Dialog;
@@ -22,44 +45,27 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
-import org.lamport.tla.toolbox.tool.tlc.output.data.TLCVariable;
 
-/**
- * The genesis of this dialog is https://github.com/tlaplus/tlaplus/issues/274
- */
-public class ErrorViewTraceFilterDialog extends Dialog {
+public class ExtraModulesDialog extends Dialog {
 	private CheckboxTableViewer tableViewer;
 	
-	private final List<TLCVariable> variables;
-	private final HashSet<TLCVariable> selection;
+	private final Set<String> modules;
+	private final Set<String> selection;
 	
 	/**
 	 * @param parentShell
-	 * @param variableList a copy of this list will be made
+	 * @param modules a copy of this list will be made
+	 * @param previouslySelectedModuleNames 
 	 */
-	public ErrorViewTraceFilterDialog(final Shell parentShell, final List<TLCVariable> variableList) {
+	public ExtraModulesDialog(final Shell parentShell, final Set<String> modules, Set<String> previouslySelectedModuleNames) {
 		super(parentShell);
 		
-		variables = new ArrayList<>(variableList);
-		selection = new HashSet<>();
+		this.modules = modules;
+		this.selection = previouslySelectedModuleNames;
 	}
 	
-	public Set<TLCVariable> getSelection() {
+	public Set<String> getSelection() {
 		return selection;
-	}
-	
-	public void setSelection(final Set<TLCVariable> newSelection) {
-		selection.clear();
-		
-		if ((newSelection == null) || (newSelection.size() == 0)) {
-			return;
-		}
-		
-		selection.addAll(newSelection);
-		if (tableViewer != null) {
-			tableViewer.setAllChecked(false);
-			selection.stream().forEach((element) -> tableViewer.setChecked(element, true));
-		}
 	}
 	
     @Override
@@ -72,7 +78,7 @@ public class ErrorViewTraceFilterDialog extends Dialog {
     	
     	
     	final Label l = new Label(container, SWT.LEFT);
-    	l.setText("Selected variables and expressions will be hidden from the error trace.");
+    	l.setText("Selected modules to be made available in trace expressions.");
     	l.setFont(JFaceResources.getFontRegistry().get(JFaceResources.DIALOG_FONT));
     	GridData gd = new GridData();
     	gd.horizontalSpan = 2;
@@ -85,10 +91,10 @@ public class ErrorViewTraceFilterDialog extends Dialog {
     	tableViewer.setLabelProvider(new ColumnLabelProvider() {
     		@Override
     		public String getText(final Object element) {
-    			return ((TLCVariable)element).getName();
+    			return (String) element;
     		}
     	});
-    	tableViewer.setInput(variables);
+    	tableViewer.setInput(modules);
 		selection.stream().forEach((element) -> tableViewer.setChecked(element, true));
     	gd = new GridData();
     	gd.horizontalAlignment = SWT.FILL;
@@ -135,7 +141,7 @@ public class ErrorViewTraceFilterDialog extends Dialog {
     protected void okPressed() {
     	selection.clear();
     	
-		Arrays.stream(tableViewer.getCheckedElements()).forEach((element) -> selection.add((TLCVariable)element));
+		Arrays.stream(tableViewer.getCheckedElements()).forEach((element) -> selection.add((String)element));
 		
         super.okPressed();
     }
@@ -148,6 +154,6 @@ public class ErrorViewTraceFilterDialog extends Dialog {
 	@Override
 	protected void configureShell(Shell shell) {
 		super.configureShell(shell);
-		shell.setText("Error Trace Filter");
+		shell.setText("Extra Modules");
 	}
 }
