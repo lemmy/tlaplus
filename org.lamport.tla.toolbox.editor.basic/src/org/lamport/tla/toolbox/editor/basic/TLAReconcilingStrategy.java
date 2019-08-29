@@ -1,152 +1,236 @@
 package org.lamport.tla.toolbox.editor.basic;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.text.BadLocationException;
-import org.eclipse.jface.text.BadPartitioningException;
+import org.eclipse.jface.text.FindReplaceDocumentAdapter;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IDocumentExtension3;
 import org.eclipse.jface.text.IRegion;
-import org.eclipse.jface.text.ITypedRegion;
 import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.reconciler.DirtyRegion;
 import org.eclipse.jface.text.reconciler.IReconcilingStrategy;
 import org.eclipse.jface.text.reconciler.IReconcilingStrategyExtension;
-import org.eclipse.swt.widgets.Display;
+import org.eclipse.jface.text.source.Annotation;
+import org.eclipse.jface.text.source.projection.ProjectionAnnotation;
+import org.eclipse.ui.PlatformUI;
+import org.lamport.tla.toolbox.editor.basic.pcal.IPCalReservedWords;
 
 /**
- * @author Simon Zambrovski
- * @version $Id$
+ * We create this reconciling strategy for at least two reasons:
+ * 	. having our custom source viewer configuration not use its super class' reconciler frees us from spell checking
+ * 		markup
+ * 	. to find fold locations for:
+ * 			. block commments
+ * 			. PlusCal code
  */
-public class TLAReconcilingStrategy implements IReconcilingStrategy, IReconcilingStrategyExtension
-{
-    /* document to reconciler */
+public class TLAReconcilingStrategy implements IReconcilingStrategy, IReconcilingStrategyExtension {
+	// Per BoxedCommentHandler, a delimiter is "(" followed by three "*", then 0-N "*", and finally suffixed with ")"
+	private static final String BLOCK_COMMENT_DELIMITER_REGEX = "^[ \\t]*\\(\\*{3}\\**\\)\\s*$";
+	
+	private static final String PCAL_TRANSLATION_PREFIX_REGEX = "^\\\\\\*+ BEGIN TRANSLATION.*$";
+	private static final String PCAL_TRANSLATION_SUFFIX_REGEX = "^\\\\\\*+ END TRANSLATION.*$";
+	
+	
     private IDocument document;
-    /* holds the calculated positions */
-    protected final List<Position> positions = new ArrayList<Position>();
-    /* editor to be updated */
+    /* the currently displayed projection annotations */
+    protected final List<TLCProjectionAnnotation> currentAnnotations = new ArrayList<>();
+    /* the editor we're bound to */
     private TLAEditor editor;
-
-    /* (non-Javadoc)
-     * @see org.eclipse.jface.text.reconciler.IReconcilingStrategy#reconcile(org.eclipse.jface.text.IRegion)
+	
+    /**
+     * {@inheritDoc}
      */
-    public void reconcile(IRegion partition)
-    {
-        initialReconcile();
-    }
-
-    /* (non-Javadoc)
-     * @see org.eclipse.jface.text.reconciler.IReconcilingStrategy#reconcile(org.eclipse.jface.text.reconciler.DirtyRegion, org.eclipse.jface.text.IRegion)
-     */
-    public void reconcile(DirtyRegion dirtyRegion, IRegion subRegion)
-    {
-        initialReconcile();
-    }
-
-    /* (non-Javadoc)
-     * @see org.eclipse.jface.text.reconciler.IReconcilingStrategy#setDocument(org.eclipse.jface.text.IDocument)
-     */
-    public void setDocument(IDocument document)
-    {
-        this.document = document;
-    }
-
-    /* (non-Javadoc)
-     * @see org.eclipse.jface.text.reconciler.IReconcilingStrategyExtension#initialReconcile()
-     */
-    public void initialReconcile()
-    {
-        // delete existing
-        positions.clear();
-
-        // calculate new partitions
-        calculatePositions();
-
-        // update the editor
-        if (editor != null) {
-        	Display.getDefault().asyncExec(new Runnable() {
-        		public void run()
-        		{
-        			editor.updateFoldingStructure(positions);
-        		}
-        	});
-        }
-    }
-
-    /* (non-Javadoc)
-     * @see org.eclipse.jface.text.reconciler.IReconcilingStrategyExtension#setProgressMonitor(org.eclipse.core.runtime.IProgressMonitor)
-     */
-    public void setProgressMonitor(IProgressMonitor monitor)
-    {
-
-    }
+    @Override
+	public void reconcile(final IRegion partition) {
+    	reconcile(partition, null, null);
+	}
 
     /**
-     * @return Returns the editor.
+     * {@inheritDoc}
      */
-    public TLAEditor getEditor()
-    {
-        return this.editor;
-    }
+    @Override
+	public void reconcile(final DirtyRegion dirtyRegion, final IRegion subRegion) {
+    	reconcile(null, dirtyRegion, subRegion);
+	}
 
     /**
-     * Sets the editor
+     * {@inheritDoc}
+     */
+    @Override
+	public void setDocument(final IDocument id) {
+		document = id;
+	}
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+	public void initialReconcile() {
+    	reconcile(null, null, null);
+	}
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setProgressMonitor(final IProgressMonitor monitor) { }
+
+    /**
+     * Sets the editor to which we're bound; this is required for communicating folding projections.
+     * 
      * @param editor
      */
-    public void setEditor(TLAEditor editor)
-    {
-        this.editor = editor;
-    }
-
+	public void setEditor(final TLAEditor tlaEditor) {
+		editor = tlaEditor;
+	}
+	
+	private void reconcile(final IRegion partition, final DirtyRegion dirtyRegion, final IRegion subRegion) {
+		if (editor != null) {
+			final HashMap<TLCProjectionAnnotation, Position> regionMap
+													= determineFoldingRegions(partition, dirtyRegion, subRegion);
+			final Annotation[] deletions;
+			final HashMap<TLCProjectionAnnotation, Position> regionsToAdd = new HashMap<>();
+			synchronized (currentAnnotations) {
+				for (final Map.Entry<TLCProjectionAnnotation, Position> me : regionMap.entrySet()) {
+					if (!currentAnnotations.remove(me.getKey())) {
+						regionsToAdd.put(me.getKey(), me.getValue());
+					}
+				}
+				
+				deletions = currentAnnotations.toArray(new Annotation[currentAnnotations.size()]);
+				currentAnnotations.clear();
+				currentAnnotations.addAll(regionMap.keySet());
+			}
+			PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
+				public void run() {
+					editor.modifyProjectionAnnotations(deletions, regionsToAdd);
+				}
+			});
+		}
+	}
+	
     /**
-     * get partitions  
+     * Once upon a time (the original version of this,) document partitioning was performed via
+     * 	{@link IDocumentExtension3#computePartitioning(String, int, int, boolean)} and it did a
+     * 	terrible job. Now, instead, we're using the Eclipse {@link FindReplaceDocumentAdapter} class.
      */
-    protected void calculatePositions()
-    {
-        try
-        {
-            IDocumentExtension3 extension = (IDocumentExtension3) document;
-            // get partitions
-            ITypedRegion[] partitions = extension.computePartitioning(TLAPartitionScanner.TLA_PARTITIONING, 0, document
-                    .getLength(), false);
-            // install positions
-            for (int i = 0; i < partitions.length; i++)
-            {
-                IRegion lineOnPartitionStart = document.getLineInformationOfOffset(partitions[i].getOffset());
+	private HashMap<TLCProjectionAnnotation, Position> determineFoldingRegions(final IRegion partition,
+			final DirtyRegion dirtyRegion, final IRegion subRegion) {
+    	// TODO use regions for tracking in optimizations on re-parses
+//		final boolean isInitialParse = ((partition == null) && (dirtyRegion == null) && (subRegion == null));
+		
+		final HashMap<TLCProjectionAnnotation, Position> additions = new HashMap<>();
 
-                // if the multi-line comment contains multiple lines
-                // Added by LL on 16 Aug 2012:  I have no idea what this does.  Since the TLA_PCAL
-                // partitions added for PlusCal can also contain multiple lines,  I guessed that
-                // whatever is done for TLA_MULTI_LINE_COMMENT partitions should also be done for
-                // TLA_PCAL partitions.   However, I discovered that my original implementation
-                // added bogus foldings in the PlusCal algorithm.  Not adding the TLA_PCAL partitions
-                // solved this problem (except for a harmless folding of the starting comment if it occupies
-                // an entire line).  I have no idea if this is used for anything else, so it's
-                // possible that not adding them will break something else.   However, this method
-                // is called only by initialReconcile, which also calls TLAEditor.updateFoldingStructure.
-                // The latter method has a comment saying it's only used for comment folding (and it's
-                // incorrect).  So, there's a good chance that everything is OK.
-                // 
-                if (   (   partitions[i].getType().equals(TLAPartitionScanner.TLA_MULTI_LINE_COMMENT)
-                //   || partitions[i].getType().equals(TLAPartitionScanner.TLA_PCAL))   // This disjunct was added for PlusCal
-                   )
-                    && partitions[i].getLength() > lineOnPartitionStart.getLength())
-                {
-                    positions.add(new Position(partitions[i].getOffset(), partitions[i].getLength()));
-                }
-            }
-
-        } catch (BadLocationException e)
-        {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (BadPartitioningException e)
-        {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+		// PCal location
+		final FindReplaceDocumentAdapter search = new FindReplaceDocumentAdapter(document);
+		try {
+			IRegion find = search.find(0, IPCalReservedWords.ALGORITHM, true, true, false, false);
+			
+			if (find == null) {
+				find = search.find(0, "--" + IPCalReservedWords.FAIR, true, true, false, false);
+			}
+			
+			if (find != null) {
+				final int pcalStartLocation = find.getOffset();
+				
+				find = search.find(pcalStartLocation, "^\\(\\*", false, true, false, true);
+				if (find != null) {
+					final int startLocation = find.getOffset();
+					
+					find = search.find(pcalStartLocation, "^\\*+\\)$", true, true, false, true);
+					addProjectionAdditionToMap(additions, startLocation, find);
+				}
+			}
+		} catch (final BadLocationException ble) { }
+		
+		
+		// Translated PCal location
+		try {
+			IRegion find = search.find(0, PCAL_TRANSLATION_PREFIX_REGEX, true, true, false, true);
+			
+			if (find != null) {
+				final int translationStartLocation = find.getOffset();
+				
+				find = search.find(translationStartLocation, PCAL_TRANSLATION_SUFFIX_REGEX, true, true, false, true);
+				if (find != null) {
+					addProjectionAdditionToMap(additions, translationStartLocation, find);
+				}
+			}
+		} catch (final BadLocationException ble) { }
+		
+		
+		// Block comment locations
+		try {
+			boolean inBlock = false;
+			int lastFoundIndex = 0; // TODO future optimizations based on DocumentEvents' locations
+			IRegion find = search.find(lastFoundIndex, BLOCK_COMMENT_DELIMITER_REGEX, true, true, false, true);
+			
+			while (find != null) {
+				if (inBlock) {
+					addProjectionAdditionToMap(additions, lastFoundIndex, find);
+				}
+				
+				inBlock = !inBlock;
+				lastFoundIndex = find.getOffset();
+				find = search.find((lastFoundIndex + find.getLength()), BLOCK_COMMENT_DELIMITER_REGEX, true, true, false, true);
+			}
+		} catch (final BadLocationException ble) { }
+		
+		return additions;
     }
 
+	private void addProjectionAdditionToMap(final Map<TLCProjectionAnnotation, Position> additions, final int startLocation,
+										    final IRegion find)
+			throws BadLocationException {
+		if (find != null) {
+			final int endLocation = find.getOffset() + find.getLength();
+			final int length = endLocation - startLocation;
+			final int positionLength = length + ((document.getLength() > endLocation) ? 1 : 0);	// +1 to cover the newline
+			final Position position = new Position(startLocation, positionLength);
+
+			additions.put(new TLCProjectionAnnotation(document.get(startLocation, length)), position);
+		}
+	}
+	
+	
+	// Nothing in the ProjectionAnnotation hierarchy implements equals/hashCode, we'd like such things to exist
+	//		for reconciliation
+	private static class TLCProjectionAnnotation extends ProjectionAnnotation {
+		TLCProjectionAnnotation(final String text) {
+			setText(text);
+		}
+		
+		@Override
+		public boolean equals(final Object other) {
+			if (other == null) {
+				return false;
+			}
+			
+			if (!Annotation.class.isAssignableFrom(other.getClass())) {
+				return false;
+			}
+			
+			final Annotation otherAnnotation = (Annotation)other;
+			final String otherText = otherAnnotation.getText();
+			
+			return Objects.equals(getText(), otherText);
+		}
+		
+		@Override
+		public int hashCode() {
+			final String text = getText();
+			
+			if (text == null) {
+				return 0;
+			}
+			
+			return text.hashCode();
+		}
+	}
 }

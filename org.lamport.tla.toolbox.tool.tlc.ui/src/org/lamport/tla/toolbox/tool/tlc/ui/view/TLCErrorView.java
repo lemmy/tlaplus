@@ -4,6 +4,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,6 +33,7 @@ import org.eclipse.jface.viewers.ILazyTreeContentProvider;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.ITreeSelection;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
@@ -42,6 +44,9 @@ import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.dnd.Clipboard;
+import org.eclipse.swt.dnd.TextTransfer;
+import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.events.ControlAdapter;
 import org.eclipse.swt.events.ControlEvent;
 import org.eclipse.swt.events.MouseAdapter;
@@ -56,6 +61,7 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.ScrollBar;
@@ -313,7 +319,8 @@ public class TLCErrorView extends ViewPart
         //
         // int sectionFlags = Section.DESCRIPTION | Section.TITLE_BAR
         // | Section.EXPANDED | Section.TWISTIE;
-        toolkit = new FormToolkit(parent.getDisplay());
+        final Display display = parent.getDisplay();
+		toolkit = new FormToolkit(display);
         form = toolkit.createForm(parent);
         form.setText("");
         toolkit.decorateFormHeading(form);
@@ -458,7 +465,7 @@ public class TLCErrorView extends ViewPart
 
         sashForm.setLayoutData(gd);
 
-        Tree tree = toolkit.createTree(sashForm, SWT.V_SCROLL | SWT.BORDER | SWT.FULL_SELECTION | SWT.SINGLE
+        Tree tree = toolkit.createTree(sashForm, SWT.V_SCROLL | SWT.BORDER | SWT.FULL_SELECTION | SWT.MULTI
                 | SWT.VIRTUAL);
         tree.setHeaderVisible(true);
         tree.setLinesVisible(true);
@@ -575,7 +582,7 @@ public class TLCErrorView extends ViewPart
 		final ToolBar toolbar = toolBarManager.createControl(errorTraceSection);
 		final ShiftClickAction action = new ShiftClickAction(
 				"Toggle between expand and collapse all (Shift+Click to restore the default two-level expansion)",
-				TLCUIActivator.getImageDescriptor("icons/elcl16/toggle_expand_state.png")) {
+				TLCUIActivator.getImageDescriptor("icons/elcl16/toggle_expand_state.png"), display) {
 			@Override
 			void runWithKey(final boolean pressed) {
 				if (pressed) {
@@ -593,8 +600,7 @@ public class TLCErrorView extends ViewPart
 				}
 			}
 		};
-		parent.getDisplay().addFilter(SWT.KeyDown, action);
-		parent.getDisplay().addFilter(SWT.KeyUp, action);
+		toolBarManager.add(new ExportErrorTrace2Clipboard(display));
 		filterErrorTraceAction = new FilterErrorTrace();
 		toolBarManager.add(filterErrorTraceAction);
 		toolBarManager.add(action);
@@ -1607,8 +1613,16 @@ public class TLCErrorView extends ViewPart
 	private static abstract class ShiftClickAction extends Action implements Listener {
 		private boolean holdDown = false;
 
-		public ShiftClickAction(final String text, final ImageDescriptor imageDescriptor) {
+		public ShiftClickAction(final String text, final ImageDescriptor imageDescriptor, final Display display) {
 			super(text, imageDescriptor);
+			display.addFilter(SWT.KeyDown, this);
+			display.addFilter(SWT.KeyUp, this);
+		}
+		
+		public ShiftClickAction(final String text, final int style, final Display display) {
+			super(text, style);
+			display.addFilter(SWT.KeyDown, this);
+			display.addFilter(SWT.KeyUp, this);
 		}
 
 		@Override
@@ -1629,4 +1643,67 @@ public class TLCErrorView extends ViewPart
 			}
 		}
 	}
+	
+	private class ExportErrorTrace2Clipboard extends ShiftClickAction implements ISelectionChangedListener {
+		private static final String DEFAULT_TOOL_TIP_TEXT = "Click to export error-trace to clipboard as\nsequence of records. "
+				+ "Shift-click to \nomit the action's position (_TEPosition), \nname, and location.";
+		
+		private final Display display;
+		
+		ExportErrorTrace2Clipboard(final Display display) {
+			super("Export the error-trace to the OS clipboard.", AS_PUSH_BUTTON, display);
+			this.display = display;
+			
+			variableViewer.addSelectionChangedListener(this);
+			
+			setImageDescriptor(TLCUIActivator
+					.getImageDescriptor("platform:/plugin/org.eclipse.ui.ide/icons/full/etool16/export_wiz.png"));
+			
+			setToolTipText(DEFAULT_TOOL_TIP_TEXT);
+		}
+		
+		/* Disable export when variables are part of the selection */
+		@Override
+		public void selectionChanged(SelectionChangedEvent event) {
+			if (variableViewer == null) {
+				this.setEnabled(false);
+			}
+			this.setEnabled(getTrace(variableViewer).hasTrace());
+		}
+		
+		@Override
+		public void runWithKey(final boolean excludeActionHeader) {
+			if (variableViewer == null) {
+				return;
+			}
+			final TLCError trace = getTrace(variableViewer);
+			if (!trace.hasTrace()) {
+				// safeguard in addition to isEnabled 
+				return;
+			}
+
+			final Clipboard clipboard = new Clipboard(display);
+			clipboard.setContents(new Object[] { trace.toSequenceOfRecords(!excludeActionHeader) },
+					new Transfer[] { TextTransfer.getInstance() });
+			clipboard.dispose();
+		}
+		
+		private TLCError getTrace(final TreeViewer variableViewer) {
+			TLCError trace = new TLCError();
+			final ITreeSelection ss = variableViewer.getStructuredSelection();
+			if (!ss.isEmpty()) {
+				// Convert the multi-selection into a new trace object.
+				final Iterator<?> iterator = ss.iterator();
+				while (iterator.hasNext()) {
+					final Object next = iterator.next();
+					if (next instanceof TLCState) {
+						trace.addState((TLCState) next);
+					}
+				}
+			} else if (variableViewer.getInput() instanceof TLCError) {
+				trace = (TLCError) variableViewer.getInput();
+			}
+			return trace;
+		}
+	}	
 }
