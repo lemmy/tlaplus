@@ -15,7 +15,7 @@ EXTENDS Naturals, Sequences, TLC
   end algorithm
 *)
 					
-(***** BEGIN TRANSLATION ***)
+\* BEGIN TRANSLATION PCal-255a10565612be8265861699149ea328
 CONSTANT defaultInitValue
 VARIABLES n, pc
 
@@ -55,5 +55,5 @@ Spec == Init /\ [][Next]_vars
 
 Termination == <>(\A self \in ProcSet: pc[self] = "Done")
 
-(***** END TRANSLATION ***)
+\* END TRANSLATION TLA-0c8f6e25783592e29e1972ef47f12501
 =============================================================================

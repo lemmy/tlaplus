@@ -10,11 +10,13 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Vector;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.internal.resources.ResourceException;
@@ -33,7 +35,7 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Status;
-import org.eclipse.core.runtime.SubProgressMonitor;
+import org.eclipse.core.runtime.SubMonitor;
 import org.eclipse.core.runtime.jobs.IJobChangeEvent;
 import org.eclipse.core.runtime.jobs.ISchedulingRule;
 import org.eclipse.core.runtime.jobs.Job;
@@ -46,14 +48,18 @@ import org.eclipse.debug.core.Launch;
 import org.eclipse.debug.core.model.IProcess;
 import org.eclipse.debug.core.model.IStreamsProxy;
 import org.eclipse.debug.core.model.LaunchConfigurationDelegate;
+import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.dialogs.MessageDialogWithToggle;
 import org.eclipse.jface.text.FindReplaceDocumentAdapter;
 import org.eclipse.jface.text.IDocument;
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.editors.text.FileDocumentProvider;
 import org.eclipse.ui.part.FileEditorInput;
+import org.lamport.tla.toolbox.spec.Module;
 import org.lamport.tla.toolbox.tool.IParseResult;
 import org.lamport.tla.toolbox.tool.ToolboxHandle;
 import org.lamport.tla.toolbox.tool.tlc.TLCActivator;
@@ -69,6 +75,7 @@ import org.lamport.tla.toolbox.tool.tlc.model.TLCSpec;
 import org.lamport.tla.toolbox.tool.tlc.model.TypedSet;
 import org.lamport.tla.toolbox.tool.tlc.output.IProcessOutputSink;
 import org.lamport.tla.toolbox.tool.tlc.util.ModelHelper;
+import org.lamport.tla.toolbox.ui.handler.ShowHistoryHandler;
 import org.lamport.tla.toolbox.util.AdapterFactory;
 import org.lamport.tla.toolbox.util.ResourceHelper;
 import org.lamport.tla.toolbox.util.TLAMarkerInformationHolder;
@@ -76,6 +83,7 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.ServiceReference;
 
+import pcal.Validator;
 import tla2sany.semantic.ModuleNode;
 import tla2sany.semantic.OpDeclNode;
 import tlc2.TLCGlobals;
@@ -98,12 +106,8 @@ import util.ExecutionStatisticsCollector;
  * Modified on 10 Sep 2009 to add No Spec TLC launch option.
  */
 @SuppressWarnings("restriction")
-public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate implements IModelConfigurationConstants,
-        IModelConfigurationDefaults
-{
-    // Mutex rule for the following jobs to run after each other
-    protected MutexRule mutexRule = new MutexRule();
-
+public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate
+		implements IModelConfigurationConstants, IModelConfigurationDefaults {
     /**
      * Configuration type
      */
@@ -116,8 +120,25 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate implemen
      * Only generate the models but do not run TLC
      */
     public static final String MODE_GENERATE = "generate";
+    
+    private static final AtomicBoolean PERFORM_VALIDATION_BEFORE_LAUNCH = new AtomicBoolean(true);
+    
+    private static final Integer DIVERGENCE_CONTINUE_LAUNCH = new Integer(1);
+    private static final Integer DIVERGENCE_SHOW_HISTORY = new Integer(2);
+    private static final LinkedHashMap<String, Integer> DIVERGENCE_DIALOG_BUTTONS;
+    
+    static {
+    	DIVERGENCE_DIALOG_BUTTONS = new LinkedHashMap<>();
+    	DIVERGENCE_DIALOG_BUTTONS.put("Don't Launch", new Integer(0));
+    	DIVERGENCE_DIALOG_BUTTONS.put("Continue", DIVERGENCE_CONTINUE_LAUNCH);
+    	DIVERGENCE_DIALOG_BUTTONS.put("Stop && Show History", DIVERGENCE_SHOW_HISTORY);
+    }
 
-	private Launch launch;
+
+    // Mutex rule for the following jobs to run after each other
+    protected MutexRule mutexRule = new MutexRule();
+
+    private Launch launch;
 
     /**
      * 1. method called during the launch
@@ -146,24 +167,106 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate implemen
      * @return whether the launch should proceed
      * @see org.eclipse.debug.core.model.ILaunchConfigurationDelegate2#preLaunchCheck(org.eclipse.debug.core.ILaunchConfiguration, java.lang.String, org.eclipse.core.runtime.IProgressMonitor)
      */
-    public boolean preLaunchCheck(ILaunchConfiguration config, String mode, IProgressMonitor monitor)
-            throws CoreException
-    {
-
+	public boolean preLaunchCheck(final ILaunchConfiguration config, final String mode, final IProgressMonitor monitor)
+			throws CoreException {
         // check the config existence
-        if (!config.exists())
-        {
+		if (!config.exists()) {
             return false;
         }
-        
-        try
-        {
-            monitor.beginTask("Reading model parameters", 1);
-        } finally
-        {
-            // finish the monitor
-            monitor.done();
+		
+        final int specType = config.getAttribute(MODEL_BEHAVIOR_SPEC_TYPE, MODEL_BEHAVIOR_TYPE_DEFAULT);
+        if ((specType != MODEL_BEHAVIOR_TYPE_NO_SPEC) && PERFORM_VALIDATION_BEFORE_LAUNCH.get()) {
+            final Model model = config.getAdapter(Model.class);
+            final IFile rootModule = model.getSpec().toSpec().getRootFile();
+            final Validator.ValidationResult result;
+
+            try (final InputStream is = rootModule.getContents()) {
+            	result = Validator.validate(is);
+            } catch (final IOException e) {
+            	monitor.done();
+            	
+            	throw new CoreException(new Status(IStatus.ERROR, TLCActivator.PLUGIN_ID, e.getMessage()));
+            }
+            
+    		final MessageDialogWithToggle dialog;
+            switch (result) {
+            	case NO_PLUSCAL_EXISTS:
+            	case NO_DIVERGENCE:
+            		break;
+            	case ERROR_ENCOUNTERED:
+					dialog = MessageDialogWithToggle.openYesNoQuestion(
+							PlatformUI.getWorkbench().getDisplay().getActiveShell(), "Error encountered",
+							"Something went wrong attempting to detect divergence between PlusCal and its translation, continue anyway?",
+							"Do not bug me about PlusCal verification during the rest of my Toolbox session.", false,
+							null, null);
+					
+					if (dialog.getToggleState()) {
+						PERFORM_VALIDATION_BEFORE_LAUNCH.set(false);
+					}
+					
+					if (dialog.getReturnCode() == IDialogConstants.NO_ID) {
+						return false;
+					}
+        			break;
+            	case NO_TRANSLATION_EXISTS:
+					dialog = MessageDialogWithToggle.openYesNoQuestion(
+							PlatformUI.getWorkbench().getDisplay().getActiveShell(), "Translation missing",
+							"Your spec appears to contain PlusCal but no TLA+ translation, are you sure you want to continue?",
+							"Do not bug me about PlusCal verification during the rest of my Toolbox session.", false,
+							null, null);
+					
+					if (dialog.getToggleState()) {
+						PERFORM_VALIDATION_BEFORE_LAUNCH.set(false);
+					}
+					
+					if (dialog.getReturnCode() == IDialogConstants.NO_ID) {
+						return false;
+					}
+        			break;
+            	case NO_CHECKSUMS_EXIST:
+					dialog = MessageDialogWithToggle.openInformation(
+							PlatformUI.getWorkbench().getDisplay().getActiveShell(), "A note about your spec",
+							"Your spec contains PlusCal and a TLA+ translation - but they have not been verified to "
+									+ "be in sync; consider re-translating the PlusCal algorithm.",
+							"Do not bug me about PlusCal verification during the rest of my Toolbox session.", false,
+							null, null);
+					
+					if (dialog.getToggleState()) {
+						PERFORM_VALIDATION_BEFORE_LAUNCH.set(false);
+					}
+
+            		break;
+            	case DIVERGENCE_EXISTS:
+					dialog = MessageDialogWithToggle.open(MessageDialogWithToggle.QUESTION,
+							PlatformUI.getWorkbench().getDisplay().getActiveShell(),
+							"PlusCal out of sync",
+							"The PlusCal and TLA+ translation in your spec appear to be out of sync - would you like to"
+									+ " stop the launch?",
+							"Do not bug me about PlusCal verification during the rest of my Toolbox session.",
+							false, null, null, SWT.NONE, DIVERGENCE_DIALOG_BUTTONS);
+					
+					if (dialog.getToggleState()) {
+						PERFORM_VALIDATION_BEFORE_LAUNCH.set(false);
+					}
+					
+					if (dialog.getReturnCode() != DIVERGENCE_CONTINUE_LAUNCH.intValue()) {
+						if (dialog.getReturnCode() == DIVERGENCE_SHOW_HISTORY.intValue()) {
+							final Module m = new Module(model.getSpec().getRootFile());
+							ShowHistoryHandler.openHistoryForModule(m);
+						}
+						
+						return false;
+					}
+            		break;
+            }
         }
+        
+		try {
+			monitor.beginTask("Reading model parameters", 1);
+		} finally {
+			// finish the monitor
+			monitor.done();
+		}
 
         return true;
     }
@@ -261,7 +364,7 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate implemen
                             {
                                 if (!members[i].getName().equals(ModelHelper.TE_TRACE_SOURCE))
                                 {
-                                    members[i].delete(IResource.FORCE, new SubProgressMonitor(monitor, 1));
+                                    members[i].delete(IResource.FORCE, SubMonitor.convert(monitor).split(1));
                                 }
                             } catch (CoreException e)
                             {
@@ -278,7 +381,7 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate implemen
             } else
             {
                 // create it
-                modelFolder.create(IResource.DERIVED | IResource.FORCE, true, new SubProgressMonitor(monitor, STEP));
+                modelFolder.create(IResource.DERIVED | IResource.FORCE, true, SubMonitor.convert(monitor).split(STEP));
             }
 
             // step 2
@@ -286,7 +389,7 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate implemen
 
             // copy
             specRootFile.copy(targetFolderPath.append(specRootFile.getProjectRelativePath()), IResource.DERIVED
-                    | IResource.FORCE, new SubProgressMonitor(monitor, 1));
+                    | IResource.FORCE, SubMonitor.convert(monitor).split(1));
             // find the result
             IResource specRootFileCopy = modelFolder.findMember(specRootFile.getProjectRelativePath());
 
@@ -301,13 +404,13 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate implemen
             copyUserModuleOverride(monitor, 2, project, targetFolderPath, specRootFile);
             
             // get the list of dependent modules
-            List extendedModules = ToolboxHandle.getExtendedModules(specRootFile.getName());
+            List<String> extendedModules = ToolboxHandle.getExtendedModules(specRootFile.getName());
 
             // iterate and copy modules that are needed for the spec
             IFile moduleFile = null;
             for (int i = 0; i < extendedModules.size(); i++)
             {
-                String module = (String) extendedModules.get(i);
+                String module = extendedModules.get(i);
 				// Only take care of user modules and actually *linked* files
 				// (not files defined via TLA_LIBRARY_PATH)
                 if (ToolboxHandle.isUserModule(module) && ResourceHelper.isLinkedFile(project, module))
@@ -317,7 +420,7 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate implemen
                     {
 						try {
 	                        moduleFile.copy(targetFolderPath.append(moduleFile.getProjectRelativePath()), IResource.DERIVED
-	                                | IResource.FORCE, new SubProgressMonitor(monitor, STEP / extendedModules.size()));
+	                                | IResource.FORCE, SubMonitor.convert(monitor).split(STEP / extendedModules.size()));
 							copyUserModuleOverride(monitor, STEP / extendedModules.size(), project, targetFolderPath, moduleFile);
 						} catch (ResourceException re) {
                     		// Trying to copy the file to the targetFolderPath produces an exception.
@@ -352,10 +455,10 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate implemen
 			for (int i = 0; i < files.length; i++) {
 				if (files[i].exists()) {
 					files[i].setContents(new ByteArrayInputStream("".getBytes()), IResource.DERIVED | IResource.FORCE,
-							new SubProgressMonitor(monitor, 1));
+							SubMonitor.convert(monitor).split(1));
 				} else {
 					files[i].create(new ByteArrayInputStream("".getBytes()), IResource.DERIVED | IResource.FORCE,
-							new SubProgressMonitor(monitor, 1));
+							SubMonitor.convert(monitor).split(1));
 				}
 			}
 
@@ -512,7 +615,7 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate implemen
             writer.writeFiles(tlaFile, cfgFile, monitor);
 
             // refresh the model folder
-            modelFolder.refreshLocal(IResource.DEPTH_ONE, new SubProgressMonitor(monitor, STEP));
+            modelFolder.refreshLocal(IResource.DEPTH_ONE, SubMonitor.convert(monitor).split(STEP));
 
         } finally
         {
@@ -575,7 +678,7 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate implemen
 		for (IFile userModuleOverride : userModuleOverrides) {
 			try {
 				userModuleOverride.copy(targetFolderPath.append(userModuleOverride.getProjectRelativePath()),
-						IResource.DERIVED | IResource.FORCE, new SubProgressMonitor(monitor, ticks));
+						IResource.DERIVED | IResource.FORCE, SubMonitor.convert(monitor).split(ticks));
 			} catch (CoreException e) {
 				// If the file could not be copied, the link is obviously stale
 				// and has to be removed to not create any problems in the
@@ -603,7 +706,7 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate implemen
 
         monitor.worked(1);
         // parse the MC file
-        IParseResult parseResult = ToolboxHandle.parseModule(rootModule, new SubProgressMonitor(monitor, 1), false,
+        IParseResult parseResult = ToolboxHandle.parseModule(rootModule, SubMonitor.convert(monitor).split(1), false,
                 false);
         final Vector<TLAMarkerInformationHolder> detectedErrors = parseResult.getDetectedErrors();
         boolean status = !AdapterFactory.isProblemStatus(parseResult.getStatus());
@@ -940,7 +1043,7 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate implemen
 	}
 
 	// This opens up a dialog at the end of the job showing the status message
-    class WithStatusJobChangeListener extends SimpleJobChangeListener {
+    class WithStatusJobChangeListener extends JobChangeAdapter {
 
 		private final Model model;
 		private final DummyProcess process;
@@ -998,7 +1101,7 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate implemen
     /**
      * listens to the termination of the TLC run 
      */
-    class TLCJobChangeListener extends SimpleJobChangeListener
+    class TLCJobChangeListener extends JobChangeAdapter
     {
         private Model model;
 
@@ -1182,37 +1285,6 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate implemen
 			refreshJob.schedule();
         }
     }
-
-    /**
-     * A listener writing the job state to the System.out
-     */
-    class SimpleJobChangeListener extends JobChangeAdapter
-    {
-
-        public void done(IJobChangeEvent event)
-        {
-            String jobName = event.getJob().getName();
-            String status = null;
-            if (event.getResult().isOK())
-            {
-                status = "Done";
-            } else
-            {
-                // analyze the cause
-                switch (event.getResult().getSeverity()) {
-                case IStatus.CANCEL:
-                    status = "Cancelled";
-                    break;
-                case IStatus.ERROR:
-                    status = "Error";
-                    break;
-                default:
-                    status = "Unknown";
-                    break;
-                }
-            }
-        }
-    };
 
     /**
      * A simple mutex rule 

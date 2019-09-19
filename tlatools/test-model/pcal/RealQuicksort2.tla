@@ -50,7 +50,7 @@ Max(S) == CHOOSE i \in S : \A j \in S : i \geq j
 
 *)
 					
-(***** BEGIN TRANSLATION ***)
+\* BEGIN TRANSLATION PCal-23d3f8a2c70b06b61c3d312c6981bc33
 CONSTANT defaultInitValue
 VARIABLES A, Uns, new, next, pc, stack, parg
 
@@ -116,7 +116,7 @@ Spec == /\ Init /\ [][Next]_vars
 
 Termination == <>(pc = "Done")
 
-(***** END TRANSLATION ***)
+\* END TRANSLATION TLA-86e50a32c6061aae8bbd3a4da8513951
 
 Invariant == 
    (pc = "Done") => \A i, j \in 1..Len(A) :

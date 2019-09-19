@@ -42,7 +42,7 @@ end algorithm
 
 ***********************)
 
-(**************** BEGIN TRANSLATION *******************************)
+\* BEGIN TRANSLATION PCal-d10cf42a8598db9135c9a3e8255fdc3c
 VARIABLES x, y, b, pc, S
 
 vars == << x, y, b, pc, S >>
@@ -150,7 +150,7 @@ Next == (\E self \in 1..N: Proc(self))
 Spec == /\ Init /\ [][Next]_vars
         /\ WF_vars(Next)
 
-(**************** END TRANSLATION *******************************)
+\* END TRANSLATION TLA-71043efb021aa260bc5d04181cce7e16
 
 inCS(i) ==  (pc[i] = "cs") 
 

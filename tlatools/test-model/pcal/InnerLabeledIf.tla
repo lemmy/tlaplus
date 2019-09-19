@@ -20,7 +20,7 @@ EXTENDS Sequences, Naturals, TLC
     end algorithm
 *)
 					
-(***** BEGIN TRANSLATION ***)
+\* BEGIN TRANSLATION PCal-8d605a76553c67cf0740a3d27b57470b
 VARIABLES x, pc
 
 vars == << x, pc >>
@@ -77,7 +77,7 @@ Spec == /\ Init /\ [][Next]_vars
 
 Termination == <>(pc = "Done")
 
-(***** END TRANSLATION ***)
+\* END TRANSLATION TLA-c43944356bde2029519b5137bfd80466
 
 
 =============================================================================

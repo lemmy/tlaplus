@@ -15,7 +15,7 @@ EXTENDS Naturals, TLC
 
 *)
 					
-(***** BEGIN TRANSLATION ***)
+\* BEGIN TRANSLATION PCal-a111e49229d06e75e660ee8777442285
 VARIABLES x, y, pc
 
 vars == << x, y, pc >>
@@ -66,5 +66,5 @@ Spec == /\ Init /\ [][Next]_vars
 
 Termination == <>(pc = "Done")
 
-(***** END TRANSLATION ***)
+\* END TRANSLATION TLA-7bfbfdcfed4c1aea23c410420c1f4f9d
 =============================================================================
