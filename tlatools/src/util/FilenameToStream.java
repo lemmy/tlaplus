@@ -14,11 +14,53 @@ import java.io.File;
  *
  * @author Leslie Lamport
  * @author Simon Zambrovski
- * @version $Id$
  */
 public interface FilenameToStream
 {
 
+	/*
+	 * Higher layers of TLC (and the Toolbox) have to determine if a module was
+	 * loaded from a library location s.a. those defined by TLA_LIBRARY (see
+	 * SimpleFilenameToStream). Thus, capture this information at module load
+	 * time when it is known where a module was loaded from.
+	 */
+	public static class TLAFile extends File {
+		private final boolean isLibraryModule;
+		private transient final FilenameToStream resolver;
+
+		public TLAFile(String pathname, FilenameToStream fts) {
+			this(pathname, false, fts);
+		}
+
+		public TLAFile(String pathname, boolean isLibraryModule, FilenameToStream fts) {
+			super(pathname);
+			this.isLibraryModule = isLibraryModule;
+			this.resolver = fts;
+		}
+
+		public TLAFile(String parent, String child, FilenameToStream fts) {
+			super(parent, child);
+			this.isLibraryModule = false;
+			this.resolver = fts;
+		}
+
+		public boolean isLibraryModule() {
+			return isLibraryModule;
+		}
+
+		/**
+		 * @return null if no TLC module override for this module exists.
+		 */
+		public File getModuleOverride() {
+			final File moduleOverride = resolver.resolve(getName().replaceAll(".tla$", ".class"), false);
+			if (moduleOverride.exists()) {
+				// resolve(...) return a File instance even if the file doesn't exist.
+				return moduleOverride;
+			}
+			return null;
+		}
+	}
+	
     /**
      * This method resolves the logical name to the OS-resource
      * @param filename
@@ -39,9 +81,15 @@ public interface FilenameToStream
      *
      * @param moduleName
      * @return
+	 * @see tla2sany.modanalyzer.ParseUnit.isLibraryModule()
+	 * @see StandardModules.isDefinedInStandardModule()
      */
     public boolean isStandardModule(String moduleName) ;
-    
+
+	default boolean isLibraryModule(String moduleName) {
+		return isStandardModule(moduleName);
+	}
+   
 	static final String TMPDIR = System.getProperty("java.io.tmpdir");
 
 	static boolean isInJar(final String aString) {

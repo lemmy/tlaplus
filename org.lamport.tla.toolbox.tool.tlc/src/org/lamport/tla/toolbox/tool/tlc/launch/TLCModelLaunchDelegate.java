@@ -7,16 +7,22 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.internal.resources.ResourceException;
@@ -79,6 +85,7 @@ import org.lamport.tla.toolbox.ui.handler.ShowHistoryHandler;
 import org.lamport.tla.toolbox.util.AdapterFactory;
 import org.lamport.tla.toolbox.util.ResourceHelper;
 import org.lamport.tla.toolbox.util.TLAMarkerInformationHolder;
+import org.lamport.tla.toolbox.util.UIHelper;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.ServiceReference;
@@ -173,9 +180,11 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate
 		if (!config.exists()) {
             return false;
         }
-		
+
         final int specType = config.getAttribute(MODEL_BEHAVIOR_SPEC_TYPE, MODEL_BEHAVIOR_TYPE_DEFAULT);
-        if ((specType != MODEL_BEHAVIOR_TYPE_NO_SPEC) && PERFORM_VALIDATION_BEFORE_LAUNCH.get()) {
+        if ((specType != MODEL_BEHAVIOR_TYPE_NO_SPEC)
+        		&& PERFORM_VALIDATION_BEFORE_LAUNCH.get()
+        		&& mode.equals(MODE_MODELCHECK)) {
             final Model model = config.getAdapter(Model.class);
             final IFile rootModule = model.getSpec().toSpec().getRootFile();
             final Validator.ValidationResult result;
@@ -188,69 +197,83 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate
             	throw new CoreException(new Status(IStatus.ERROR, TLCActivator.PLUGIN_ID, e.getMessage()));
             }
             
-    		final MessageDialogWithToggle dialog;
+    		final Display d = PlatformUI.getWorkbench().getDisplay();
+    		final AtomicInteger returnCode = new AtomicInteger(-1);
             switch (result) {
             	case NO_PLUSCAL_EXISTS:
             	case NO_DIVERGENCE:
             		break;
             	case ERROR_ENCOUNTERED:
-					dialog = MessageDialogWithToggle.openYesNoQuestion(
-							PlatformUI.getWorkbench().getDisplay().getActiveShell(), "Error encountered",
-							"Something went wrong attempting to detect divergence between PlusCal and its translation, continue anyway?",
-							"Do not bug me about PlusCal verification during the rest of my Toolbox session.", false,
-							null, null);
+            		d.syncExec(() -> {
+            			final MessageDialogWithToggle dialog = MessageDialogWithToggle.openYesNoQuestion(
+    							d.getActiveShell(), "Error encountered",
+    							"Something went wrong attempting to detect divergence between PlusCal and its translation, continue anyway?",
+    							"Do not bug me about PlusCal verification during the rest of my Toolbox session.", false,
+    							null, null);
+    					
+    					if (dialog.getToggleState()) {
+    						PERFORM_VALIDATION_BEFORE_LAUNCH.set(false);
+    					}
+    					
+    					returnCode.set(dialog.getReturnCode());
+            		});
 					
-					if (dialog.getToggleState()) {
-						PERFORM_VALIDATION_BEFORE_LAUNCH.set(false);
-					}
-					
-					if (dialog.getReturnCode() == IDialogConstants.NO_ID) {
+					if (returnCode.get() == IDialogConstants.NO_ID) {
 						return false;
 					}
         			break;
             	case NO_TRANSLATION_EXISTS:
-					dialog = MessageDialogWithToggle.openYesNoQuestion(
-							PlatformUI.getWorkbench().getDisplay().getActiveShell(), "Translation missing",
-							"Your spec appears to contain PlusCal but no TLA+ translation, are you sure you want to continue?",
-							"Do not bug me about PlusCal verification during the rest of my Toolbox session.", false,
-							null, null);
+            		d.syncExec(() -> {
+            			final MessageDialogWithToggle dialog = MessageDialogWithToggle.openYesNoQuestion(
+    							d.getActiveShell(), "Translation missing",
+    							"Your spec appears to contain PlusCal but no TLA+ translation, are you sure you want to continue?",
+    							"Do not bug me about PlusCal verification during the rest of my Toolbox session.", false,
+    							null, null);
+    					
+    					if (dialog.getToggleState()) {
+    						PERFORM_VALIDATION_BEFORE_LAUNCH.set(false);
+    					}
+    					
+    					returnCode.set(dialog.getReturnCode());
+            		});
 					
-					if (dialog.getToggleState()) {
-						PERFORM_VALIDATION_BEFORE_LAUNCH.set(false);
-					}
-					
-					if (dialog.getReturnCode() == IDialogConstants.NO_ID) {
+					if (returnCode.get() == IDialogConstants.NO_ID) {
 						return false;
 					}
         			break;
             	case NO_CHECKSUMS_EXIST:
-					dialog = MessageDialogWithToggle.openInformation(
-							PlatformUI.getWorkbench().getDisplay().getActiveShell(), "A note about your spec",
-							"Your spec contains PlusCal and a TLA+ translation - but they have not been verified to "
-									+ "be in sync; consider re-translating the PlusCal algorithm.",
-							"Do not bug me about PlusCal verification during the rest of my Toolbox session.", false,
-							null, null);
+            		d.syncExec(() -> {
+            			final MessageDialogWithToggle dialog = MessageDialogWithToggle.openInformation(
+    							d.getActiveShell(), "A note about your spec",
+    							"Your spec contains PlusCal and a TLA+ translation - but they have not been verified to "
+    									+ "be in sync; consider re-translating the PlusCal algorithm.",
+    							"Do not bug me about PlusCal verification during the rest of my Toolbox session.", false,
+    							null, null);
+    					
+    					if (dialog.getToggleState()) {
+    						PERFORM_VALIDATION_BEFORE_LAUNCH.set(false);
+    					}
+            		});
 					
-					if (dialog.getToggleState()) {
-						PERFORM_VALIDATION_BEFORE_LAUNCH.set(false);
-					}
-
             		break;
             	case DIVERGENCE_EXISTS:
-					dialog = MessageDialogWithToggle.open(MessageDialogWithToggle.QUESTION,
-							PlatformUI.getWorkbench().getDisplay().getActiveShell(),
-							"PlusCal out of sync",
-							"The PlusCal and TLA+ translation in your spec appear to be out of sync - would you like to"
-									+ " stop the launch?",
-							"Do not bug me about PlusCal verification during the rest of my Toolbox session.",
-							false, null, null, SWT.NONE, DIVERGENCE_DIALOG_BUTTONS);
+            		d.syncExec(() -> {
+            			final MessageDialogWithToggle dialog = MessageDialogWithToggle.open(MessageDialogWithToggle.QUESTION,
+    							d.getActiveShell(), "PlusCal out of sync",
+    							"The PlusCal and TLA+ translation in your spec appear to be out of sync - would you like to"
+    									+ " stop the launch?",
+    							"Do not bug me about PlusCal verification during the rest of my Toolbox session.", false,
+    							null, null, SWT.NONE, DIVERGENCE_DIALOG_BUTTONS);
+    					
+    					if (dialog.getToggleState()) {
+    						PERFORM_VALIDATION_BEFORE_LAUNCH.set(false);
+    					}
+    					
+    					returnCode.set(dialog.getReturnCode());
+            		});
 					
-					if (dialog.getToggleState()) {
-						PERFORM_VALIDATION_BEFORE_LAUNCH.set(false);
-					}
-					
-					if (dialog.getReturnCode() != DIVERGENCE_CONTINUE_LAUNCH.intValue()) {
-						if (dialog.getReturnCode() == DIVERGENCE_SHOW_HISTORY.intValue()) {
+					if (returnCode.get() != DIVERGENCE_CONTINUE_LAUNCH.intValue()) {
+						if (returnCode.get() == DIVERGENCE_SHOW_HISTORY.intValue()) {
 							final Module m = new Module(model.getSpec().getRootFile());
 							ShowHistoryHandler.openHistoryForModule(m);
 						}
@@ -296,22 +319,23 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate
             // step 1
             monitor.subTask("Creating directories");
 
-            // retrieve the project containing the specification
-            final IProject project = model.getSpec().getProject();
+            final TLCSpec spec = model.getSpec();
+			// retrieve the project containing the specification
+            final IProject project = spec.getProject();
             if (project == null)
             {
                 // project could not be found
                 throw new CoreException(new Status(IStatus.ERROR, TLCActivator.PLUGIN_ID,
-                        "Error accessing the spec project " + model.getSpec().getName()));
+                        "Error accessing the spec project " + spec.getName()));
             }
 
             // retrieve the root file
-            final IFile specRootFile = model.getSpec().getRootFile();
+            final IFile specRootFile = spec.getRootFile();
             if (specRootFile == null)
             {
                 // root module file not found
                 throw new CoreException(new Status(IStatus.ERROR, TLCActivator.PLUGIN_ID,
-                        "Error accessing the root module " + model.getSpec().getRootFilename()));
+                        "Error accessing the root module " + spec.getRootFilename()));
             }
 
             // retrieve the model folder
@@ -397,7 +421,7 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate
             if (specRootFileCopy == null)
             {
                 throw new CoreException(new Status(IStatus.ERROR, TLCActivator.PLUGIN_ID, "Error copying "
-                        + model.getSpec().getRootFilename() + " into " + targetFolderPath.toOSString()));
+                        + spec.getRootFilename() + " into " + targetFolderPath.toOSString()));
             }
             
             // Copy the spec's root file userModule override if any.
@@ -450,6 +474,25 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate
                     // TODO check the existence of copied files
                 }
             }
+            
+			// CloudTLC deploys a custom packaged tla2tools.jar on the remote instance,
+			// which is self-contained. I.e. it contains all of the spec's dependencies such
+			// as modules from the library path and TLC module overrides. Here we make sure
+            // these dependencies get included in the custom tla2tools.jar (see PayloadHelper)
+            // by copying them to the model directory.
+            if (!local.contains(getMode(config))) {
+				final Path modelDirectoryPath = Paths.get(modelFolder.getRawLocation().makeAbsolute().toFile().toURI());
+            	for (Module m : spec.getModulesSANY()) {
+					if (m.isLibraryModule() && !m.isStandardModule()) {
+						try {
+							m.copyTo(modelDirectoryPath);
+						} catch (IOException e) {
+							throw new CoreException(new Status(Status.ERROR, "org.lamport.tlc.toolbox.tool.tlc",
+									String.format("Error copying file %s to %s.", m.getFile(), modelDirectoryPath), e));
+						}
+					}
+				}
+            }
 
             // create files
 			for (int i = 0; i < files.length; i++) {
@@ -468,7 +511,7 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate
             ModelWriter writer = new ModelWriter();
        
             // add the MODULE beginning and EXTENDS statement
-            writer.addPrimer(ModelHelper.MC_MODEL_NAME, model.getSpec().getRootModuleName());
+            writer.addPrimer(ModelHelper.MC_MODEL_NAME, spec.getRootModuleName());
 
             // Sets constants to a Vector of the substitutions for the CONSTANT substitutions
             List<Assignment> constants = ModelHelper.deserializeAssignmentList(config.getAttribute(MODEL_PARAMETER_CONSTANTS,
@@ -561,9 +604,9 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate
             case MODEL_BEHAVIOR_TYPE_SPEC_CLOSED:
 
                 // the specification name-formula pair
-            	final String spec = config.getAttribute(MODEL_BEHAVIOR_CLOSED_SPECIFICATION, EMPTY_STRING);
-    			if (model.getSpec().declares(spec) && !isExpression(spec)) {
-            		writer.addFormulaList(spec, "SPECIFICATION", MODEL_BEHAVIOR_CLOSED_SPECIFICATION);
+            	final String specIdentifier = config.getAttribute(MODEL_BEHAVIOR_CLOSED_SPECIFICATION, EMPTY_STRING);
+    			if (spec.declares(specIdentifier) && !isExpression(specIdentifier)) {
+            		writer.addFormulaList(specIdentifier, "SPECIFICATION", MODEL_BEHAVIOR_CLOSED_SPECIFICATION);
     			} else {
     				writer.addFormulaList(ModelWriter.createSourceContent(MODEL_BEHAVIOR_CLOSED_SPECIFICATION,
     						ModelWriter.SPEC_SCHEME, config), "SPECIFICATION", MODEL_BEHAVIOR_CLOSED_SPECIFICATION);
@@ -572,7 +615,7 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate
             case MODEL_BEHAVIOR_TYPE_SPEC_INIT_NEXT:
             	// the init and next formulas
             	final String init = config.getAttribute(MODEL_BEHAVIOR_SEPARATE_SPECIFICATION_INIT, EMPTY_STRING);
-				if (model.getSpec().declares(init) && !isExpression(init)) {
+				if (spec.declares(init) && !isExpression(init)) {
             		writer.addFormulaList(init, "INIT", MODEL_BEHAVIOR_SEPARATE_SPECIFICATION_INIT);
             	} else {
             		writer.addFormulaList(ModelWriter.createSourceContent(MODEL_BEHAVIOR_SEPARATE_SPECIFICATION_INIT,
@@ -580,7 +623,7 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate
             	}
 				
             	final String next = config.getAttribute(MODEL_BEHAVIOR_SEPARATE_SPECIFICATION_NEXT, EMPTY_STRING);
-				if (model.getSpec().declares(next) && !isExpression(next)) {
+				if (spec.declares(next) && !isExpression(next)) {
 	           		writer.addFormulaList(next, "NEXT", MODEL_BEHAVIOR_SEPARATE_SPECIFICATION_INIT);
             	} else {
 	                writer.addFormulaList(ModelWriter.createSourceContent(MODEL_BEHAVIOR_SEPARATE_SPECIFICATION_NEXT,
@@ -599,12 +642,12 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate
             	// invariants (separate those declared in the spec from those declared in the model).
 				final List<String> invariants = config.getAttribute(MODEL_CORRECTNESS_INVARIANTS, new Vector<String>());
 				writer.addFormulaList(
-						createProperties(writer, model.getSpec(), invariants, ModelWriter.INVARIANT_SCHEME),
+						createProperties(writer, spec, invariants, ModelWriter.INVARIANT_SCHEME),
 						"INVARIANT", MODEL_CORRECTNESS_INVARIANTS);
 
 				// properties
 				final List<String> properties = config.getAttribute(MODEL_CORRECTNESS_PROPERTIES, new Vector<String>());
-				writer.addFormulaList(createProperties(writer, model.getSpec(), properties, ModelWriter.PROP_SCHEME),
+				writer.addFormulaList(createProperties(writer, spec, properties, ModelWriter.PROP_SCHEME),
 						"PROPERTY", MODEL_CORRECTNESS_PROPERTIES);
             }
 
@@ -845,22 +888,7 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate
         // number of workers
         int numberOfWorkers = config.getAttribute(LAUNCH_NUMBER_OF_WORKERS, LAUNCH_NUMBER_OF_WORKERS_DEFAULT);
 
-        // distributed launch (legacy launch configurations pre-dating TLC distributed functionality 
-        // do not have the LAUNCH_DISTRIBUTED attribute. Then, it obviously defaults to distribution turned off.
-        // Trying to lookup a non-existing attribute would cause a runtime exception.)
-        // Then it could also be true or false. The legacy flag showing if "ad hoc" distribution is turned
-        // on or not. Simply map it to "ad hoc" or "off".
-        String cloud = "off";
-        if (config.hasAttribute(LAUNCH_DISTRIBUTED)) {
-        	try {
-        		cloud = config.getAttribute(LAUNCH_DISTRIBUTED, LAUNCH_DISTRIBUTED_DEFAULT);
-        	} catch (CoreException e) {
-        		boolean distributed = config.getAttribute(LAUNCH_DISTRIBUTED, false);
-        		if (distributed) {
-        			cloud = "ad hoc";
-        		}
-        	}
-        }
+        final String cloud = getMode(config);
         
         // TLC job
         Job job = null;
@@ -984,6 +1012,27 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate
         job.addJobChangeListener(tlcJobListener);
         job.schedule();
     }
+
+    private static final Set<String> local = new HashSet<>(Arrays.asList("ad hoc", "off"));
+    
+	private static String getMode(final ILaunchConfiguration config) throws CoreException {
+        // distributed launch (legacy launch configurations pre-dating TLC distributed functionality 
+        // do not have the LAUNCH_DISTRIBUTED attribute. Then, it obviously defaults to distribution turned off.
+        // Trying to lookup a non-existing attribute would cause a runtime exception.)
+        // Then it could also be true or false. The legacy flag showing if "ad hoc" distribution is turned
+        // on or not. Simply map it to "ad hoc" or "off".
+		if (config.hasAttribute(LAUNCH_DISTRIBUTED)) {
+        	try {
+        		return  config.getAttribute(LAUNCH_DISTRIBUTED, LAUNCH_DISTRIBUTED_DEFAULT);
+        	} catch (CoreException e) {
+        		boolean distributed = config.getAttribute(LAUNCH_DISTRIBUTED, false);
+        		if (distributed) {
+        			return "ad hoc";
+        		}
+        	}
+        }
+		return "off";
+	}
     
 	// A DummyProcess instance has to be attached to the corresponding ILaunch
 	// when the Job launched neither creates an IProcess nor IDebugTarget. In
@@ -1259,6 +1308,22 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate
 							}
 						};
 						j.schedule();
+						
+						// Open the ModelEditor on the snapshot. The output/result of the remote
+						// CloudTLC run is *not* reported into Model_1 but into its most recent
+						// snapshots. Without opening the ModelEditor on the snapshot, it appears
+						// as if nothing is happening (unless the TLCConsole happens to be open).
+						final IFile launchFile = snapshot.getLaunchConfiguration().getFile();
+						if (launchFile.exists()) {
+							PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
+								@Override
+								public void run() {
+									//TODO Refactor constant into a class accessible by this bundle.
+									UIHelper.openEditor("org.lamport.tla.toolbox.tool.tlc.ui.editor.ModelEditor",
+											launchFile);
+								}
+							});
+						}
 					}
 					monitor.done();
 					return Status.OK_STATUS;

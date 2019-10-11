@@ -172,7 +172,7 @@ node ('master') {
 node ('master') {
    stage('Archive') {
 //      unstash 'signed'
-//      fingerprint '**/org.lamport.tla.toolbox.product.product/target/repository/, **/org.lamport.tla.toolbox.product.product/target/products/*.zip, **/org.lamport.tla.toolbox.product.product/target/products/*.deb, **/tlatools/dist/, **/org.lamport.tla.toolbox.doc/html/'
+      fingerprint '**/org.lamport.tla.toolbox.product.product/target/repository/, **/org.lamport.tla.toolbox.product.product/target/products/*.zip, **/org.lamport.tla.toolbox.product.product/target/products/*.deb, **/tlatools/dist/, **/org.lamport.tla.toolbox.doc/html/'
 
       archiveArtifacts '**/general/docs/changelogs/changelog.html, **/org.lamport.tla.toolbox.product.product/target/org.lamport.tla.toolbox.product.product-1.4.0-SNAPSHOT.zip, **/org.lamport.tla.toolbox.p2repository/target/repository/, **/org.lamport.tla.toolbox.product.product/target/repository/, **/org.lamport.tla.toolbox.product.product/target/products/*.zip, **/org.lamport.tla.toolbox.product.product/target/products/*.deb, **/org.lamport.tla.toolbox.product.product/target/products/*.rpm, **/org.lamport.tla.toolbox.product.product/target/products/32bit_x86/*, **/tlatools/dist/, **/org.lamport.tla.toolbox.doc/html/'
    }

@@ -354,13 +354,50 @@ public class Simulator {
 			MP.printMessage(EC.TLC_ERROR_STATE);
 			StatePrinter.printState(state);
 		} else {
-			MP.printError(EC.TLC_BEHAVIOR_UP_TO_THIS_POINT);
-			TLCState lastState = null;
-			for (int i = 0; i < stateTrace.size(); i++) {
-				StatePrinter.printState(stateTrace.elementAt(i), lastState, i + 1);
-				lastState = stateTrace.elementAt(i);
+			if (!stateTrace.isLastElement(state)) {
+				// MAK 09/24/2019: this method is called with state being the stateTrace's
+				// last element or not.
+				stateTrace.addElement(state);
 			}
-			StatePrinter.printState(state, null, stateTrace.size() + 1);
+			
+			MP.printError(EC.TLC_BEHAVIOR_UP_TO_THIS_POINT);
+			// MAK 09/24/2019: For space reasons, TLCState does not store the state's action.
+			// This is why the loop below creates TLCStateInfo instances out of the pair cur
+			// -> last to print the action's name as part of the error trace. This is
+			// especially useful for Error-Trace Explorer in the Toolbox.
+			TLCState lastState = null;
+			TLCStateInfo sinfo;
+			int cnt = 1;
+			for (int i = 0; i < stateTrace.size(); i++) {
+				final TLCState curState = stateTrace.elementAt(i);
+				if (lastState != null) {
+					sinfo = this.tool.getState(curState, lastState);
+				} else {
+					sinfo = new TLCStateInfo(curState, "<Initial predicate>");
+				}
+				
+				// MAK 09/25/2019: It is possible for
+				// tlc2.tool.SimulationWorker.simulateRandomTrace() to produce traces with
+				// *non-terminal* stuttering steps, i.e. it might produce traces such
+				// as s0,s1,s1,s2,s3,s3,s3,...sN* (where sN* represents an infinite suffix of
+				// "terminal" stuttering steps). In other words, it produces traces s.t.
+				// a trace can contain finite (sub-)sequence of stuttering steps.
+				// The reason is that simulateRandomTrace with non-zero probability selects
+				// a stuttering steps as the current state's successor. Guarding against it
+				// would require to fingerprint states (i.e. check equality) for each successor
+				// state selected which is considered too expensive.
+				// A trace with finite stuttering can be reduced to a shorter - hence
+				// better readable - trace with only infinite stuttering. This check makes sure
+				// we get rid of the confusing Toolbox behavior that a trace with finite
+				// stuttering is implicitly reduced by breadth-first-search when trace
+				// expressions are evaluated. 
+				if (lastState == null || curState.fingerPrint() != lastState.fingerPrint()) {
+					StatePrinter.printState(sinfo, lastState, cnt++);
+				} else {
+					assert Boolean.TRUE;
+				}
+				lastState = curState;
+			}
 		}
 	}
 
