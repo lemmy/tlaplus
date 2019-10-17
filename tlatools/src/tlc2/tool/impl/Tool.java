@@ -1106,7 +1106,7 @@ public final StateVec getNextStates(Action action, TLCState state) {
               FcnLambdaValue fcn = (FcnLambdaValue)fval;
               if (fcn.fcnRcd == null) {
                 Context c1 = this.getFcnContext(fcn, args, c, s0, s1, EvalControl.Clear, cm);
-                return this.getNextStates(fcn.body, acts, c1, s0, s1, nss, cm);
+                return this.getNextStates(fcn.body, acts, c1, s0, s1, nss, fcn.cm);
               }
               fval = fcn.fcnRcd;
             }
@@ -1883,7 +1883,8 @@ public final StateVec getNextStates(Action action, TLCState state) {
               ExprOrOpArgNode[] pairArgs = pairNode.getArgs();
               if (pairArgs[0] == null) {
                 other = pairArgs[1];
-              }
+                if (coverage) { cm = cm.get(pairNode); }
+               }
               else {
                 Value bval = this.eval(pairArgs[0], c, s0, s1, control, coverage ? cm.get(pairNode) : cm);
                 if (!(bval instanceof BoolValue)) {

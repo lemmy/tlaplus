@@ -1,12 +1,12 @@
 --- RCPTT testcase ---
 Format-Version: 1.0
-Element-Name: TLA_Functional_PCal_Checksums
+Element-Name: TLA.Functional.PCal.Checksums
 Element-Type: testcase
 Element-Version: 3.0
 External-Reference: 
 Id: _wH2aMNWzEemOp9qASlV00A
 Runtime-Version: 2.4.0.201902010011
-Save-Time: 9/13/19, 2:46 PM
+Save-Time: 10/13/19, 7:31 PM
 Testcase-Type: ecl
 
 ------=_.content-0a7243a0-75d3-3d5f-9791-539de0e5b7ac
@@ -26,8 +26,8 @@ try -command {
 	    key-type "M1+s"
 	}
 
-	get-menu -path "TLC Model Checker/New Model..." | click
-	get-window "New model..." | get-button "OK" | click
+	get-menu -path $TLA-MENU-PATH-NEW-MODEL | click
+	get-window $TLA-DIALOG-TITLE-NEW-MODEL | get-button $TLA-BUTTON-OK | click
 	
 	get-menu -path "TLC Model Checker/Run model" | click
 	with [get-window "PlusCal out of sync"] {
