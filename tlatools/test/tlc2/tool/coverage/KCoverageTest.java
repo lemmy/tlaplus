@@ -23,16 +23,31 @@
  * Contributors:
  *   Markus Alexander Kuppe - initial API and implementation
  ******************************************************************************/
-package tlc2.value;
+package tlc2.tool.coverage;
 
-public interface IMVPerm {
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-	IValue get(IValue value);
+import org.junit.Test;
 
-	void put(IModelValue dval, IModelValue rval);
+import tlc2.output.EC;
 
-	int size();
+public class KCoverageTest extends AbstractCoverageTest {
 
-	IMVPerm compose(IMVPerm elementAt);
+    public KCoverageTest () {
+        super("K");
+    }
 
+    @Test
+    public void testSpec () {
+		// ModelChecker has finished and generated the expected amount of states
+		assertTrue(recorder.recorded(EC.TLC_FINISHED));
+		assertTrue(recorder.recordedWithStringValue(EC.TLC_SEARCH_DEPTH, "1"));
+		assertTrue(recorder.recordedWithStringValues(EC.TLC_STATS, "2", "1", "0"));
+
+		// No 'general' errors recorded
+		assertFalse(recorder.recorded(EC.GENERAL));
+
+		assertFalse(recorder.recorded(EC.TLC_COVERAGE_MISMATCH));
+    }
 }
