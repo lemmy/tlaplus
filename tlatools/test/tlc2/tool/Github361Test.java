@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Microsoft Research. All rights reserved. 
+ * Copyright (c) 2019 Microsoft Research. All rights reserved. 
  *
  * The MIT License (MIT)
  * 
@@ -23,79 +23,37 @@
  * Contributors:
  *   Markus Alexander Kuppe - initial API and implementation
  ******************************************************************************/
-package tlc2.tool.coverage;
+package tlc2.tool;
 
-import tla2sany.semantic.SemanticNode;
+import static org.junit.Assert.assertTrue;
 
-public interface CostModel {
+import org.junit.Test;
 
-	CostModel DO_NOT_RECORD = new CostModel() {
+import tlc2.output.EC;
+import tlc2.output.EC.ExitStatus;
+import tlc2.tool.liveness.ModelCheckerTestCase;
 
-		@Override
-		public final CostModel report() {
-			// no-op
-			return this;
-		}
+public class Github361Test extends ModelCheckerTestCase {
 
-		@Override
-		public final CostModel get(final SemanticNode sn) {
-			return this;
-		}
-		
-		@Override
-		public final CostModel getRoot() {
-			return this;
-		}
+	public Github361Test() {
+		super("Github361", ExitStatus.SUCCESS);
+	}
 
-		@Override
-		public final CostModel incInvocations() {
-			// no-op
-			return this;
-		}
+	@Test
+	public void testSpec() {
+		// This implicitly tests SpecProcessor#processConstantDefns(ModuleNode), which
+		// must not fully initialize (fingerprint) values because it is for some
+		// definitions (such as Partitions in Github361.tla) too expensive.  This is
+		// the reason why it runs with multiple threads to make sure optimizations for
+		// single-threaded TLC hide bugs.
+		assertTrue(recorder.recorded(EC.TLC_FINISHED));
+		assertTrue(recorder.recordedWithStringValues(EC.TLC_STATS, "2", "1", "0"));
+		assertTrue(recorder.recordedWithStringValue(EC.TLC_INIT_GENERATED1, "1"));
+	}
 
-		@Override
-		public final CostModel incInvocations(final long value) {
-			// no-op
-			return this;
-		}
-
-		@Override
-		public final CostModel incSecondary() {
-			// no-op
-			return this;
-		}
-
-		@Override
-		public final CostModel incSecondary(long value) {
-			// no-op
-			return null;
-		}
-
-		@Override
-		public final CostModel getAndIncrement(SemanticNode eon) {
-			// no-op
-			return this;
-		}
-		
-		@Override
-		public final String toString() {
-			return "DO_NOT_RECORD";
-		}
-	};
-
-	CostModel incInvocations();
-
-	CostModel incInvocations(final long value);
-
-	CostModel incSecondary();
-	
-	CostModel incSecondary(final long value);
-
-	CostModel report();
-
-	CostModel get(final SemanticNode sn);
-	
-	CostModel getAndIncrement(final SemanticNode eon);
-	
-	CostModel getRoot();
+	@Override
+	protected int getNumberOfThreads() {
+		// See comment above.
+		return 2;
+	}
 }
