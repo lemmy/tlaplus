@@ -774,6 +774,16 @@ public class MP
             		+ "It might cause TLC to miss violations of the stated liveness properties. "
             		+ "Please check liveness without symmetry defined.");
             break;
+        case EC.TLC_FEATURE_LIVENESS_CONSTRAINTS:
+        	// Specifying Systems Section 14.3.5 page 247.
+        	// https://lamport.azurewebsites.net/tla/book.html
+            b.append("Declaring state or action constraints during liveness checking is dangerous: "
+            		+ "All behaviors might end in infinite stuttering and thus do not satisfy "
+            		+ "the spec's fairness constraints. Be sure to check a liveness property such as "
+            		+ "'<>FALSE' to verify that TLC reports liveness errors. Please read section 14.3.5 "
+            		+ "on page 247 of Specifying Systems (https://lamport.azurewebsites.net/tla/book.html) "
+            		+ "for more details.");
+            break;
 
         /* Liveness errors */
         case EC.TLC_LIVE_BEGRAPH_FAILED_TO_CONSTRUCT:
