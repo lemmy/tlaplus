@@ -130,13 +130,13 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate
     
     private static final AtomicBoolean PERFORM_VALIDATION_BEFORE_LAUNCH = new AtomicBoolean(true);
     
-    private static final Integer DIVERGENCE_CONTINUE_LAUNCH = new Integer(1);
-    private static final Integer DIVERGENCE_SHOW_HISTORY = new Integer(2);
+    private static final Integer DIVERGENCE_CONTINUE_LAUNCH = Integer.valueOf(1);
+    private static final Integer DIVERGENCE_SHOW_HISTORY = Integer.valueOf(2);
     private static final LinkedHashMap<String, Integer> DIVERGENCE_DIALOG_BUTTONS;
     
     static {
     	DIVERGENCE_DIALOG_BUTTONS = new LinkedHashMap<>();
-    	DIVERGENCE_DIALOG_BUTTONS.put("&Abort Launch", new Integer(0));
+    	DIVERGENCE_DIALOG_BUTTONS.put("&Abort Launch", Integer.valueOf(0));
     	DIVERGENCE_DIALOG_BUTTONS.put("Continue &Launch", DIVERGENCE_CONTINUE_LAUNCH);
     	DIVERGENCE_DIALOG_BUTTONS.put("Abort Launch && Show &History", DIVERGENCE_SHOW_HISTORY); // "&&" because "&" is mnemonic.
     }
@@ -938,6 +938,16 @@ public class TLCModelLaunchDelegate extends LaunchConfigurationDelegate
 					
 					// The parameters below are the only one currently useful with CloudDistributedTLC
 					final StringBuffer tlcParams = new StringBuffer();
+					
+					if (!launch.getLaunchConfiguration().getAttribute(LAUNCH_MC_MODE, LAUNCH_MC_MODE_DEFAULT)) {
+						tlcParams.append("-simulate");
+			        	tlcParams.append(" ");
+						tlcParams.append("-depth");
+			        	tlcParams.append(" ");
+						final int depth = launch.getLaunchConfiguration().getAttribute(LAUNCH_SIMU_DEPTH, LAUNCH_SIMU_DEPTH_DEFAULT);
+						tlcParams.append(Integer.toString(depth));
+			        	tlcParams.append(" ");
+					}
 					
 			        // fp seed offset (decrease by one to map from [1, 64] interval to [0, 63] array address)
 					if (launch.getLaunchConfiguration().getAttribute(LAUNCH_FP_INDEX_RANDOM, LAUNCH_FP_INDEX_RANDOM_DEFAULT)) {
