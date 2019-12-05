@@ -32,6 +32,7 @@ import org.lamport.tla.toolbox.tool.tlc.model.TypedSet;
 import org.lamport.tla.toolbox.tool.tlc.ui.editor.DataBindingManager;
 import org.lamport.tla.toolbox.tool.tlc.ui.editor.ModelEditor;
 import org.lamport.tla.toolbox.tool.tlc.ui.editor.page.BasicFormPage;
+import org.lamport.tla.toolbox.tool.tlc.ui.editor.page.MainModelPage;
 import org.lamport.tla.toolbox.tool.tlc.ui.editor.part.ValidateableOverridesSectionPart;
 import org.lamport.tla.toolbox.tool.tlc.ui.editor.part.ValidateableSectionPart;
 import org.lamport.tla.toolbox.tool.tlc.ui.util.DirtyMarkingListener;
@@ -287,6 +288,30 @@ public class AdvancedModelPage extends BasicFormPage implements Closeable {
                 }
             }
         }
+        
+		final MainModelPage mmp = (MainModelPage) getModelEditor().getFormPage(MainModelPage.ID);
+		if (mmp.hasLivenessProperty()) {
+			if (!FormHelper.trimTrailingSpaces(constraintSource.getDocument().get()).isEmpty()) {
+				modelEditor.addErrorMessage("constraintSource", "Declaring state constraints during liveness checking is dangerous: "
+								+ "All behaviors might\nend in infinite stuttering and thus do not satisfy "
+								+ "the spec's fairness constraints. Be\nsure to check a liveness property such as"
+								+ "'<>FALSE' to verify that TLC reports liveness\nerrors. Please read section 14.3.5 "
+								+ "on page 247 of Specifying Systems for more details\n(https://lamport.azurewebsites.net/tla/book.html).",
+						this.getId(), IMessageProvider.INFORMATION,
+						UIHelper.getWidget(dm.getAttributeControl(MODEL_PARAMETER_CONSTRAINT)));
+				expandSection(dm.getSectionForAttribute(MODEL_PARAMETER_CONSTRAINT));
+			}
+			if (!FormHelper.trimTrailingSpaces(actionConstraintSource.getDocument().get()).isEmpty()) {
+				modelEditor.addErrorMessage("actionConstraintSource", "Declaring action constraints during liveness checking is dangerous: "
+							+ "All behaviors might\nend in infinite stuttering and thus do not satisfy "
+							+ "the spec's fairness constraints. Be\nsure to check a liveness property such as"
+							+ "'<>FALSE' to verify that TLC reports liveness\nerrors. Please read section 14.3.5 "
+							+ "on page 247 of Specifying Systems for more details\n(https://lamport.azurewebsites.net/tla/book.html).",
+					this.getId(), IMessageProvider.INFORMATION,
+						UIHelper.getWidget(dm.getAttributeControl(MODEL_PARAMETER_ACTION_CONSTRAINT)));
+				expandSection(dm.getSectionForAttribute(MODEL_PARAMETER_ACTION_CONSTRAINT));
+			}
+		}
 
         mm.setAutoUpdate(true);
         
