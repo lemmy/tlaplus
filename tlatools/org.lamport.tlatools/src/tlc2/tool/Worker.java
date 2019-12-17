@@ -16,7 +16,8 @@ import tlc2.output.EC;
 import tlc2.output.MP;
 import tlc2.tool.fp.FPSet;
 import tlc2.tool.impl.FastTool;
-import tlc2.tool.queue.IStateQueue;
+import tlc2.tool.queue.Page;
+import tlc2.tool.queue.PageQueue;
 import tlc2.util.BufferedRandomAccessFile;
 import tlc2.util.IStateWriter;
 import tlc2.util.IdThread;
@@ -39,9 +40,9 @@ public final class Worker extends IdThread implements IWorker, INextStateFunctor
 	 */
 	private final ModelChecker tlc;
 	private final FastTool tool;
-	private final IStateQueue squeue;
 	private final FPSet theFPSet;
 	private final IStateWriter allStateWriter;
+	private final PageQueue pqueue = PageQueue.getInstance();
 	private final IBucketStatistics outDegree;
 	private final String filename;
 	private final BufferedRandomAccessFile raf;
@@ -52,6 +53,8 @@ public final class Worker extends IdThread implements IWorker, INextStateFunctor
 	private int unseenSuccessorStates = 0;
 	private volatile int maxLevel = 0;
 
+	private Page h;
+	
 	// SZ Feb 20, 2009: changed due to super type introduction
 	public Worker(int id, AbstractChecker tlc, String metadir, String specFile) throws IOException {
 		super(id);
@@ -61,7 +64,6 @@ public final class Worker extends IdThread implements IWorker, INextStateFunctor
 		this.checkLiveness = this.tlc.checkLiveness;
 		this.checkDeadlock = this.tlc.checkDeadlock;
 		this.tool = (FastTool) this.tlc.tool;
-		this.squeue = this.tlc.theStateQueue;
 		this.theFPSet = this.tlc.theFPSet;
 		this.allStateWriter = this.tlc.allStateWriter;
 		this.outDegree = new FixedSizedBucketStatistics(this.getName(), 32); // maximum outdegree of 32 appears sufficient for now.
@@ -77,65 +79,70 @@ public final class Worker extends IdThread implements IWorker, INextStateFunctor
    * updates the state set and state queue.
 	 */
 	public void run() {
-		TLCState curState = null;
-		try {
-			while (true) {
-				curState = this.squeue.sDequeue();
-				if (curState == null) {
+		Page curPage = null;
+		while (true) {
+			curPage = this.pqueue.dequeue(this);
+			if (curPage == null) {
+				synchronized (this.tlc) {
+					this.tlc.setDone();
+					this.tlc.notify();
+				}
+				this.pqueue.finishAll();
+				this.tlc.theStateQueue.finishAll();
+				return;
+			}
+			
+			for (int i = 0; i < curPage.size(); i++) {
+				final TLCState curState = curPage.get(i);
+				try {
+					setCurrentState(curState);
+					
+					if (this.checkLiveness) {
+						// Allocate iff liveness is checked.
+						setOfStates = createSetOfStates();
+					}
+					
+					final long preNext = this.statesGenerated;
+					try {
+						this.tool.getNextStates(this, curState);
+					} catch (TLCRuntimeException | EvalException e) {
+						this.tlc.doNextFailed(curState, null, e);
+						throw e;
+					}
+					
+					if (this.checkDeadlock && preNext == this.statesGenerated) {
+						// A deadlock is defined as a state without (seen or unseen) successor
+						// states. In other words, evaluating the next-state relation for a state
+						// yields no states.
+		                this.tlc.doNextSetErr(curState, null, false, EC.TLC_DEADLOCK_REACHED, null);
+					}
+					
+		            // Finally, add curState into the behavior graph for liveness checking:
+		            if (this.checkLiveness)
+		            {
+						doNextCheckLiveness(curState, setOfStates);
+		            }
+					
+					this.outDegree.addSample(unseenSuccessorStates);
+					unseenSuccessorStates = 0;
+				} catch (Throwable e) {
+					// Something bad happened. Quit ...
+					// Assert.printStack(e);
+					resetCurrentState();
 					synchronized (this.tlc) {
 						if(!this.tlc.setDone()) {
 							doPostConditionCheck();
 						}
+						if (this.tlc.setErrState(curState, null, true, EC.GENERAL)) {
+							MP.printError(EC.GENERAL, e); // LL changed call 7 April 2012
+						}
+						this.pqueue.finishAll();
+						this.tlc.theStateQueue.finishAll();
 						this.tlc.notify();
 					}
-					//TODO: finishAll not inside the synchronized block above, while
-					//inside in a similar construct below (Throwable catch)?!
-					this.squeue.finishAll();
 					return;
 				}
-				setCurrentState(curState);
-				
-				if (this.checkLiveness) {
-					// Allocate iff liveness is checked.
-					setOfStates = createSetOfStates();
-				}
-				
-				final long preNext = this.statesGenerated;
-				try {
-					this.tool.getNextStates(this, curState);
-				} catch (TLCRuntimeException | EvalException e) {
-					// The next-state relation couldn't be evaluated.
-					this.tlc.doNextFailed(curState, null, e);
-				}
-				
-				if (this.checkDeadlock && preNext == this.statesGenerated) {
-					// A deadlock is defined as a state without (seen or unseen) successor
-					// states. In other words, evaluating the next-state relation for a state
-					// yields no states.
-	                this.tlc.doNextSetErr(curState, null, false, EC.TLC_DEADLOCK_REACHED, null);
-				}
-				
-	            // Finally, add curState into the behavior graph for liveness checking:
-	            if (this.checkLiveness)
-	            {
-					doNextCheckLiveness(curState, setOfStates);
-	            }
-				
-				this.outDegree.addSample(unseenSuccessorStates);
-				unseenSuccessorStates = 0;
 			}
-		} catch (Throwable e) {
-			// Something bad happened. Quit ...
-			// Assert.printStack(e);
-			resetCurrentState();
-			synchronized (this.tlc) {
-				if (this.tlc.setErrState(curState, null, true, EC.GENERAL)) {
-					MP.printError(EC.GENERAL, e); // LL changed call 7 April 2012
-				}
-				this.squeue.finishAll();
-				this.tlc.notify();
-			}
-			return;
 		}
 	}
 	
@@ -369,7 +376,20 @@ public final class Worker extends IdThread implements IWorker, INextStateFunctor
 				// The state is inModel, unseen and neither invariants
 				// nor implied actions are violated. It is thus eligible
 				// for further processing by other workers.
-				this.squeue.sEnqueue(succState);
+				
+				if (this.h == null) {
+					this.h = this.pqueue.claim();
+				} else if (this.h.isFull()) {
+					this.pqueue.enqueue(this.h);
+					this.h = this.pqueue.claim();
+				}
+				
+				this.h.add(succState);
+				
+				if (this.h.isFull()) {
+					this.pqueue.enqueue(this.h);
+					this.h = null;
+				}
 			}
 			return this;
 		} catch (Exception e) {
@@ -465,6 +485,16 @@ public final class Worker extends IdThread implements IWorker, INextStateFunctor
 					this.tool.getImpliedActNames()[k], e);
 		}
         return false;
+	}    
+        
+	public Page releasePage() {
+		final Page p = this.h;
+		this.h = null;
+		return p;
+	}
+
+	public boolean hasPage() {
+		return this.h != null;
 	}
 
 	// User request: http://discuss.tlapl.us/msg03658.html

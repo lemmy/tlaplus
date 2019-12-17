@@ -26,6 +26,7 @@ import tlc2.tool.liveness.LiveCheck;
 import tlc2.tool.queue.DiskByteArrayQueue;
 import tlc2.tool.queue.DiskStateQueue;
 import tlc2.tool.queue.IStateQueue;
+import tlc2.tool.queue.PageQueue;
 import tlc2.util.IStateWriter;
 import tlc2.util.SetOfStates;
 import tlc2.util.statistics.BucketStatistics;
@@ -1133,7 +1134,7 @@ public class ModelChecker extends AbstractChecker
 					if (!seen) {
 						allStateWriter.writeState(curState);
 						((Worker) workers[0]).writeState(curState, fp);
-						theStateQueue.enqueue(curState);
+						PageQueue.getInstance().enqueue(curState);
 
 						// build behavior graph for liveness checking
 						if (checkLiveness) {
