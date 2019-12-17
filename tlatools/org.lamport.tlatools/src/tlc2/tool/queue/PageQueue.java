@@ -35,12 +35,6 @@ import tlc2.tool.Worker;
 
 public class PageQueue {
 	
-	private static final PageQueue PQ = new PageQueue("not disk file yet");
-	
-	public synchronized static PageQueue getInstance() {
-		return PQ;
-	}
-	
 	private static final long FINISH = -1L;
 	
 	// For the moment represent the disk with an in-memory hash map. 
@@ -51,8 +45,11 @@ public class PageQueue {
 	private final AtomicLong head = new AtomicLong(0L);
 	
 	private final AtomicLong tail = new AtomicLong(0L);
+
+	private final String diskdir;
 	
-	public PageQueue(String metadir) {
+	public PageQueue(String diskdir) {
+		this.diskdir = diskdir;
 		System.err.println("Loaded PageQueue");
 	}
 
@@ -116,7 +113,7 @@ public class PageQueue {
 				return null;
 			} else if (h2 <= t2 && worker.hasPage()) {
 				final Page other = worker.releasePage();
-				this.pages.put(other.id(), other);
+				this.enqueue(other);
 				continue LOOP;
 			}
 		}
@@ -160,8 +157,8 @@ public class PageQueue {
 		throw new UnsupportedOperationException("suspendAll not yet implemented");
 	}
 
-	public static int pageSize() {
-		return pageSize(PQ.head.get());
+	public int pageSize() {
+		return pageSize(this.head.get());
 	}
 
 	private static int pageSize(final long h) {

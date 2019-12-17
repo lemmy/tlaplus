@@ -42,7 +42,7 @@ public final class Worker extends IdThread implements IWorker, INextStateFunctor
 	private final FastTool tool;
 	private final FPSet theFPSet;
 	private final IStateWriter allStateWriter;
-	private final PageQueue pqueue = PageQueue.getInstance();
+	private final PageQueue pqueue;
 	private final IBucketStatistics outDegree;
 	private final String filename;
 	private final BufferedRandomAccessFile raf;
@@ -61,6 +61,7 @@ public final class Worker extends IdThread implements IWorker, INextStateFunctor
 		// SZ 12.04.2009: added thread name
 		this.setName("TLC Worker " + id);
 		this.tlc = (ModelChecker) tlc;
+		this.pqueue = this.tlc.thePageQueue;
 		this.checkLiveness = this.tlc.checkLiveness;
 		this.checkDeadlock = this.tlc.checkDeadlock;
 		this.tool = (FastTool) this.tlc.tool;
@@ -385,11 +386,6 @@ public final class Worker extends IdThread implements IWorker, INextStateFunctor
 				}
 				
 				this.h.add(succState);
-				
-				if (this.h.isFull()) {
-					this.pqueue.enqueue(this.h);
-					this.h = null;
-				}
 			}
 			return this;
 		} catch (Exception e) {

@@ -27,7 +27,7 @@ package tlc2.tool.queue;
 
 import tlc2.tool.TLCState;
 
-public class Page {
+public final class Page {
 
 	private final TLCState[] l;
 	private final long id;

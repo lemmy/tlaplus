@@ -57,6 +57,7 @@ public class ModelChecker extends AbstractChecker
 	private long numberOfInitialStates;
     public FPSet theFPSet; // the set of reachable states (SZ: note the type)
     public IStateQueue theStateQueue; // the state queue
+    public final PageQueue thePageQueue;
     public final ConcurrentTLCTrace trace; // the trace file
     // used to calculate the spm metric
     public long distinctStatesPerMinute, statesPerMinute = 0L;
@@ -112,6 +113,7 @@ public class ModelChecker extends AbstractChecker
 				? new DiskByteArrayQueue(this.metadir)
 				: new DiskStateQueue(this.metadir);
         // this.theStateQueue = new MemStateQueue(this.metadir);
+        this.thePageQueue = new PageQueue(this.metadir);
 
         // Finally, initialize the trace file:
         this.trace = new ConcurrentTLCTrace(this.metadir, this.tool.getRootName(), this.tool);
@@ -1134,7 +1136,7 @@ public class ModelChecker extends AbstractChecker
 					if (!seen) {
 						allStateWriter.writeState(curState);
 						((Worker) workers[0]).writeState(curState, fp);
-						PageQueue.getInstance().enqueue(curState);
+						thePageQueue.enqueue(curState);
 
 						// build behavior graph for liveness checking
 						if (checkLiveness) {
