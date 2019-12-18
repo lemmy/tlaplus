@@ -25,6 +25,7 @@
  ******************************************************************************/
 package tlc2.tool.queue;
 
+import java.io.File;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -32,10 +33,13 @@ import java.util.concurrent.atomic.AtomicLong;
 import tlc2.TLCGlobals;
 import tlc2.tool.TLCState;
 import tlc2.tool.Worker;
+import util.FileUtil;
 
 public class PageQueue {
 	
 	private static final long FINISH = -1L;
+	
+	private static final long MemoryLimit = 100;
 	
 	// For the moment represent the disk with an in-memory hash map. 
 	private final Map<Long, Page> pages = new ConcurrentHashMap<>();
@@ -65,12 +69,11 @@ public class PageQueue {
 
 	public void enqueue(final Page page) {
 		/** wrt-action **/
-		this.pages.put(page.id(), page);
-		// TODO A page instance that was written to disk can be reused. One that was
-		// added to an in-memory store (Map) cannot.
-		//if (page.id() > 4711) {
-		//  write to disk storage
-		//}
+		if (page.id() > MemoryLimit) {
+			page.write(this.diskdir);
+		} else {
+			this.pages.put(page.id(), page);
+		}
 	}
 
 	public Page dequeue(final Worker worker) {
@@ -100,7 +103,7 @@ public class PageQueue {
 		 */
 		/** wt-action **/
 		Page page = null;
-		LOOP: while ((page = this.pages.remove(t)) == null) {
+		LOOP: while ((page = getPage(t)) == null) {
 			/** wt1-action: **/
 			final long t2 = tail.get();
 			final long h2 = head.get();
@@ -112,8 +115,7 @@ public class PageQueue {
 				tail.set(FINISH);
 				return null;
 			} else if (h2 <= t2 && worker.hasPage()) {
-				final Page other = worker.releasePage();
-				this.enqueue(other);
+				this.enqueue(worker.releasePage());
 				continue LOOP;
 			}
 		}
@@ -121,6 +123,24 @@ public class PageQueue {
 		return page;
 	}
 
+	private final Page getPage(final long t) {
+		if (t > MemoryLimit) {
+			final File f = new File(diskdir + FileUtil.separator + Long.toString(t) + ".pq");
+			if (f.exists()) {
+				return new Page(f, t, pageSize(t));
+			} else {
+				try {
+					Thread.sleep(500L);
+				} catch (InterruptedException whyDoWeIgnoreThis) {
+					whyDoWeIgnoreThis.printStackTrace();
+				}
+				return null;
+			}
+		} else {
+			return this.pages.remove(t);
+		}
+	}
+	
 	public boolean isEmpty() {
 		return head.get() == 0;
 	}
@@ -158,7 +178,7 @@ public class PageQueue {
 	}
 
 	public int pageSize() {
-		return pageSize(this.head.get());
+		return pageSize(head.get());
 	}
 
 	private static int pageSize(final long h) {

@@ -25,7 +25,17 @@
  ******************************************************************************/
 package tlc2.tool.queue;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+
+import tlc2.output.EC;
 import tlc2.tool.TLCState;
+import tlc2.value.ValueInputStream;
+import tlc2.value.ValueOutputStream;
+import util.Assert;
+import util.FileUtil;
 
 public final class Page {
 
@@ -37,7 +47,46 @@ public final class Page {
 		this.id = id;
 		this.l = new TLCState[length];
 	}
-	
+
+	public Page(final File f, final long id, final int states) {
+		this.id = id;
+		TLCState[] buf = null;
+		try {
+			final ValueInputStream vis = new ValueInputStream(f);
+			this.idx = vis.readInt();
+			assert this.idx > 0;
+			buf = new TLCState[this.idx];
+			for (int i = 0; i < buf.length; i++) {
+				buf[i] = TLCState.Empty.createEmpty();
+				buf[i].read(vis);
+			}
+			vis.close();
+			f.delete();
+		} catch (Exception e) {
+			Assert.fail(EC.SYSTEM_ERROR_READING_STATES, new String[] { f.getName(),
+					(e.getMessage() == null) ? e.toString() : e.getMessage() });
+		}
+		this.l = buf;
+	}
+
+	public void write(final String diskdir) {
+		final String tmpFileName = diskdir + FileUtil.separator + Long.toString(id) + ".pq.tmp";
+		try {
+			final ValueOutputStream vos = new ValueOutputStream(tmpFileName);
+			vos.writeInt(this.idx);
+			for (int i = 0; i < this.idx; i++) {
+				this.l[i].write(vos);
+			}
+			vos.close();
+			
+			Files.move(Paths.get(tmpFileName), Paths.get(tmpFileName.replace(".tmp", "")),
+					StandardCopyOption.ATOMIC_MOVE);
+		} catch (Exception e) {
+			Assert.fail(EC.SYSTEM_ERROR_WRITING_STATES,
+					new String[] { tmpFileName, (e.getMessage() == null) ? e.toString() : e.getMessage() });
+		}
+	}
+
 	public void add(final TLCState state) {
 		this.l[idx++] = state;
 	}
