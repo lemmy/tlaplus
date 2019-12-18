@@ -27,6 +27,7 @@ package tlc2.tool.queue;
 
 import java.io.File;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -39,7 +40,9 @@ public class PageQueue {
 	
 	private static final long FINISH = -1L;
 	
-	private static final long MemoryLimit = 100;
+	private static final long MemoryLimit = 1 + new Random().nextInt(1000);
+
+	private static final int PageSize = 1 + new Random().nextInt(8196);
 	
 	// For the moment represent the disk with an in-memory hash map. 
 	private final Map<Long, Page> pages = new ConcurrentHashMap<>();
@@ -54,7 +57,7 @@ public class PageQueue {
 	
 	public PageQueue(String diskdir) {
 		this.diskdir = diskdir;
-		System.err.println("Loaded PageQueue");
+		System.err.printf("Loaded PageQueue (MemLimit=%s, PageSize=%s)\n", MemoryLimit, PageSize);
 	}
 
 	public final Page claim() {
@@ -178,7 +181,8 @@ public class PageQueue {
 	}
 
 	public int pageSize() {
-		return pageSize(head.get());
+		return PageSize;
+//		return pageSize(head.get());
 	}
 
 	private static int pageSize(final long h) {
