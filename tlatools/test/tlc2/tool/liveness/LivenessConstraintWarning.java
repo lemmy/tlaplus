@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016 Microsoft Research. All rights reserved. 
+ * Copyright (c) 2019 Microsoft Research. All rights reserved. 
  *
  * The MIT License (MIT)
  * 
@@ -23,50 +23,25 @@
  * Contributors:
  *   Markus Alexander Kuppe - initial API and implementation
  ******************************************************************************/
-package tlc2.util;
+package tlc2.tool.liveness;
 
-import java.io.IOException;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import tlc2.tool.Action;
-import tlc2.tool.TLCState;
+import org.junit.Test;
 
-public interface IStateWriter {
-	
-	public enum Visualization {
-		/**
-		 * If successor and the current state are identical and the transition
-		 * is due to stuttering.
-		 */
-		STUTTERING,
-		/**
-		 * No extra visualization hint is given.
-		 */
-		DEFAULT,
-		/**
-		 * A dotted line.
-		 */
-		DOTTED;
+import tlc2.output.EC;
+
+public class LivenessConstraintWarning extends ModelCheckerTestCase {
+
+	public LivenessConstraintWarning() {
+		super("LivenessConstraintWarning");
 	}
-
-	void writeState(TLCState state);
-
-	void writeState(TLCState state, TLCState successor, boolean successorStateIsNew);
 	
-	void writeState(TLCState state, TLCState successor, boolean successorStateIsNew, Action action);
-
-	void writeState(TLCState state, TLCState successor, boolean successorStateIsNew, Visualization visulation);
-	
-	void writeState(TLCState state, TLCState successor, BitVector actionChecks, int from, int length, boolean successorStateIsNew);
-
-	void writeState(TLCState state, TLCState successor, BitVector actionChecks, int from, int length, boolean successorStateIsNew, Visualization visulation);
-	
-	void close();
-
-	String getDumpFileName();
-
-	boolean isNoop();
-	
-	boolean isDot();
-
-	void snapshot() throws IOException;
+	@Test
+	public void testSpec() {
+		assertTrue(recorder.recorded(EC.TLC_FINISHED));
+		assertTrue(recorder.recorded(EC.TLC_FEATURE_LIVENESS_CONSTRAINTS));
+		assertFalse(recorder.recorded(EC.GENERAL));
+	}
 }

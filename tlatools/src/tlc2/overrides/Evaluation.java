@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016 Microsoft Research. All rights reserved. 
+ * Copyright (c) 2019 Microsoft Research. All rights reserved. 
  *
  * The MIT License (MIT)
  * 
@@ -23,50 +23,42 @@
  * Contributors:
  *   Markus Alexander Kuppe - initial API and implementation
  ******************************************************************************/
-package tlc2.util;
+package tlc2.overrides;
 
-import java.io.IOException;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
-import tlc2.tool.Action;
-import tlc2.tool.TLCState;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 
-public interface IStateWriter {
-	
-	public enum Visualization {
-		/**
-		 * If successor and the current state are identical and the transition
-		 * is due to stuttering.
-		 */
-		STUTTERING,
-		/**
-		 * No extra visualization hint is given.
-		 */
-		DEFAULT,
-		/**
-		 * A dotted line.
-		 */
-		DOTTED;
-	}
+/**
+ * @see EvaluatingValue.
+ */
+@Retention(RUNTIME)
+@Target(METHOD)
+public @interface Evaluation {
 
-	void writeState(TLCState state);
+	/**
+	 * @return The identifier of a TLA+ state or action predicate. 
+	 */
+	String definition();
 
-	void writeState(TLCState state, TLCState successor, boolean successorStateIsNew);
-	
-	void writeState(TLCState state, TLCState successor, boolean successorStateIsNew, Action action);
+	/**
+	 * @return The name of the TLA+ module declaring the definition above.
+	 */
+	String module();
 
-	void writeState(TLCState state, TLCState successor, boolean successorStateIsNew, Visualization visulation);
-	
-	void writeState(TLCState state, TLCState successor, BitVector actionChecks, int from, int length, boolean successorStateIsNew);
-
-	void writeState(TLCState state, TLCState successor, BitVector actionChecks, int from, int length, boolean successorStateIsNew, Visualization visulation);
-	
-	void close();
-
-	String getDumpFileName();
-
-	boolean isNoop();
-	
-	boolean isDot();
-
-	void snapshot() throws IOException;
+	/**
+	 * @return The minimum level that will be assigned to the OpDefNode that
+	 *         represents the EvaluatingValue in the semantic graph. Unless
+	 *         the actual level checking in Spec.getLevelBound assigns a
+	 *         greater value, the OpDefNode is a constant-level expression if
+	 *         0 causing it to be eagerly evaluated in 
+	 *         SpecProcessor.processConstantDefns.
+	 * @see tla2sany.semantic.LevelNode.getLevel()
+	 * @see tlc2.tool.impl.Spec.getLevelBound(SemanticNode, Context)
+	 * @see tlc2.value.impl.EvaluatingValue
+	 * @see tlc2.tool.impl.SpecProcessor.processConstantDefns()
+	 */
+	int minLevel() default 0;
 }

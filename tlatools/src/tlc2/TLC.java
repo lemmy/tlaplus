@@ -297,6 +297,7 @@ public class TLC
 		boolean asDot = false;
 	    boolean colorize = false;
 	    boolean actionLabels = false;
+		boolean snapshot = false;
 		
         // SZ Feb 20, 2009: extracted this method to separate the 
         // parameter handling from the actual processing
@@ -411,6 +412,7 @@ public class TLC
                 	asDot = true;
                 	colorize = dotArgs.contains("colorize");
                 	actionLabels = dotArgs.contains("actionlabels");
+                	snapshot = dotArgs.contains("snapshot");
 					dumpFile = getDumpFile(args[index++], ".dot");
                 }
                 else if (index < args.length)
@@ -828,7 +830,7 @@ public class TLC
         	}
         	try {
         		if (asDot) {
-        			this.stateWriter = new DotStateWriter(dumpFile, colorize, actionLabels);
+        			this.stateWriter = new DotStateWriter(dumpFile, colorize, actionLabels, snapshot);
         		} else {
         			this.stateWriter = new StateWriter(dumpFile);
         		}
@@ -1147,8 +1149,11 @@ public class TLC
 		parameters.remove("seed");
 		udc.putAll(parameters);
 		
-		// True if TLC is run from within the Toolbox.
+		// True if TLC is run from within the Toolbox. Derive ide name from .tool too
+		// unless set explicitly.  Eventually, we can probably remove the toolbox
+		// parameter.
 		udc.put("toolbox", Boolean.toString(TLCGlobals.tool));
+		udc.put("ide", System.getProperty(TLC.class.getName() + ".ide", TLCGlobals.tool ? "toolbox" : "cli"));
 		new ExecutionStatisticsCollector().collect(udc);
 	}
 	

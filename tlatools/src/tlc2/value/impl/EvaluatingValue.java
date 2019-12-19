@@ -1,85 +1,77 @@
-// Copyright (c) 2003 Compaq Corporation.  All rights reserved.
-// Portions Copyright (c) 2003 Microsoft Corporation.  All rights reserved.
-// Last modified on Wed 12 Jul 2017 at 16:10:00 PST by ian morris nieves
-//      modified on Mon 30 Apr 2007 at 13:21:00 PST by lamport
-//      modified on Fri Sep 22 13:18:45 PDT 2000 by yuanyu
-
+/*******************************************************************************
+ * Copyright (c) 2019 Microsoft Research. All rights reserved. 
+ *
+ * The MIT License (MIT)
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy 
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software. 
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * Contributors:
+ *   Markus Alexander Kuppe - initial API and implementation
+ ******************************************************************************/
 package tlc2.value.impl;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 
+import tla2sany.semantic.ExprOrOpArgNode;
 import tlc2.output.EC;
 import tlc2.output.MP;
-import tlc2.tool.EvalControl;
-import tlc2.tool.EvalException;
 import tlc2.tool.FingerprintException;
+import tlc2.tool.TLCState;
+import tlc2.tool.coverage.CostModel;
 import tlc2.tool.impl.Tool;
+import tlc2.util.Context;
 import tlc2.value.IValue;
 import tlc2.value.Values;
 import util.Assert;
 import util.Assert.TLCRuntimeException;
 import util.WrongInvocationException;
 
-public class MethodValue extends OpValue implements Applicable {
-
-	public static MethodValue get(final Method md) {
-		return get(md, 0);
-	}
-	
-	public static MethodValue get(final Method md, int minLevel) {
-		final MethodValue mv = new MethodValue(md, minLevel);
-		// Eagerly evaluate the constant operator if possible (zero arity) to only
-		// evaluate once at startup and not during state exploration.
-		final int acnt = md.getParameterTypes().length;
-    	final boolean isConstant = (acnt == 0) && Modifier.isFinal(md.getModifiers());
-    	return isConstant ? (MethodValue) mv.apply(Tool.EmptyArgs, EvalControl.Clear) : mv;
-	}
-	
+public class EvaluatingValue extends OpValue implements Applicable {
   private final MethodHandle mh;
   private final Method md;
   private final int minLevel;
 
   /* Constructor */
-	private MethodValue(final Method md, final int minLevel) {
+	public EvaluatingValue(final Method md, final int minLevel) {
 		this.md = md;
 		this.minLevel = minLevel;
 		try {
-			final int parameterCount = this.md.getParameterCount();
-			if (parameterCount > 0) {
-				// With more than one argument, we want to setup the method handle to use a
-				// spreader which essentially converts the Value[] into something that is
-				// accepted by the method handle. Without a spreader, passing a Value[] to
-				// MethodHandle#invoke does not work. Instead one has to use MethodHandle#invokeWithArguments.
-				// MethodHandle#invokeWithArguments internally creates a spreader on the fly
-				// which turns out to be costly (for the spec MongoRepl of the performance
-				// tests it resulted in a 20% performance drop).
-				this.mh = MethodHandles.publicLookup().unreflect(md).asSpreader(IValue[].class, parameterCount);
-			} else {
-				this.mh = MethodHandles.publicLookup().unreflect(md); 
-			}
+			this.mh = MethodHandles.publicLookup().unreflect(md).asFixedArity();
 		} catch (IllegalAccessException e) {
 			throw new TLCRuntimeException(EC.TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE, MP.getMessage(
 					EC.TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE, new String[] { md.toString(), e.getMessage() }));
 		}
 	}
 
-  @Override
+	public Value eval(final Tool tool, final ExprOrOpArgNode[] args, final Context c, final TLCState s0,
+			final TLCState s1, final int control, final CostModel cm) {
+		try {
+			return (Value) this.mh.invoke(tool, args, c, s0, s1, control, cm);
+		} catch (Throwable e) {
+            Assert.fail(EC.TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE, new String[]{this.md.toString(), e.getMessage()});
+            return null; // make compiler happy
+		}
+	}
+
   public final byte getKind() { return METHODVALUE; }
 
-  @Override
-  public final IValue initialize() {
-	  this.deepNormalize();
-	  // Do not call fingerprint as a MethodValue has no fingerprint.
-	  return this;
-  }
-  
-  @Override
   public final int compareTo(Object obj) {
     try {
       Assert.fail("Attempted to compare operator " + this.toString() +
@@ -104,7 +96,6 @@ public class MethodValue extends OpValue implements Applicable {
     }
   }
 
-  @Override
   public final boolean member(Value elem) {
     try {
       Assert.fail("Attempted to check if the value:\n" + elem == null ? "null" : Values.ppr(elem.toString()) +
@@ -117,7 +108,6 @@ public class MethodValue extends OpValue implements Applicable {
     }
   }
 
-  @Override
   public final boolean isFinite() {
     try {
       Assert.fail("Attempted to check if the operator " + this.toString() +
@@ -130,7 +120,6 @@ public class MethodValue extends OpValue implements Applicable {
     }
   }
 
-  @Override
   public final Value apply(Value arg, int control) {
     try {
       throw new WrongInvocationException("It is a TLC bug: Should use the other apply method.");
@@ -141,50 +130,16 @@ public class MethodValue extends OpValue implements Applicable {
     }
   }
 
-  @Override
   public final Value apply(Value[] args, int control) {
-    try {
-      Value res = null;
-      try
-      {
-    	  if (args.length == 0) {
-    		  res = (Value) this.mh.invokeExact();
-    	  } else {
-    		  res = (Value) this.mh.invoke(args);
-    	  }
-      } catch (Throwable e)
-      {
-          if (e instanceof InvocationTargetException)
-          {
-              Throwable targetException = ((InvocationTargetException)e).getTargetException();
-              throw new EvalException(EC.TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE, new String[]{this.md.toString(), targetException.getMessage()});
-          } else if (e instanceof NullPointerException) {
-              throw new EvalException(EC.TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE, new String[]{this.md.toString(), e.getMessage()});
-          } else if (e instanceof EvalException) {
-        	  // Do not wrap an EvalException below.
-        	  throw (EvalException) e;
-          } else
-          {
-              String message = e.getMessage();
-              if (message == null) {
-				  // Try to pass some information along (i.e. the full stack-trace) in cases where
-				  // message is null.
-		          final StringWriter sw = new StringWriter();
-            	  e.printStackTrace(new PrintWriter(sw));
-            	  message = sw.toString();
-              }
-			Assert.fail(EC.TLC_MODULE_VALUE_JAVA_METHOD_OVERRIDE, new String[]{this.md.toString(), message});
-          }
-      }
-      return res;
-    }
-    catch (RuntimeException | OutOfMemoryError e) {
-      if (hasSource()) { throw FingerprintException.getNewHead(this, e); }
-      else { throw e; }
-    }
+	    try {
+	        throw new WrongInvocationException("It is a TLC bug: Should use the other apply method.");
+	      }
+	      catch (RuntimeException | OutOfMemoryError e) {
+	        if (hasSource()) { throw FingerprintException.getNewHead(this, e); }
+	        else { throw e; }
+	      }
   }
 
-  @Override
   public final Value select(Value arg) {
     try {
       throw new WrongInvocationException("It is a TLC bug: Attempted to call MethodValue.select().");
@@ -195,7 +150,6 @@ public class MethodValue extends OpValue implements Applicable {
     }
   }
 
-  @Override
   public final Value takeExcept(ValueExcept ex) {
     try {
       Assert.fail("Attempted to appy EXCEPT construct to the operator " +
@@ -208,7 +162,6 @@ public class MethodValue extends OpValue implements Applicable {
     }
   }
 
-  @Override
   public final Value takeExcept(ValueExcept[] exs) {
     try {
       Assert.fail("Attempted to apply EXCEPT construct to the operator " +
@@ -221,7 +174,6 @@ public class MethodValue extends OpValue implements Applicable {
     }
   }
 
-  @Override
   public final Value getDomain() {
     try {
       Assert.fail("Attempted to compute the domain of the operator " +
@@ -234,7 +186,6 @@ public class MethodValue extends OpValue implements Applicable {
     }
   }
 
-  @Override
   public final int size() {
     try {
       Assert.fail("Attempted to compute the number of elements in the operator " +
@@ -248,7 +199,6 @@ public class MethodValue extends OpValue implements Applicable {
   }
 
   /* Should never normalize an operator. */
-  @Override
   public final boolean isNormalized() {
     try {
       throw new WrongInvocationException("It is a TLC bug: Attempted to normalize an operator.");
@@ -259,7 +209,6 @@ public class MethodValue extends OpValue implements Applicable {
     }
   }
 
-  @Override
   public final Value normalize() {
     try {
       throw new WrongInvocationException("It is a TLC bug: Attempted to normalize an operator.");
@@ -270,13 +219,10 @@ public class MethodValue extends OpValue implements Applicable {
     }
   }
 
-  @Override
   public final boolean isDefined() { return true; }
 
-  @Override
   public final IValue deepCopy() { return this; }
 
-  @Override
   public final boolean assignable(Value val) {
     try {
       throw new WrongInvocationException("It is a TLC bug: Attempted to initialize an operator.");
@@ -288,7 +234,6 @@ public class MethodValue extends OpValue implements Applicable {
   }
 
   /* String representation of the value.  */
-  @Override
   public final StringBuffer toString(StringBuffer sb, int offset, boolean ignored) {
     try {
       return sb.append("<Java Method: " + this.md + ">");
@@ -298,8 +243,8 @@ public class MethodValue extends OpValue implements Applicable {
       else { throw e; }
     }
   }
-  
-  public final int getMinLevel() {
+
+  public int getMinLevel() {
 	  return minLevel;
   }
 }

@@ -110,6 +110,7 @@ public class CloudDistributedTLCJob extends Job {
 	private final Properties props;
 	private final CloudTLCInstanceParameters params;
 	private boolean isCLI = false;
+	// Azul VM comes with JFR support. This can thus be safely activated.
 	private boolean doJfr = false;
 
 	public CloudDistributedTLCJob(String aName, File aModelFolder,
@@ -179,6 +180,10 @@ public class CloudDistributedTLCJob extends Job {
 
 			// Create compute environment in the cloud and inject an ssh
 			// implementation. ssh is our means of communicating with the node.
+			// In order to debug jclouds on the command-line or from the Toolbox:
+			// a) Make sure command-line also uses SLF4JLogginModule by hacking the build.
+			// b) Append -Dorg.slf4j.simpleLogger.defaultLogLevel=debug to toolbox/toolbox.ini
+			// c) Delete toolbox/plugins/slf4j.nop_1.7.25.jar to make sure slf4j.simple gets loaded.
 			final Iterable<AbstractModule> modules = ImmutableSet.<AbstractModule>of(new SshjSshClientModule(),
 					isCLI ? new ConsoleLoggingModule() : new SLF4JLoggingModule());
 
@@ -243,7 +248,13 @@ public class CloudDistributedTLCJob extends Job {
 				return Status.CANCEL_STATUS;
 			}
 
-			final String tlcMasterCommand = " sudo shutdown -c && rm -rf /mnt/tlc/* && " // Cancel and remove any pending shutdown and leftovers from previous runs.
+			final String tlcMasterCommand = " sudo shutdown -c && " // Cancel a pending shutdown.
+					// In case the provision step didn't run (e.g. because we run a custom VM image), /mnt/tlc does not
+					// exist because it is on ephemeral storage. For the subsequent commands to work, create it and make
+					// it writeable.
+					+ "sudo mkdir -p /mnt/tlc && sudo chmod 777 /mnt/tlc/ && "
+					// Remove any leftovers from previous runs.
+					+ "rm -rf /mnt/tlc/* && "
 					+ "cd /mnt/tlc/ && "
 					// Decompress tla2tools.pack.gz
 					+ "unpack200 /tmp/tla2tools.pack.gz /tmp/tla2tools.jar"

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016 Microsoft Research. All rights reserved. 
+ * Copyright (c) 2019 Microsoft Research. All rights reserved. 
  *
  * The MIT License (MIT)
  * 
@@ -23,50 +23,16 @@
  * Contributors:
  *   Markus Alexander Kuppe - initial API and implementation
  ******************************************************************************/
-package tlc2.util;
+package tlc2.tool.impl;
 
-import java.io.IOException;
-
-import tlc2.tool.Action;
+import tla2sany.semantic.ExprOrOpArgNode;
 import tlc2.tool.TLCState;
+import tlc2.tool.coverage.CostModel;
+import tlc2.util.Context;
+import tlc2.value.impl.Value;
 
-public interface IStateWriter {
-	
-	public enum Visualization {
-		/**
-		 * If successor and the current state are identical and the transition
-		 * is due to stuttering.
-		 */
-		STUTTERING,
-		/**
-		 * No extra visualization hint is given.
-		 */
-		DEFAULT,
-		/**
-		 * A dotted line.
-		 */
-		DOTTED;
-	}
+public interface Evaluator {
 
-	void writeState(TLCState state);
+	Value eval(Tool tool, ExprOrOpArgNode[] args, Context c, TLCState s0, TLCState s1, int control, CostModel cm);
 
-	void writeState(TLCState state, TLCState successor, boolean successorStateIsNew);
-	
-	void writeState(TLCState state, TLCState successor, boolean successorStateIsNew, Action action);
-
-	void writeState(TLCState state, TLCState successor, boolean successorStateIsNew, Visualization visulation);
-	
-	void writeState(TLCState state, TLCState successor, BitVector actionChecks, int from, int length, boolean successorStateIsNew);
-
-	void writeState(TLCState state, TLCState successor, BitVector actionChecks, int from, int length, boolean successorStateIsNew, Visualization visulation);
-	
-	void close();
-
-	String getDumpFileName();
-
-	boolean isNoop();
-	
-	boolean isDot();
-
-	void snapshot() throws IOException;
 }
