@@ -35,14 +35,17 @@ import tlc2.TLCGlobals;
 import tlc2.tool.TLCState;
 import tlc2.tool.Worker;
 import util.FileUtil;
+import util.ToolIO;
 
 public class PageQueue {
 	
 	private static final long FINISH = -1L;
 	
-	private static final long MemoryLimit = 1 + new Random().nextInt(1000);
+	private static final long InMemoryPages = Integer.getInteger(PageQueue.class.getName() + ".InMemoryPages",
+			1 + new Random().nextInt(1000));
 
-	private static final int PageSize = 1 + new Random().nextInt(8196);
+	private static final int PageSize = Integer.getInteger(PageQueue.class.getName() + ".PageSize",
+			1 + new Random().nextInt(8196));
 	
 	// For the moment represent the disk with an in-memory hash map. 
 	private final Map<Long, Page> pages = new ConcurrentHashMap<>();
@@ -57,7 +60,7 @@ public class PageQueue {
 	
 	public PageQueue(String diskdir) {
 		this.diskdir = diskdir;
-		System.err.printf("Loaded PageQueue (MemLimit=%s, PageSize=%s)\n", MemoryLimit, PageSize);
+		ToolIO.out.println(String.format("Loaded PageQueue (MemLimit=%s, PageSize=%s)\n", InMemoryPages, PageSize));
 	}
 
 	public final Page claim() {
@@ -72,7 +75,7 @@ public class PageQueue {
 
 	public void enqueue(final Page page) {
 		/** wrt-action **/
-		if (page.id() > MemoryLimit) {
+		if (page.id() > InMemoryPages) {
 			page.write(this.diskdir);
 		} else {
 			this.pages.put(page.id(), page);
@@ -127,15 +130,21 @@ public class PageQueue {
 	}
 
 	private final Page getPage(final long t) {
-		if (t > MemoryLimit) {
+		if (t > InMemoryPages) {
 			final File f = new File(diskdir + FileUtil.separator + Long.toString(t) + ".pq");
 			if (f.exists()) {
 				return new Page(f, t, pageSize(t));
 			} else {
-				try {
-					Thread.sleep(500L);
-				} catch (InterruptedException whyDoWeIgnoreThis) {
-					whyDoWeIgnoreThis.printStackTrace();
+				if (numWorkers == 1) {
+					// Don't be schizophrenic and wait for others when there is nobody else out
+					// there.
+					return null;
+				} else {
+					try {
+						Thread.sleep(500L);
+					} catch (InterruptedException whyDoWeIgnoreThis) {
+						whyDoWeIgnoreThis.printStackTrace();
+					}
 				}
 				return null;
 			}
