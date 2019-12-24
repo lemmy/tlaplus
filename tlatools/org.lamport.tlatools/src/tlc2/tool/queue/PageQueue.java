@@ -37,7 +37,7 @@ import tlc2.tool.Worker;
 import util.FileUtil;
 import util.ToolIO;
 
-public class PageQueue {
+public final class PageQueue {
 	
 	private static final long FINISH = -1L;
 	
@@ -67,13 +67,13 @@ public class PageQueue {
 		return new Page(head.incrementAndGet(), pageSize());
 	}
 	
-	public void enqueue(final TLCState initialState) {
+	public final void enqueue(final TLCState initialState) {
 		final Page page = claim();
 		page.add(initialState);
 		this.enqueue(page);
 	}
 
-	public void enqueue(final Page page) {
+	public final void enqueue(final Page page) {
 		/** wrt-action **/
 		if (page.id() > InMemoryPages) {
 			page.write(this.diskdir);
@@ -82,7 +82,7 @@ public class PageQueue {
 		}
 	}
 
-	public Page dequeue(final Worker worker) {
+	public final Page dequeue(final Worker worker) {
 		/**
             (****************************************************************)
             (* 1. Stage: Dequeue an unexplored page iff one is available.   *)
@@ -118,7 +118,7 @@ public class PageQueue {
 				return null;
 			} else if (h2 == t2 - numWorkers) {
 				assert !worker.hasPage();
-				tail.set(FINISH);
+				finishAll();
 				return null;
 			} else if (h2 <= t2 && worker.hasPage()) {
 				this.enqueue(worker.releasePage());
@@ -153,11 +153,11 @@ public class PageQueue {
 		}
 	}
 	
-	public boolean isEmpty() {
+	public final boolean isEmpty() {
 		return head.get() == 0;
 	}
 
-	public long size() {
+	public final long size() {
 		// Approximate...
 		long low = tail.get();
 		if (t < 0) {
@@ -177,24 +177,24 @@ public class PageQueue {
 	// resumeAll. Logically, kind of like a ticket number.
 	private long t = 0L;
 
-	public void finishAll() {
+	public final void finishAll() {
 		this.tail.set(FINISH);
 	}
 	
-	public boolean suspendAll() {
+	public final boolean suspendAll() {
 		throw new UnsupportedOperationException("suspendAll not yet implemented");
 	}
 
-	public void resumeAll() {
+	public final void resumeAll() {
 		throw new UnsupportedOperationException("suspendAll not yet implemented");
 	}
 
-	public int pageSize() {
+	public final int pageSize() {
 		return PageSize;
 //		return pageSize(head.get());
 	}
 
-	private static int pageSize(final long h) {
+	private static final int pageSize(final long h) {
 		if (h < 10) {
 			return 1;
 		} else if (h < 100) {

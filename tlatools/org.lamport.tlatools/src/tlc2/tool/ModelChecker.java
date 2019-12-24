@@ -221,7 +221,7 @@ public class ModelChecker extends AbstractChecker
         // Finished if there is no next state predicate:
         if (this.tool.getActions().length == 0)
         {
-        	if (this.theStateQueue.isEmpty()) {
+        	if (this.thePageQueue.isEmpty()) {
         		reportSuccess(this.theFPSet, getStatesGenerated());
         		this.printSummary(true, startTime);
         	} else {
@@ -255,7 +255,7 @@ public class ModelChecker extends AbstractChecker
                             String.valueOf(this.trace.getLevelForReporting()),
                             MP.format(getStatesGenerated()),
                             MP.format(theFPSet.size()),
-                            MP.format(this.theStateQueue.size()) });
+                            MP.format(this.thePageQueue.size()) });
                 	
                     report("checking liveness");
                     result = liveCheck.finalCheck(tool);
@@ -561,6 +561,7 @@ public class ModelChecker extends AbstractChecker
 		    	}
 				this.trace.printTrace(curState, succState);
 				this.theStateQueue.finishAll();
+				this.thePageQueue.finishAll();
 				this.notify();
 			}
 		}
@@ -601,6 +602,7 @@ public class ModelChecker extends AbstractChecker
 				MP.printError(ec, new String[] { param, (e.getMessage() == null) ? e.toString() : e.getMessage() });
 				this.trace.printTrace(curState, succState);
 				this.theStateQueue.finishAll();
+				this.thePageQueue.finishAll();
 				this.notify();
 			}
 			throw e;
@@ -648,6 +650,7 @@ public class ModelChecker extends AbstractChecker
 		        }
 				this.trace.printTrace(curState, succState);
 				this.theStateQueue.finishAll();
+				this.thePageQueue.finishAll();
 				this.notify();
 			}
 		}
@@ -847,7 +850,7 @@ public class ModelChecker extends AbstractChecker
         }
 
         MP.printMessage(EC.TLC_STATS, new String[] { String.valueOf(getStatesGenerated()),
-                String.valueOf(this.theFPSet.size()), String.valueOf(this.theStateQueue.size()) });
+                String.valueOf(this.theFPSet.size()), String.valueOf(this.thePageQueue.size()) });
         // The depth used to only be reported on success, but this seems bogus since TLC reports
         // the number states above.
         MP.printMessage(EC.TLC_SEARCH_DEPTH, String.valueOf(this.trace.getLevelForReporting()));
@@ -893,7 +896,7 @@ public class ModelChecker extends AbstractChecker
                 String.valueOf(this.trace.getLevelForReporting()),
                 MP.format(l),
                 MP.format(fpSetSize),
-                MP.format(this.theStateQueue.size()),
+                MP.format(this.thePageQueue.size()),
                 MP.format(statesPerMinute),
                 MP.format(distinctStatesPerMinute) });
 		
@@ -957,6 +960,7 @@ public class ModelChecker extends AbstractChecker
         if (level > depth)
         {
             this.theStateQueue.finishAll();
+            this.thePageQueue.finishAll();
             this.done = true;
         } else
         {
@@ -1031,6 +1035,7 @@ public class ModelChecker extends AbstractChecker
 		synchronized (this) {
 			this.setDone();
 			this.theStateQueue.finishAll();
+			this.thePageQueue.finishAll();
 			this.notifyAll();
 		}
 	}
@@ -1038,6 +1043,7 @@ public class ModelChecker extends AbstractChecker
 	public void suspend() {
 		synchronized (this) {
 			this.theStateQueue.suspendAll();
+			this.thePageQueue.suspendAll();
 			this.notifyAll();
 		}
 	}
@@ -1045,6 +1051,7 @@ public class ModelChecker extends AbstractChecker
 	public void resume() {
 		synchronized (this) {
 			this.theStateQueue.resumeAll();
+			this.thePageQueue.resumeAll();
 			this.notifyAll();
 		}
 	}
@@ -1054,7 +1061,7 @@ public class ModelChecker extends AbstractChecker
 	 */
 	@Override
 	public long getStateQueueSize() {
-		return theStateQueue.size();
+		return thePageQueue.size();
 	}
 
 	/* (non-Javadoc)
