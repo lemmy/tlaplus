@@ -95,7 +95,7 @@ public final class PageQueue {
 		}
 		/** casA-action **/
 		if (!tail.compareAndSet(t, t + 1L)) {
-			// Page t is assigned to a different worker.
+			// Slow path: Page t is assigned to a different worker.
 			return dequeue(worker);
 		}
 		t = t + 1;
@@ -110,6 +110,7 @@ public final class PageQueue {
 		/** wt-action **/
 		Page page = null;
 		LOOP: while ((page = getPage(t)) == null) {
+			// Slow path:
 			/** wt1-action: **/
 			final long t2 = tail.get();
 			final long h2 = head.get();
@@ -135,6 +136,7 @@ public final class PageQueue {
 			if (f.exists()) {
 				return new Page(f, t, pageSize(t));
 			} else {
+				// Slow path:
 				if (numWorkers == 1) {
 					// Don't be schizophrenic and wait for others when there is nobody else out
 					// there.
