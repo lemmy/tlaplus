@@ -109,6 +109,7 @@ public final class PageQueue {
 		 */
 		/** wt-action **/
 		Page page = null;
+		int	retries = 0;
 		LOOP: while ((page = getPage(t)) == null) {
 			// Slow path:
 			/** wt1-action: **/
@@ -121,9 +122,15 @@ public final class PageQueue {
 				assert !worker.hasPage();
 				finishAll();
 				return null;
-			} else if (h2 <= t2 && worker.hasPage()) {
-				this.enqueue(worker.releasePage());
-				continue LOOP;
+			} else if (worker.hasPage()) {
+				// Either release local page when pages run low globally or after number of
+				// retries. Retries takes care of cyclic wait-for graphs where one or more
+				// workers spin to read the other worker's page (i.e. a worker with local page
+				// 42 gets assigned page 42).
+				if (h2 <= t2 || retries++ == 10) {
+					this.enqueue(worker.releasePage());
+					continue LOOP;
+				}
 			}
 		}
 		/** rd-action **/
