@@ -41,14 +41,14 @@ public final class PageQueue {
 	
 	private static final long FINISH = -1L;
 	
-	private static final long InMemoryPages = Integer.getInteger(PageQueue.class.getName() + ".InMemoryPages",
+	private static final int InMemoryPages = Integer.getInteger(PageQueue.class.getName() + ".InMemoryPages",
 			1 + new Random().nextInt(1000));
 
 	private static final int PageSize = Integer.getInteger(PageQueue.class.getName() + ".PageSize",
 			1 + new Random().nextInt(8196));
 	
 	// For the moment represent the disk with an in-memory hash map. 
-	private final Map<Long, Page> pages = new ConcurrentHashMap<>();
+	private final Map<Long, Page> pages = new ConcurrentHashMap<>(InMemoryPages);
 
 	private final int numWorkers = TLCGlobals.getNumWorkers();
 	
@@ -212,8 +212,8 @@ public final class PageQueue {
 	}
 
 	public final int pageSize() {
-		return PageSize;
-//		return pageSize(head.get());
+//		return PageSize;
+		return pageSize(head.get());
 	}
 
 	private static final int pageSize(final long h) {
