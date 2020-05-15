@@ -123,6 +123,18 @@ public final class PageQueue {
 				finishAll();
 				return null;
 			} else if (worker.hasPage()) {
+				// TODO: Moir & Shavit in "Concurrent Data Structures" mention an "elimination"
+				// technique where two operations with "reverse semantics" pair up (one thread's
+				// enqueue gets serviced by another thread's dequeue).  We might borrow this idea
+				// here to use e.g. their "collision array" to let threads resolve the deadlock by
+				// collaborating directly. Terms: exchanger, rendezvous, complementary ops, ...
+				//
+				// TODO: Array of java.util.concurrent.Exchanger whose array address is determined
+				// by page id modulo array.length?!  Do we know what the maximum size of the array
+				// would have to be, maybe numWorkers?
+				// The goal here is to short-circuit the enq/deq of a page in order to skip
+				// serialization to disk.
+				
 				// Either release local page when pages run low globally or after number of
 				// retries. Retries takes care of cyclic wait-for graphs where one or more
 				// workers spin to read the other worker's page (i.e. a worker with local page
@@ -149,6 +161,7 @@ public final class PageQueue {
 					// there.
 					return null;
 				} else {
+					// TODO: Use a more elaborate backoff technique such as exponential backoff?
 					try {
 						Thread.sleep(500L);
 					} catch (InterruptedException whyDoWeIgnoreThis) {
