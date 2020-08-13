@@ -135,14 +135,28 @@ public final class PageQueue {
 				// The goal here is to short-circuit the enq/deq of a page in order to skip
 				// serialization to disk.
 				
-				// Either release local page when pages run low globally or after number of
-				// retries. Retries takes care of cyclic wait-for graphs where one or more
+				// Either release local page when a) pages run low globally or b) after number of
+				// retries. b) Retries take care of cyclic wait-for graphs where one or more
 				// workers spin to read the other worker's page (i.e. a worker with local page
-				// 42 gets assigned page 42).
-				if (h2 <= t2 || retries++ == 10) {
+				// 42 gets assigned page 42). a) is an optimization for when we approach the end
+				// of model-checking.
+				// TODO: Proof that the cycle cannot contain all the threads? Or can it? retries
+				// makes sure that we recover. Doesn't this downgrade this algorithm from lock-free
+				// to non-blocking (busy waiting)?
+				
+				// Optimization: It is possible that a worker waits for its own page.  This can
+				// obviously be optimized to not go through the queue.  On the other hand, we
+				// shouldn't loose track of statistics, which might be affected by such an optimization.
+				if (h2 <= t2) {
 					this.enqueue(worker.releasePage());
 					continue LOOP;
 				}
+				if (retries++ >= 10) {
+					this.enqueue(worker.releasePage());
+					continue LOOP;
+				}
+			} else {
+				//skip;
 			}
 		}
 		/** rd-action **/
