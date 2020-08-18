@@ -94,6 +94,7 @@ public final class PageQueue {
 			return null;
 		}
 		/** casA-action **/
+		//TODO Replace with getAndAdd (fetch-and-add) operation.
 		if (!tail.compareAndSet(t, t + 1L)) {
 			// Slow path: Page t is assigned to a different worker.
 			return dequeue(worker);
