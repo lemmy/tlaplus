@@ -89,17 +89,20 @@ public final class PageQueue {
             (****************************************************************)
 		 */
 		/** deq-action **/
-		long t = tail.get();
-		if (t == FINISH) {
-			return null;
+		long t;
+		while (true) {
+			t = tail.get();
+			if (t == FINISH) {
+				return null;
+			}
+			/** casA-action **/
+			//TODO Replace with getAndAdd (fetch-and-add) operation.
+			if (tail.compareAndSet(t, t + 1L)) {
+				t = t + 1;
+				break;
+			}
+			// Slow path: Page t is assigned to a different worker => retry
 		}
-		/** casA-action **/
-		//TODO Replace with getAndAdd (fetch-and-add) operation.
-		if (!tail.compareAndSet(t, t + 1L)) {
-			// Slow path: Page t is assigned to a different worker.
-			return dequeue(worker);
-		}
-		t = t + 1;
 		
 		/**
             (***************************************************************)
@@ -110,54 +113,34 @@ public final class PageQueue {
 		 */
 		/** wt-action **/
 		Page page = null;
-		int	retries = 0;
 		LOOP: while ((page = getPage(t)) == null) {
 			// Slow path:
 			/** wt1-action: **/
-			final long t2 = tail.get();
-			final long h2 = head.get();
 			
+			final long h = worker.pageId();
+			if (h >= t) {
+				//    \* This disjunct is actually an inefficiency because worker releases/enqueues a page
+				//    \* when it doesn't have to. As a result, a worker enqueues an underful page.
+				// \/ worker too fast missing the addition of t to the secondary storage (no wait-for loop)
+			    // \/ self-loop (wait-for loop of one worker)
+				// \/ Wait-for cycle of n workers with n \in 2..|Workers|
+				this.enqueue(worker.releasePage());
+				continue LOOP;
+			}
+
+			final long t2 = tail.get();
 			if (t2 == FINISH) {
 				return null;
-			} else if (h2 == t2 - numWorkers) {
+			}
+			
+			final long h2 = head.get();
+			if (h2 == t2 - numWorkers) {
 				assert !worker.hasPage();
 				finishAll();
 				return null;
-			} else if (worker.hasPage()) {
-				// TODO: Moir & Shavit in "Concurrent Data Structures" mention an "elimination"
-				// technique where two operations with "reverse semantics" pair up (one thread's
-				// enqueue gets serviced by another thread's dequeue).  We might borrow this idea
-				// here to use e.g. their "collision array" to let threads resolve the deadlock by
-				// collaborating directly. Terms: exchanger, rendezvous, complementary ops, ...
-				//
-				// TODO: Array of java.util.concurrent.Exchanger whose array address is determined
-				// by page id modulo array.length?!  Do we know what the maximum size of the array
-				// would have to be, maybe numWorkers?
-				// The goal here is to short-circuit the enq/deq of a page in order to skip
-				// serialization to disk.
-				
-				// Either release local page when a) pages run low globally or b) after number of
-				// retries. b) Retries take care of cyclic wait-for graphs where one or more
-				// workers spin to read the other worker's page (i.e. a worker with local page
-				// 42 gets assigned page 42). a) is an optimization for when we approach the end
-				// of model-checking.
-				// TODO: Proof that the cycle cannot contain all the threads? Or can it? retries
-				// makes sure that we recover. Doesn't this downgrade this algorithm from lock-free
-				// to non-blocking (busy waiting)?
-				
-				// Optimization: It is possible that a worker waits for its own page.  This can
-				// obviously be optimized to not go through the queue.  On the other hand, we
-				// shouldn't loose track of statistics, which might be affected by such an optimization.
-				if (h2 <= t2) {
-					this.enqueue(worker.releasePage());
-					continue LOOP;
-				}
-				if (retries++ >= 10) {
-					this.enqueue(worker.releasePage());
-					continue LOOP;
-				}
-			} else {
-				//skip;
+			} else if (h >= 0 && h < t && h2 <= t2) {
+				this.enqueue(worker.releasePage());
+				continue LOOP;
 			}
 		}
 		/** rd-action **/

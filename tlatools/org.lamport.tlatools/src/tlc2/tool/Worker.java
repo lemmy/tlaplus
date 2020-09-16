@@ -488,11 +488,22 @@ public final class Worker extends IdThread implements IWorker, INextStateFunctor
 		this.h = null;
 		return p;
 	}
+	
+	public long pageId() {
+		if (this.h== null) {
+			return -23;
+		}
+		return this.h.id();
+	}
 
 	public boolean hasPage() {
 		return this.h != null;
 	}
 
+	public boolean isPage(long pageId) {
+		return hasPage() && this.h.id() == pageId;
+	}
+	
 	// User request: http://discuss.tlapl.us/msg03658.html
 	private final void doPostConditionCheck() {
 		final ExprNode sn = (ExprNode) this.tool.getPostConditionSpec();
