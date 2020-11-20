@@ -4,9 +4,11 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutionException;
 
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
@@ -112,6 +114,7 @@ public class REPL {
             ToolIO.reset();
 
             try {
+        		
                 // We placed the REPL spec files into a temporary directory, so, we add this temp directory
                 // path to the filename resolver used by the Tool.
                 SimpleFilenameToStream resolver = new SimpleFilenameToStream(replTempDir.toAbsolutePath().toString());
@@ -133,32 +136,58 @@ public class REPL {
 
     /**
      * Runs the main REPL loop continuously until there is a fatal error or a user interrupt.
+     * @throws ExecutionException 
+     * @throws InterruptedException 
+     * \A a, b \in {1,2,3}: a # b \/ a = b
      */
-    public void runREPL() throws IOException {
-        // For TLA+ we don't want to treat backslashes as escape chars e.g. for LaTeX like operators.
-        DefaultParser parser = new DefaultParser();
-        parser.setEscapeChars(null);
-        Terminal terminal = TerminalBuilder.builder().build();
-        LineReader reader = LineReaderBuilder.builder().parser(parser).terminal(terminal).build();
+    public void runREPL() throws Exception {
+    	try (ServerSocket serverSocket = new ServerSocket(4712)) {
+//        	final Socket socket = serverSocket.accept();
+//    		final InputStream inputStream = socket.getInputStream();
+//    		final OutputStream outputStream = socket.getOutputStream();
+//    		
+//			TLCDebugger server = new TLCDebugger();
+//			final Launcher<IDebugProtocolClient> launcher = DSPLauncher.createServerLauncher(
+//					server
+////					ServiceEndpoints.toServiceObject(new TLCDebugger(), IDebugProtocolServer.class)
+//					, inputStream,
+//					outputStream);
+//			server.setLauncher(launcher);
+//			
+//    		launcher.startListening();
+//        	
+//    		IDebugProtocolClient remoteProxy = launcher.getRemoteProxy();
+//    		remoteProxy.initialized();
+//    		
+//			StoppedEventArguments sea = new StoppedEventArguments();
+//			sea.setThreadId(0);
+//			remoteProxy.stopped(sea);
+       	
+            // For TLA+ we don't want to treat backslashes as escape chars e.g. for LaTeX like operators.
+            DefaultParser parser = new DefaultParser();
+            parser.setEscapeChars(null);
+            Terminal terminal = TerminalBuilder.builder().build();
+            LineReader reader = LineReaderBuilder.builder().parser(parser).terminal(terminal).build();
 
-        // Run the loop.
-        String prompt = "(tla+) ";
-        String expr;
-        while (true) {
-            try {
-                expr = reader.readLine(prompt);
-                String res = processInput(expr);
-                if (res.equals("")) {
-                    continue;
+            // Run the loop.
+            String prompt = "(tla+) ";
+            String expr;
+            while (true) {
+                try {
+                    expr = reader.readLine(prompt);
+                    String res = processInput(expr);
+                    if (res.equals("")) {
+                        continue;
+                    }
+                    System.out.println(res);
+                } catch (UserInterruptException e) {
+                    return;
+                } catch (EndOfFileException e) {
+                    e.printStackTrace();
+                    return;
                 }
-                System.out.println(res);
-            } catch (UserInterruptException e) {
-                return;
-            } catch (EndOfFileException e) {
-                e.printStackTrace();
-                return;
             }
-        }
+    	}
     }
 
     public static void main(String[] args) {

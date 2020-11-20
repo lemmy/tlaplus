@@ -170,12 +170,16 @@
 		<iajc destdir="${class.dir}" debug="true" verbose="true" source="1.8" target="1.8">
 			<sourceroots>
 				<!-- Here we implicitly decide to use AspectJ Load-Time weaving by excludign ${src.dir} as a pathelement. Adding ${src.dir} results in aspects being woven at compile-time as part of the ant build. -->
+				<pathelement location="${src.dir}"/>
 				<pathelement location="${src-aj.dir}"/>
 			</sourceroots>
 			<classpath refid="project.classpath" />
 			<classpath>
 				<pathelement location="lib/aspectjrt-1.9.2.jar" />
 				<pathelement location="lib/aspectjtools-1.9.2.jar" />
+				<pathelement location="lib/jline/jline-reader-3.14.1.jar" />
+				<pathelement location="lib/jline/jline-terminal-3.14.1.jar" />
+				<pathelement location="lib/javax.mail/mailapi-1.6.3.jar" />
 				<pathelement path="${class.dir}" />
 			</classpath>
 		</iajc>

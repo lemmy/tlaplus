@@ -9,6 +9,7 @@ package tlc2.tool.impl;
 import java.io.File;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Stack;
 
 import tla2sany.parser.SyntaxTreeNode;
 import tla2sany.semantic.APSubstInNode;
@@ -1423,6 +1424,8 @@ public abstract class Tool
 
   @Override
   public final IValue eval(SemanticNode expr, Context c, TLCState s0) {
+//	  final Stack<ToolFrame> s = new Stack<ToolFrame>();
+	  s.clear();
 	    return this.eval(expr, c, s0, TLCState.Empty, EvalControl.Clear, CostModel.DO_NOT_RECORD);
 	  }
 
@@ -1550,6 +1553,8 @@ public abstract class Tool
   public abstract Value eval(SemanticNode expr, Context c, TLCState s0,
                           TLCState s1, final int control, final CostModel cm);
   
+  private static final Stack<SemanticNode> s = new Stack<SemanticNode>();
+
   @ExpectInlined
   protected final Value evalImpl(final SemanticNode expr, final Context c, final TLCState s0,
           final TLCState s1, final int control, CostModel cm) {
@@ -1566,7 +1571,20 @@ public abstract class Tool
           {
             OpApplNode expr1 = (OpApplNode)expr;
             if (coverage) {cm = cm.get(expr);}
-            return this.evalAppl(expr1, c, s0, s1, control, cm);
+
+//            System.err.println("push: " + expr1);
+//            s.push(expr1);
+            
+            Value evalAppl = this.evalAppl(expr1, c, s0, s1, control, cm);
+
+//            SemanticNode pop = s.pop();
+//            assert pop == expr1;
+//            String indent = new String(new char[s.size()]).replace('\0', '#');
+//			System.out.printf("%s %s %s %s\n", indent, pop, pop.getTreeNode().getHumanReadableImage(), evalAppl);
+
+			//            System.err.println("pop: " + expr1 + " " + evalAppl);
+            return evalAppl;
+            // \A a, b \in {1,2,3}: a # b \/ a = b
           }
         case LetInKind:
           {
