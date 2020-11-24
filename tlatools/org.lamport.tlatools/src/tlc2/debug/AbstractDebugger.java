@@ -1,5 +1,31 @@
+/*******************************************************************************
+ * Copyright (c) 2020 Microsoft Research. All rights reserved. 
+ *
+ * The MIT License (MIT)
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy 
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software. 
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * Contributors:
+ *   Markus Alexander Kuppe - initial API and implementation
+ ******************************************************************************/
 package tlc2.debug;
 
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.lsp4j.debug.CompletionsArguments;
@@ -8,16 +34,21 @@ import org.eclipse.lsp4j.debug.DataBreakpointInfoArguments;
 import org.eclipse.lsp4j.debug.DataBreakpointInfoResponse;
 import org.eclipse.lsp4j.debug.DisassembleArguments;
 import org.eclipse.lsp4j.debug.DisassembleResponse;
+import org.eclipse.lsp4j.debug.DisconnectArguments;
 import org.eclipse.lsp4j.debug.EvaluateArguments;
 import org.eclipse.lsp4j.debug.EvaluateResponse;
 import org.eclipse.lsp4j.debug.ExceptionInfoArguments;
 import org.eclipse.lsp4j.debug.ExceptionInfoResponse;
+import org.eclipse.lsp4j.debug.GotoArguments;
 import org.eclipse.lsp4j.debug.GotoTargetsArguments;
 import org.eclipse.lsp4j.debug.GotoTargetsResponse;
+import org.eclipse.lsp4j.debug.LoadedSourcesArguments;
+import org.eclipse.lsp4j.debug.LoadedSourcesResponse;
 import org.eclipse.lsp4j.debug.ModulesArguments;
 import org.eclipse.lsp4j.debug.ModulesResponse;
 import org.eclipse.lsp4j.debug.ReadMemoryArguments;
 import org.eclipse.lsp4j.debug.ReadMemoryResponse;
+import org.eclipse.lsp4j.debug.RestartArguments;
 import org.eclipse.lsp4j.debug.RestartFrameArguments;
 import org.eclipse.lsp4j.debug.ReverseContinueArguments;
 import org.eclipse.lsp4j.debug.RunInTerminalRequestArguments;
@@ -31,12 +62,64 @@ import org.eclipse.lsp4j.debug.SetFunctionBreakpointsArguments;
 import org.eclipse.lsp4j.debug.SetFunctionBreakpointsResponse;
 import org.eclipse.lsp4j.debug.SetInstructionBreakpointsArguments;
 import org.eclipse.lsp4j.debug.SetInstructionBreakpointsResponse;
+import org.eclipse.lsp4j.debug.SourceArguments;
+import org.eclipse.lsp4j.debug.SourceResponse;
+import org.eclipse.lsp4j.debug.StepBackArguments;
 import org.eclipse.lsp4j.debug.StepInTargetsArguments;
 import org.eclipse.lsp4j.debug.StepInTargetsResponse;
+import org.eclipse.lsp4j.debug.TerminateArguments;
 import org.eclipse.lsp4j.debug.TerminateThreadsArguments;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer;
 
 public abstract class AbstractDebugger  implements IDebugProtocolServer{
+
+	@Override
+	public CompletableFuture<SourceResponse> source(SourceArguments args) {
+		System.out.println("SourceResponse");
+		return CompletableFuture.completedFuture(new SourceResponse());
+	}
+
+	@Override
+	public CompletableFuture<LoadedSourcesResponse> loadedSources(LoadedSourcesArguments args) {
+		System.out.println("loadedSources");
+		return CompletableFuture.completedFuture(new LoadedSourcesResponse());
+	}
+
+	@Override
+	public CompletableFuture<Void> stepBack(StepBackArguments args) {
+		System.out.println("stepBack");
+		return CompletableFuture.completedFuture(null);
+	}
+
+	@Override
+	public CompletableFuture<Void> goto_(GotoArguments args) {
+		System.out.println("goto_");
+		return CompletableFuture.completedFuture(null);
+	}
+
+	@Override
+	public CompletableFuture<Void> attach(Map<String, Object> args) {
+		System.out.println("attach");
+		return CompletableFuture.completedFuture(null);
+	}
+
+	@Override
+	public CompletableFuture<Void> restart(RestartArguments args) {
+		System.out.println("restart");
+		return CompletableFuture.completedFuture(null);
+	}
+
+	@Override
+	public CompletableFuture<Void> disconnect(DisconnectArguments args) {
+		System.out.println("disconnect");
+		return CompletableFuture.completedFuture(null);
+	}
+
+	@Override
+	public CompletableFuture<Void> terminate(TerminateArguments args) {
+		System.out.println("terminate");
+		return CompletableFuture.completedFuture(null);
+	}
 
 	@Override
 	public CompletableFuture<RunInTerminalResponse> runInTerminal(RunInTerminalRequestArguments args) {

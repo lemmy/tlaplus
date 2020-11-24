@@ -23,16 +23,18 @@
  * Contributors:
  *   Markus Alexander Kuppe - initial API and implementation
  ******************************************************************************/
-package tlc2.tool;
+package tlc2.debug;
 
 import tla2sany.semantic.SemanticNode;
+import tlc2.debug.IDebugTarget;
+import tlc2.tool.TLCState;
 import tlc2.tool.coverage.CostModel;
 import tlc2.tool.impl.Tool;
 import tlc2.util.Context;
 import tlc2.value.IValue;
 import tlc2.value.impl.Value;
 
-public aspect TLCDebugger {
+public aspect TLCDebuggerAspect {
 	
 	private int level = 0;
 	private IDebugTarget target = IDebugTarget.Factory.getInstance();
@@ -45,14 +47,14 @@ public aspect TLCDebugger {
      */
 	
 	pointcut eval(SemanticNode expr, Context c, TLCState s0) : execution(public final IValue Tool.eval(SemanticNode, Context, TLCState))
-	&& args(expr, c, s0) && !within(TLCDebugger);
-	
+	&& args(expr, c, s0)
+	&& !within(TLCDebuggerAspect) 
+	&& !(cflow(execution(IDebugTarget pushFrame(Tool, int, SemanticNode, Context, int))) || cflow(execution(IDebugTarget popFrame(Tool, Value, int, SemanticNode, Context, int))) );
+
 	IValue around(SemanticNode expr, Context c, TLCState s0): (eval(expr, c, s0)) {
 		target = IDebugTarget.Factory.getInstance();
 		level = 0;
-//		System.out.printf("Before eval: %s %s %s %s\n", expr, c, s0, level);
 		IValue v = proceed(expr, c, s0);
-//		System.out.printf("After eval: %s %s %s\n", expr, c, s0, v);
 		return v;
 	}
 	
@@ -62,15 +64,19 @@ public aspect TLCDebugger {
           final TLCState s1, final int control, CostModel cm) {
 	 */
 	pointcut evalImpl(SemanticNode expr, Context c, TLCState s0, TLCState s1, int control, CostModel cm) : execution(protected final Value Tool.evalImpl(SemanticNode, Context, TLCState, TLCState, int, CostModel))
-	&& args(expr, c, s0, s1, control, cm) && !within(TLCDebugger);
+	&& args(expr, c, s0, s1, control, cm) && !within(TLCDebuggerAspect)
+	&& !(cflow(execution(IDebugTarget pushFrame(Tool, int, SemanticNode, Context, int))) || cflow(execution(IDebugTarget popFrame(Tool, Value, int, SemanticNode, Context, int))) );
 	
 	Value around(SemanticNode expr, Context c, TLCState s0, TLCState s1, int control, CostModel cm): (evalImpl(expr, c, s0, s1, control, cm)) {
 		level++;
-		target = target.frame(level, expr, c, control);
-		Value v = proceed(expr, c, s0, s1, control, cm);
+
+		final Tool t = (Tool) thisJoinPoint.getThis();
+		target = target.pushFrame(t, level, expr, c, control);
+		
+		final Value v = proceed(expr, c, s0, s1, control, cm);
+		
+		target = target.popFrame(t, v, level, expr, c, control);
 		level--;
-//		
-//		System.out.printf("%s After evalImpl: [%s], value: %s, level: %s\n", indent, expr, v, level);
 		return v;
 	}
 }

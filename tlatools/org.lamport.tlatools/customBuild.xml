@@ -252,6 +252,7 @@
 			<patternset>
 		        <include name="**/*.class"/>
 				<exclude name="org/**"/>
+			    <exclude name="META-INF/**"/>
 			</patternset>
 		</unzip>
 		<touch file="target/classes/META-INF/javamail.default.address.map"/>
@@ -259,6 +260,65 @@
 		<unzip src="lib/jline/jline-terminal-3.14.1.jar" dest="${class.dir}">
 			<patternset>
 				<include name="**/*.*"/>
+			</patternset>
+		</unzip>
+
+		<unzip src="lib/aspectjrt-1.9.2.jar" dest="${class.dir}">
+			<patternset>
+				<include name="**/*.class"/>
+			</patternset>
+		</unzip>
+		<unzip src="lib/lsp/gson-2.8.6.jar" dest="${class.dir}">
+			<patternset>
+				<include name="**/*.class"/>
+			</patternset>
+		</unzip>
+		<unzip src="lib/lsp/org.eclipse.lsp4j.debug-0.10.0.jar" dest="${class.dir}">
+			<patternset>
+				<include name="**/*.class"/>
+				<exclude name="META-INF/**"/>
+			</patternset>
+		</unzip>
+		<unzip src="lib/lsp/org.eclipse.lsp4j.jsonrpc-0.10.0.jar" dest="${class.dir}">
+			<patternset>
+				<include name="**/*.class"/>
+				<exclude name="META-INF/**"/>
+			</patternset>
+		</unzip>
+		<unzip src="lib/lsp/org.eclipse.lsp4j.websocket-0.10.0.jar" dest="${class.dir}">
+			<patternset>
+				<include name="**/*.class"/>
+				<exclude name="META-INF/**"/>
+			</patternset>
+		</unzip>
+		<unzip src="lib/lsp/org.eclipse.xtext.xbase.lib-2.23.0.jar" dest="${class.dir}">
+			<patternset>
+				<include name="**/*.class"/>
+				<exclude name="META-INF/**"/>
+			</patternset>
+		</unzip>
+		<unzip src="lib/lsp/org.eclipse.lsp4j-0.10.0.jar" dest="${class.dir}">
+			<patternset>
+				<include name="**/*.class"/>
+				<exclude name="META-INF/**"/>
+			</patternset>
+		</unzip>
+		<unzip src="lib/lsp/org.eclipse.lsp4j.generator-0.10.0.jar" dest="${class.dir}">
+			<patternset>
+				<include name="**/*.class"/>
+				<exclude name="META-INF/**"/>
+			</patternset>
+		</unzip>
+		<unzip src="lib/lsp/org.eclipse.lsp4j.jsonrpc.debug-0.10.0.jar" dest="${class.dir}">
+			<patternset>
+				<include name="**/*.class"/>
+				<exclude name="META-INF/**"/>
+			</patternset>
+		</unzip>
+		<unzip src="lib/lsp/org.eclipse.xtend.lib-2.23.0.jar" dest="${class.dir}">
+			<patternset>
+				<include name="**/*.class"/>
+				<exclude name="META-INF/**"/>
 			</patternset>
 		</unzip>
 

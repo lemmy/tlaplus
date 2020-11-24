@@ -10,7 +10,7 @@
 		<!-- 
 		<aspect name="tlc2.tool.CostModelAspect"/>
 		 -->
-		<aspect name="tlc2.tool.TLCDebugger"/>
+		<aspect name="tlc2.debug.TLCDebugger"/>
 	</aspects>
 	
 	<!-- 
