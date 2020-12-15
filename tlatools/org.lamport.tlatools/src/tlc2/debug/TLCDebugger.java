@@ -35,6 +35,7 @@ import java.net.Socket;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -89,7 +90,7 @@ import tla2sany.semantic.SemanticNode;
 import tla2sany.st.Location;
 import tlc2.tool.EvalControl;
 import tlc2.tool.TLCState;
-import tlc2.tool.impl.FastTool;
+import tlc2.tool.impl.DebugTool;
 import tlc2.tool.impl.Tool;
 import tlc2.util.Context;
 import tlc2.util.FP64;
@@ -102,6 +103,38 @@ import tlc2.value.impl.ValueEnumeration;
 import util.SimpleFilenameToStream;
 import util.ToolIO;
 
+
+/*
+ * TODO:
+ * 
+ * - Debug state space exploration
+ * -- Attach debugger to (running) TLC
+ * -- Show current and next state in variables view
+ * -- Map invariant-type breakpoint to existing breakpoints
+ * --- How to parse TLA+ expressions after model checking has started?
+ *
+ * - Step forward/reverse state-space exploration in debugger 
+ *
+ * - Add support for line-based breakpoints
+ * 
+ * - Figure out how to debug PlusCal "code" (might not be possible)
+ * 
+ * - Launch TLC when user presses debug button in VSCode extension
+ *
+ * - Add some sort of testing (debugger itself and DAP)
+ * 
+ * - Figure out how to package DAP dependencies such as gson, aspectjrt, ...
+ * -- Make dependencies a responsibility of the front-ends (Toolbox, VSCode, ...)
+ * --- This would make building a pure command-line interface to the debugger inpractical
+ * -- With loadtime weaving, we are staring down the barrel of 3 to 4 MBs of dependencies
+ * -- Could adopt the same idea as CommunityModules and release two versions of tla2tools.jar (one with and one without deps)
+ * --- big fat jar and a slim one with manually provided dependencies
+ * - If we settle on runtime weaving (preferable for performance reasons), add aspectj weaving to the list of dependencies (jars)
+ * https://www.eclipse.org/aspectj/doc/released/devguide/ltw-rules.html
+ * https://github.com/google/gson/blob/master/LICENSE
+ * 
+ * - Add DAP front-end to Toolbox
+ */
 public class TLCDebugger extends AbstractDebugger implements IDebugTarget {
 
 	public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
@@ -166,11 +199,13 @@ public class TLCDebugger extends AbstractDebugger implements IDebugTarget {
 		return CompletableFuture.completedFuture(response);
 	}
 
+	private volatile Breakpoint[] breakpoints;
+	
 	@Override
 	public CompletableFuture<SetBreakpointsResponse> setBreakpoints(SetBreakpointsArguments args) {
 		System.out.println("setBreakpoints");
 		SourceBreakpoint[] sbps = args.getBreakpoints();
-		Breakpoint[] breakpoints = new Breakpoint[sbps.length];
+		breakpoints = new Breakpoint[sbps.length];
 		for (int j = 0; j < sbps.length; j++) {
 			breakpoints[j] = new Breakpoint();
 			breakpoints[j].setColumn(sbps[j].getColumn());
@@ -217,10 +252,22 @@ public class TLCDebugger extends AbstractDebugger implements IDebugTarget {
 	@Override
 	public CompletableFuture<VariablesResponse> variables(VariablesArguments args) {
 		final int vr = args.getVariablesReference();
-		System.out.println("variables " + vr);
 
-		final TLCStackFrame frame = this.stack.peek();
-		final Variable[] variables = frame.getVariables(vr);
+//		Optional<TLCStackFrame> findFirst = this.stack.stream().filter(frame -> frame.getId() == vr).findFirst();
+//		findFirst.ifPresent(frame -> frame.getv);
+		
+		// TODO: It is wrong to lookup the variables in the top stack frame. Instead,
+		// the lookup of vr should be independent of any stack frame and, thus, done
+		// against the global pile of variables. The front-end uses the scopes request
+		// first to get the set of variables ids/refs for the current frame.
+		final Variable[] variables;
+		if (!this.stack.isEmpty()) {
+			final TLCStackFrame frame = this.stack.peek();
+			variables = frame.getVariables(vr);
+			if (vr == STACK_SCOPE) System.err.printf("STACK_SCOPE for %s, %s", frame.getName(), Arrays.toString(variables));
+		} else {
+			variables = new Variable[0];
+		}
 
 		VariablesResponse value = new VariablesResponse();
 		value.setVariables(variables);
@@ -320,7 +367,7 @@ public class TLCDebugger extends AbstractDebugger implements IDebugTarget {
 		};
 		ToolIO.reset();
 		
-		final Tool tool = new FastTool(moduleName, specName, new SimpleFilenameToStream(specPath));
+		final Tool tool = new DebugTool(moduleName, specName, new SimpleFilenameToStream(specPath), this);
 		final ModuleNode module = tool.getSpecProcessor().getRootModule();
 		// The spec has to have an "debugMe" operator.
 		final OpDefNode valueNode = module.getOpDef("debugMe");
@@ -328,7 +375,7 @@ public class TLCDebugger extends AbstractDebugger implements IDebugTarget {
 		// Register this instance at the debug target of the aspect that is woven into
 		// Tool. Do *not* register before processing the spec above because TLC eagerly
 		// tries to evaluate expressions that we don't want to debug.
-		IDebugTarget.Factory.set(this);
+//		IDebugTarget.Factory.set(this);
 
 		// Make sure we pause/stop debugging initially.
 		targetLevel = Integer.MIN_VALUE;
@@ -344,14 +391,16 @@ public class TLCDebugger extends AbstractDebugger implements IDebugTarget {
 
 	// 8888888888888888888888888888888888888888888888888888888888888888888888888//
 
+	private static final int CONTEXT_SCOPE = 2913847;
+	
+	private static final int STACK_SCOPE = 94290870;
+
 	private static class TLCStackFrame extends StackFrame {
 
 		private transient final SemanticNode node;
 		private transient final Context ctxt;
 
 		private transient final Map<Integer, Variable[]> variableValues = new HashMap<>();
-
-		private static final int CONTEXT_SCOPE = 2913847;
 
 		public TLCStackFrame(SemanticNode node, Context ctxt, final Tool tool) {
 			this.node = node;
@@ -433,6 +482,7 @@ public class TLCDebugger extends AbstractDebugger implements IDebugTarget {
 				c = c.next();
 			}
 			variableValues.put(CONTEXT_SCOPE, vars.toArray(new Variable[vars.size()]));
+			variableValues.put(STACK_SCOPE, new Variable[0]);
 		}
 
 		public Variable[] getVariables(final int vr) {
@@ -443,7 +493,13 @@ public class TLCDebugger extends AbstractDebugger implements IDebugTarget {
 
 			final List<Scope> scopes = new ArrayList<>();
 
-			if (!variableValues.isEmpty()) {
+			if (variableValues.containsKey(STACK_SCOPE)) {
+				final Scope scope = new Scope();
+				scope.setName("Stack");
+				scope.setVariablesReference(STACK_SCOPE);
+				scopes.add(scope);
+			}
+			if (variableValues.containsKey(CONTEXT_SCOPE)) {
 				final Scope scope = new Scope();
 				scope.setName("Context");
 				scope.setVariablesReference(CONTEXT_SCOPE);
@@ -454,6 +510,11 @@ public class TLCDebugger extends AbstractDebugger implements IDebugTarget {
 		}
 	}
 
+	//TODO: Instead of maintaining the stack here, we could evaluated with CallStackTool
+	// that will get the job done for us (tlc2.tool.impl.CallStackTool.callStack).
+	// However, CST only keeps the SemanticNode but skips the Context and the values. We
+	// would have to make CST take a function that applies a transformation for the debugger
+	// and a different one when CST does its original job.
 	private final Stack<TLCStackFrame> stack = new Stack<>();
 
 	//TODO: This is a clutch; it's working but should be simplified!
@@ -469,7 +530,7 @@ public class TLCDebugger extends AbstractDebugger implements IDebugTarget {
 		TLCStackFrame frame = new TLCStackFrame(expr, c, tool);
 		stack.push(frame);
 
-		if (matches(step, targetLevel, level)) {
+		if (matches(step, targetLevel, level) || matches(expr)) {
 			System.err.println("loadSource -> stopped");
 			StoppedEventArguments eventArguments = new StoppedEventArguments();
 			eventArguments.setThreadId(0);
@@ -485,11 +546,39 @@ public class TLCDebugger extends AbstractDebugger implements IDebugTarget {
 		return this;
 	}
 
+	/*
+            { f \in [S -> S] :
+                /\ S = { f[x] : x \in DOMAIN f }
+                /\ \E n, m \in DOMAIN f: /\ f[n] = a
+                                         /\ f[m] = b
+                                         /\ n - m \in {1, -1}               
+            }
+            
+	 */
+	/*
+	 * The SetEnumValue to which 'DOMAIN f' evaluates and the FcnRcdValue of '{ f[x]
+	 * : x \in DOMAIN f }' go through here.
+	 */
 	@Override
 	public IDebugTarget popFrame(Tool tool, Value v, int level, SemanticNode expr, Context c, int control) {
 		System.out.printf("%s Call popFrame: [%s], level: %s\n", new String(new char[level]).replace('\0', '#'), expr,
 				level);
-		TLCStackFrame pop = stack.pop();
+		final TLCStackFrame pop = stack.pop();
+		if (!stack.isEmpty()) {
+			final TLCStackFrame parent = stack.peek();
+			
+			final Variable var = new Variable();
+			if (v.hasSource()) {
+				var.setName(v.getSource().getHumanReadableImage());
+			} else {
+				var.setName(v.toString());
+			}
+			var.setValue(v.toString());
+			var.setType(v.getClass().getSimpleName());
+
+			parent.variableValues.put(STACK_SCOPE, new Variable[] {var});
+			System.out.printf("Attaching stack vars to %s\n", parent.getName());
+		}
 		assert expr == pop.node;
 		return this;
 	}
@@ -511,5 +600,17 @@ public class TLCDebugger extends AbstractDebugger implements IDebugTarget {
 			}
 		}
 		return false;
+	}
+
+	private boolean matches(final SemanticNode expr) {
+		//TODO: Better match the location.  However, it shouldn't be done down here
+		// but in setBreakpoints above that lets the debuggee tell the front-end
+		// that a user-defined location is "corrected" to one that matches the bounds
+		// of an expression in the semantic graph that is evaluated.  In other words,
+		// setBreakpoints should traverse the semantic graph trying to find the smallest
+		// i.e. best match for the given editor location.  The code here should then
+		// simple compare the two location instances.
+		final Location location = expr.getLocation();
+		return Arrays.asList(breakpoints).stream().anyMatch(b -> b.getLine() == location.beginLine());
 	}
 }
