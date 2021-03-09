@@ -67,8 +67,9 @@ public class TLCStateStackFrame extends TLCStackFrame {
 			RuntimeException e) {
 		super(parent, node, ctxt, tool, e);
 		this.state = state.deepCopy();
-
-		// Tempting to use state.fingerprint/hashCode, but would normalize all values as
+		assert this.state instanceof TLCStateMutExt;
+		
+		// Tempting to use state.fingerprint/hashCode, but would normalize all values as(
 		// a side effect.
 		this.stateId = rnd.nextInt(Integer.MAX_VALUE - 1) + 1;
 	}
