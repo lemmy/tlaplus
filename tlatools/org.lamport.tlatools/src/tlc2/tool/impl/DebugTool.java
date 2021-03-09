@@ -247,12 +247,12 @@ public class DebugTool extends Tool {
 
 	private Value actionLevelEval(SemanticNode expr, Context c, TLCState s0, TLCState s1, int control, CostModel cm) {
 		try {
-			target.pushFrame(this, expr, c, s0, s1);
+			target.pushFrame(this, expr, c, s0, s1.getAction(), s1);
 			final Value v = super.evalImpl(expr, c, s0, s1, control, cm);
 			target.popFrame(this, expr, c, v, s0, s1);
 			return v;
 		} catch (TLCRuntimeException | EvalException e) {
-			target.pushExceptionFrame(this, expr, c, s0, s1, e);
+			target.pushExceptionFrame(this, expr, c, s0, s1.getAction(), s1, e);
 			throw e;
 		}
 	}
@@ -321,7 +321,12 @@ public class DebugTool extends Tool {
 			return fastTool.getNextStatesImpl(action, pred, acts, c, s0, s1, nss, cm);
 		}
 		mode = EvalMode.Action;
-		return getNextStatesImpl(action, pred, acts, c, s0, s1, nss, cm);
+		// In regular model-checking mode (no DebugTool), TLC sets the action and
+		// predecessor lazily, that is after the successor has been fully constructed
+		// and the state- and action-constraints evaluated.  With DebugTool present,
+		// users want to see the trace from the initial to the current, partially
+		// evaluated state.  Thus, we set action and predecessor eagerly.
+		return getNextStatesImpl(action, pred, acts, c, s0, s1.setPredecessor(s0).setAction(action), nss, cm);
 	}
 
 	@Override
@@ -331,7 +336,7 @@ public class DebugTool extends Tool {
 			return fastTool.getNextStatesApplImpl(action, pred, acts, c, s0, s1, nss, cm);
 		}
 		mode = EvalMode.Action;
-		target.pushFrame(this, pred, c, s0, s1);
+		target.pushFrame(this, pred, c, s0, action, s1);
 		TLCState s = getNextStatesApplImpl(action, pred, acts, c, s0, s1, nss, cm);
 		target.popFrame(this, pred, c, s0, s1);
 		return s;
@@ -349,7 +354,15 @@ public class DebugTool extends Tool {
 		if (mode == EvalMode.Debugger) {
 			fastTool.getInitStates(init, acts, c, ps, states, cm);
 		} else {
-			super.getInitStates(init, acts, c, ps, new WrapperStateFunctor(states, target), cm);
+			mode = EvalMode.State;
+			if (states instanceof WrapperStateFunctor) {
+				// Wrap the IStateFunctor so we can intercept Tool adding a new state to the
+				// functor. Without it, the debugger wouldn't show the fully assigned state and
+				// the variable that is assigned last will always be null.
+				super.getInitStates(init, acts, c, ps, states, cm);
+			} else {
+				super.getInitStates(init, acts, c, ps, new WrapperStateFunctor(states, target), cm);
+			}
 		}
 	}
 		
@@ -372,10 +385,18 @@ public class DebugTool extends Tool {
 			fastTool.getNextStates(functor, state);
 		}
 		mode = EvalMode.Action;
-		if (functor instanceof WrapperNextStateFunctor) {
-			return super.getNextStates(functor, state);
-		} else {
-			return super.getNextStates(new WrapperNextStateFunctor(functor, target), state);
+		try {
+			if (functor instanceof WrapperNextStateFunctor) {
+				return super.getNextStates(functor, state);
+			} else {
+				return super.getNextStates(new WrapperNextStateFunctor(functor, target), state);
+			}
+		} finally {
+			// In getNextState above, the predecessor state is set eagerly for
+			// TLCStateStackFrame#getTrace to function correctly in all cases. Here, we null
+			// the predecessor again. Otherwise, TLC would keep the list of predecessors up
+			// to the initial states (unless a TLCState is persisted to disk in the StateQueue).
+			state.unsetPredecessor();
 		}
 	}
 	
@@ -405,7 +426,7 @@ public class DebugTool extends Tool {
 
 		@Override
 		public Object addElement(TLCState predecessor, Action a, TLCState state) {
-			target.pushFrame(predecessor, state);
+			target.pushFrame(predecessor, a, state);
 			Object addElement = ((INextStateFunctor) functor).addElement(predecessor, a, state);
 			target.popFrame(predecessor, state);
 			return addElement;
