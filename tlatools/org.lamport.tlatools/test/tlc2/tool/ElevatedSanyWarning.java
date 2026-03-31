@@ -22,12 +22,9 @@
  ******************************************************************************/
 package tlc2.tool;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 
 import org.junit.Test;
 
@@ -39,26 +36,26 @@ import util.TestPrintStream;
 import util.ToolIO;
 
 public class ElevatedSanyWarning extends ModelCheckerTestCase {
-    private static final String TEST_SPEC_DIR = CommonTestCase.BASE_DIR + File.separator +
-            "test" + File.separator + "tla2sany" + File.separator + "semantic" + File.separator + 
-            "error_corpus" + File.separator;
-    private static final String TEST_SPEC_PATH = TEST_SPEC_DIR + "W4802_Pre_Test.tla";
-    private static final ErrorCode CODE_4802 = ErrorCode.RECORD_CONSTRUCTOR_FIELD_NAME_CLASH;
-    private TestPrintStream testPrintStream;
+	private static final String TEST_SPEC_DIR = CommonTestCase.BASE_DIR + File.separator + "test" + File.separator
+			+ "tla2sany" + File.separator + "semantic" + File.separator + "error_corpus" + File.separator;
+	private static final String TEST_SPEC_PATH = TEST_SPEC_DIR + "W4802_Pre_Test.tla";
+	private static final ErrorCode CODE_4802 = ErrorCode.RECORD_CONSTRUCTOR_FIELD_NAME_CLASH;
+	private TestPrintStream testPrintStream;
 
-    public ElevatedSanyWarning() {
-        super(TEST_SPEC_PATH, new String[] { "-messagesAsErrors", String.valueOf(CODE_4802.getStandardValue()) }, ExitStatus.ERROR_SPEC_PARSE);
-    }
+	public ElevatedSanyWarning() {
+		super(TEST_SPEC_PATH, new String[] { "-messagesAsErrors", String.valueOf(CODE_4802.getStandardValue()) },
+				ExitStatus.ERROR_SPEC_PARSE);
+	}
 
-    @Override
-    public void beforeSetUp() {
-      testPrintStream = new TestPrintStream();
-      ToolIO.out = testPrintStream;
-    }
-  
-      @Test
-    public void testSpec() {
-        assertTrue(recorder.recorded(EC.TLC_PARSING_FAILED));
-        testPrintStream.assertSubstring("Warning treated as error");
-    }
+	@Override
+	public void beforeSetUp() {
+		testPrintStream = new TestPrintStream();
+		ToolIO.out = testPrintStream;
+	}
+
+	@Test
+	public void testSpec() {
+		assertTrue(recorder.recorded(EC.TLC_PARSING_FAILED));
+		testPrintStream.assertSubstring("Warning treated as error");
+	}
 }
